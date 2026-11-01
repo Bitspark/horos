@@ -55,6 +55,7 @@ def main():
 import {readFileSync} from "node:fs";
 import {decode} from "@bitspark/ontos-codec";
 import {wf, conforms} from "@bitspark/horos";
+import * as surface from "@bitspark/horos";
 import {diagnose, diagnoseWf, completedBool} from "@bitspark/horos/diagnose";
 const doc=JSON.parse(readFileSync("../conformance.json","utf8"));
 for(const c of doc.cases) {
@@ -67,7 +68,8 @@ for(const c of doc.cases) {
     const b=completedBool(diagnose(v,t)); if(b!==undefined) assert.equal(b,item.conforms,c.name);
   }
 }
-for(const path of ["semantics","wire"]) await assert.rejects(import("@bitspark/horos/"+path), {code:"ERR_PACKAGE_PATH_NOT_EXPORTED"});
+for(const name of ["isLeafCtor","leafClassifies","leafWellFormed","readFieldDescriptor"]) assert.equal(name in surface,false,name);
+for(const path of ["semantics","wire","core"]) await assert.rejects(import("@bitspark/horos/"+path), {code:"ERR_PACKAGE_PATH_NOT_EXPORTED"});
 console.log(`npm: ${doc.cases.length} oracle descriptors and diagnostics from installed package`);
 ''')
         (npm / "check.ts").write_text('''import {wf, conforms} from "@bitspark/horos";

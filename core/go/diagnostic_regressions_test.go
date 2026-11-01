@@ -22,10 +22,18 @@ func TestDiagnosticBinaryIdentity(t *testing.T) {
 
 func TestExactDeepLiteral(t *testing.T) {
 	v, equal, different := dAtom("end"), dAtom("end"), dAtom("other")
-	for i := 0; i < 20000; i++ { v = core.NewTuple(v); equal = core.NewTuple(equal); different = core.NewTuple(different) }
+	for i := 0; i < 20000; i++ {
+		v = core.NewTuple(v)
+		equal = core.NewTuple(equal)
+		different = core.NewTuple(different)
+	}
 	ty := desc("exact", v)
-	if !WF(ty) || !Conforms(equal, ty) || Diagnose(equal, ty).Verdict != VerdictConforms { t.Fatal("deep equal literal rejected") }
-	if Conforms(different, ty) || Diagnose(different, ty).Verdict != VerdictMismatch { t.Fatal("deep unequal literal accepted") }
+	if !WF(ty) || !Conforms(equal, ty) || Diagnose(equal, ty).Verdict != VerdictConforms {
+		t.Fatal("deep equal literal rejected")
+	}
+	if Conforms(different, ty) || Diagnose(different, ty).Verdict != VerdictMismatch {
+		t.Fatal("deep unequal literal accepted")
+	}
 }
 
 func TestDiagnosticWFDepthAndScope(t *testing.T) {

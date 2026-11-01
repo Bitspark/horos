@@ -39,6 +39,7 @@ case "${1:-all}" in
     ;;
   public)
     python3 scripts/verify-public.py
+    python3 -m unittest discover scripts -p 'test_*.py' -v
     git diff --check
     ;;
   all)

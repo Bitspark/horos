@@ -1,6 +1,7 @@
 """Prepare and compare horos release artifacts. Registry reads are anonymous."""
 from pathlib import Path
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -39,12 +40,22 @@ def get(url):
 
 def receipt(directory):
     data = json.loads((directory / "candidate.json").read_text())
-    assert data["version"] == VERSION and data["mode"] == "rehearse"
+    assert data["schema"] == 1 and data["version"] == VERSION and data["mode"] == "rehearse"
     assert data["source"] == run(["git", "rev-parse", "HEAD"]), "candidate/source mismatch"
+    assert data["tree"] == run(["git", "rev-parse", "HEAD^{tree}"]), "candidate/tree mismatch"
+    assert data["tags"] == [f"v{VERSION}", f"core/go/v{VERSION}"]
+    expected = {("npm", "@bitspark/horos", VERSION, f"bitspark-horos-{VERSION}.tgz"),
+                ("crates.io", "bitspark-horos", VERSION, f"bitspark-horos-{VERSION}.crate")}
+    assert len(data["packages"]) == 2
+    assert {(p["registry"], p["name"], p["version"], p["file"]) for p in data["packages"]} == expected
     assert data["oracle_sha256"] == digest(ROOT / "vectors/conformance.json")
     for package in data["packages"]:
         assert Path(package["file"]).name == package["file"]
         assert digest(directory / package["file"]) == package["sha256"], package["name"]
+        archive = (directory / package["file"]).read_bytes()
+        assert len(archive) == package["size"]
+        if package["registry"] == "npm":
+            assert package["integrity"] == "sha512-" + base64.b64encode(hashlib.sha512(archive).digest()).decode()
     return data
 
 
@@ -71,8 +82,8 @@ def prepare(directory):
         "oracle_sha256": digest(ROOT / "vectors/conformance.json"),
         "tags": [f"v{VERSION}", f"core/go/v{VERSION}"],
         "packages": [
-            {"registry": "npm", "name": "@bitspark/horos", "file": npm["filename"], "sha256": digest(directory / npm["filename"]), "integrity": npm["integrity"]},
-            {"registry": "crates.io", "name": "bitspark-horos", "file": crate.name, "sha256": digest(directory / crate.name)},
+            {"registry": "npm", "name": "@bitspark/horos", "version": VERSION, "file": npm["filename"], "sha256": digest(directory / npm["filename"]), "integrity": npm["integrity"], "size": (directory / npm["filename"]).stat().st_size},
+            {"registry": "crates.io", "name": "bitspark-horos", "version": VERSION, "file": crate.name, "sha256": digest(directory / crate.name), "size": (directory / crate.name).stat().st_size},
         ],
         "go": {"module": "github.com/Bitspark/horos/core/go", "version": "v" + VERSION},
         "python": "source-only validation",

@@ -896,7 +896,8 @@ function exactEqual(left: Value, right: Value): boolean {
       if (b.kind !== "atom" || !bytesEqual(a.bytes(), b.bytes())) return false;
     } else {
       if (b.kind !== "tuple") return false;
-      const aa = a.items(), bb = b.items();
+      const aa = a.items(),
+        bb = b.items();
       if (aa.length !== bb.length) return false;
       for (let i = 0; i < aa.length; i++) work.push([aa[i]!, bb[i]!]);
     }

@@ -7,12 +7,21 @@ import { diagnose, diagnoseWf } from "../src/diagnose.js";
 
 const a = (s: string): Value => atom(new TextEncoder().encode(s));
 const d = (ctor: string, ...args: Value[]): Value => tuple([a(`horos/${ctor}`), ...args]);
-const seqs = (n: number, ty: Value): Value => { for (let i = 0; i < n; i++) ty = d("seq", ty); return ty; };
+const seqs = (n: number, ty: Value): Value => {
+  for (let i = 0; i < n; i++) ty = d("seq", ty);
+  return ty;
+};
 const field = (ty: Value): Value => d("field", encodeText("next"), a("opt"), ty);
 
 test("exact compares deep finite literals without native stack recursion", () => {
-  let v: Value = a("end"), equal: Value = a("end"), different: Value = a("other");
-  for (let i = 0; i < 20000; i++) { v = tuple([v]); equal = tuple([equal]); different = tuple([different]); }
+  let v: Value = a("end"),
+    equal: Value = a("end"),
+    different: Value = a("other");
+  for (let i = 0; i < 20000; i++) {
+    v = tuple([v]);
+    equal = tuple([equal]);
+    different = tuple([different]);
+  }
   const ty = d("exact", v);
   assert.equal(wf(ty), true);
   assert.equal(conforms(equal, ty), true);
@@ -23,7 +32,12 @@ test("exact compares deep finite literals without native stack recursion", () =>
 
 test("a byte-order mark does not normalize a descriptor or field label", () => {
   const invalid = tuple([a("\ufeffhoros/any")]);
-  const invalidField = tuple([a("\ufeffhoros/field"), encodeText("next"), a("opt"), d("any")]);
+  const invalidField = tuple([
+    a("\ufeffhoros/field"),
+    encodeText("next"),
+    a("opt"),
+    d("any"),
+  ]);
   for (const ty of [invalid, d("record", a("open"), invalidField)]) {
     assert.equal(wf(ty), false);
     assert.equal(conforms(tuple([]), ty), false);
@@ -33,12 +47,17 @@ test("a byte-order mark does not normalize a descriptor or field label", () => {
 });
 
 test("diagnostics preserve arbitrary binary labels and recursion names", () => {
-  const x = atom(new Uint8Array([0x80])), y = atom(new Uint8Array([0x81]));
+  const x = atom(new Uint8Array([0x80])),
+    y = atom(new Uint8Array([0x81]));
   const label = d("compound", x);
   assert.equal(wf(label), true);
   assert.equal(conforms(tuple([y]), label), false);
   assert.equal(diagnose(tuple([y]), label).verdict, "mismatch");
-  const ty = d("rec", x, d("union", d("exact", a("end")), d("tuple", d("rec", y, d("tuple", d("ref", x))))));
+  const ty = d(
+    "rec",
+    x,
+    d("union", d("exact", a("end")), d("tuple", d("rec", y, d("tuple", d("ref", x))))),
+  );
   const v = tuple([tuple([a("end")])]);
   assert.equal(wf(ty), true);
   assert.equal(conforms(v, ty), true);
@@ -46,7 +65,10 @@ test("diagnostics preserve arbitrary binary labels and recursion names", () => {
 });
 
 test("diagnostic well-formedness carries depth and scope through records and recursion", () => {
-  for (const inner of [d("rec", a("x"), seqs(2, d("any"))), d("record", a("open"), field(seqs(2, d("any"))))]) {
+  for (const inner of [
+    d("rec", a("x"), seqs(2, d("any"))),
+    d("record", a("open"), field(seqs(2, d("any")))),
+  ]) {
     const at = seqs(MAX_RECURSION_DEPTH - 3, inner);
     const over = seqs(MAX_RECURSION_DEPTH - 2, inner);
     assert.equal(wf(at), true);
@@ -55,7 +77,10 @@ test("diagnostic well-formedness carries depth and scope through records and rec
     assert.equal(diagnoseWf(over).verdict, "exhausted");
     assert.equal(diagnose(tuple([]), over).verdict, "exhausted");
   }
-  assert.equal(diagnoseWf(d("rec", a("x"), seqs(MAX_RECURSION_DEPTH + 1, d("any")))).verdict, "exhausted");
+  assert.equal(
+    diagnoseWf(d("rec", a("x"), seqs(MAX_RECURSION_DEPTH + 1, d("any")))).verdict,
+    "exhausted",
+  );
   const guarded = d("rec", a("x"), d("record", a("open"), field(d("ref", a("x")))));
   assert.equal(wf(guarded), true);
   assert.equal(diagnoseWf(guarded).verdict, "conforms");
