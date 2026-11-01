@@ -1,0 +1,36 @@
+{
+  "name": "@bitspark/horos",
+  "version": "0.6.0",
+  "description": "Types and schemas over ontos values: descriptor well-formedness, conformance and diagnostics.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": { "type": "git", "url": "git+https://github.com/Bitspark/horos.git", "directory": "core/ts" },
+  "publishConfig": { "registry": "https://registry.npmjs.org/", "access": "public", "provenance": true },
+  "files": ["dist/src", "LICENSE", "LICENSE-MIT", "NOTICE"],
+  "exports": {
+    ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" },
+    "./diagnose": { "types": "./dist/src/diagnose.d.ts", "import": "./dist/src/diagnose.js" },
+    "./package.json": "./package.json"
+  },
+  "bin": { "horos-conform": "./dist/src/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . && prettier --check .",
+    "test": "npm run build && node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "@bitspark/ontos-core": "0.15.0",
+    "@bitspark/ontos-codec": "0.15.0",
+    "@bitspark/ontos-data": "0.15.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7",
+    "@types/node": "^22",
+    "eslint": "9.39.4",
+    "@eslint/js": "9.39.4",
+    "@typescript-eslint/parser": "8.60.1",
+    "@typescript-eslint/eslint-plugin": "8.60.1",
+    "prettier": "3.8.3"
+  }
+}

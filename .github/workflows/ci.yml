@@ -1,0 +1,44 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  check:
+    name: check (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [public, go, rust, typescript, python, conformance]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - run: rustup toolchain install --no-self-update
+      - name: Public Python dependency
+        if: matrix.target == 'python'
+        run: git -c credential.helper= clone --depth 1 --branch v0.15.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
+      - name: Check
+        env:
+          ONTOS_PY_ROOT: ${{ runner.temp }}/ontos
+          npm_config_userconfig: /dev/null
+          npm_config_globalconfig: /dev/null
+        run: bash scripts/check.sh '${{ matrix.target }}'

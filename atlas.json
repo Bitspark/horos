@@ -1,0 +1,9 @@
+{
+  "name": "horos",
+  "greek": "ὅρος",
+  "gloss": "the bound that defines",
+  "is": "types and schemas over ontos values",
+  "layer": "substance",
+  "dependsOn": [{ "to": "ontos", "kind": "build", "note": "One shared value identity and canonical data recognizers." }],
+  "docs": { "entry": "README.md", "exports": [{ "id": "spec", "kind": "spec", "path": "docs/spec/horos.md" }] }
+}

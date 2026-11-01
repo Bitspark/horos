@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  horos lockup — the bound that defines (light). The mark: a horizontal measure
+  bounded at each end (the law of form — "where a kind begins and ends"), its centre
+  broken so the one sanctioned fill — the value seated inside the bound — completes
+  the gap (v : T, framed not skewered). horos's model: what counts as a well-formed
+  value of a kind. Drawn to the Bitspark/design wordmark spec (brand/wordmark.md):
+  stroke-only mark + the one sanctioned axiom fill, then the system-sans wordmark, a
+  hairline rule, and the letterspaced kicker. Colours are literal @bitspark/design
+  light-theme token values:
+    #18181b = color-fg ; #e4e4e7 = color-border ; #52525b = color-fg-muted.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 264" width="280" role="img" aria-label="horos — the bound that defines">
+  <g fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="208" y1="48" x2="208" y2="64"/>
+    <line x1="272" y1="48" x2="272" y2="64"/>
+    <line x1="208" y1="56" x2="230" y2="56"/>
+    <line x1="250" y1="56" x2="272" y2="56"/>
+    <circle cx="240" cy="56" r="6" fill="#18181b" stroke="none"/>
+  </g>
+  <text x="240" y="190" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="84" font-weight="700" fill="#18181b" letter-spacing="-0.02em">horos</text>
+  <line x1="196" y1="212" x2="284" y2="212" stroke="#e4e4e7" stroke-width="1"/>
+  <text x="240" y="234" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="11" font-weight="600" fill="#52525b" letter-spacing="0.16em">ὅρος · FORM · WHAT COUNTS</text>
+</svg>

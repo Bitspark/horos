@@ -1,0 +1,43 @@
+name: prepare
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: rustup toolchain install --no-self-update
+      - name: Resolve public locks and format source
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GOSUMDB: sum.golang.org
+          GOPRIVATE: ''
+          GONOSUMDB: ''
+          GIT_CONFIG_GLOBAL: /dev/null
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile
+          cargo fmt --all
+          (cd core/go && go mod tidy && gofmt -w .)
+          (cd core/ts && npm install --package-lock-only --ignore-scripts --registry=https://registry.npmjs.org/ && npm ci --ignore-scripts && npx prettier --write .)
+          git add -N .
+          git diff --binary > "$RUNNER_TEMP/preparation.patch"
+          git rev-parse HEAD > "$RUNNER_TEMP/source.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preparation
+          path: |
+            ${{ runner.temp }}/preparation.patch
+            ${{ runner.temp }}/source.txt

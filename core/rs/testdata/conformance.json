@@ -1,0 +1,1574 @@
+{
+  "cases": [
+    {
+      "descriptor": "01010009686f726f732f616e79",
+      "name": "any",
+      "values": [
+        {
+          "conforms": true,
+          "note": "an atom",
+          "value": "000178"
+        },
+        {
+          "conforms": true,
+          "note": "a tuple",
+          "value": "0100"
+        },
+        {
+          "conforms": true,
+          "note": "an int",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0101000a686f726f732f61746f6d",
+      "name": "atom",
+      "values": [
+        {
+          "conforms": true,
+          "note": "an atom",
+          "value": "000178"
+        },
+        {
+          "conforms": false,
+          "note": "a tuple",
+          "value": "0100"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020010686f726f732f61746f6d2d657861637400026869",
+      "name": "atom-exact",
+      "values": [
+        {
+          "conforms": true,
+          "note": "exact match",
+          "value": "00026869"
+        },
+        {
+          "conforms": false,
+          "note": "different bytes",
+          "value": "0002686f"
+        },
+        {
+          "conforms": false,
+          "note": "a tuple, not an atom",
+          "value": "010100026869"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e740002000101020003696e7400020003",
+      "name": "atom-len-1-3",
+      "values": [
+        {
+          "conforms": true,
+          "note": "len 1",
+          "value": "000178"
+        },
+        {
+          "conforms": true,
+          "note": "len 3",
+          "value": "0003616263"
+        },
+        {
+          "conforms": false,
+          "note": "len 0 below lo",
+          "value": "0000"
+        },
+        {
+          "conforms": false,
+          "note": "len 4 above hi",
+          "value": "000461626364"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f61746f6d2d696e01030003736574000178000179",
+      "name": "atom-in",
+      "values": [
+        {
+          "conforms": true,
+          "note": "member",
+          "value": "000178"
+        },
+        {
+          "conforms": false,
+          "note": "non-member",
+          "value": "00017a"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e740002000101020003696e7400020003",
+      "name": "text-len-1-3",
+      "values": [
+        {
+          "conforms": true,
+          "note": "1 char (1 byte)",
+          "value": "01020009757466382d74657874000161"
+        },
+        {
+          "conforms": true,
+          "note": "3 chars (3 bytes)",
+          "value": "01020009757466382d746578740003616263"
+        },
+        {
+          "conforms": false,
+          "note": "0 chars below lo",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": false,
+          "note": "4 chars above hi",
+          "value": "01020009757466382d74657874000461626364"
+        },
+        {
+          "conforms": true,
+          "note": "3 multi-byte chars (6 bytes) — char-count 3 ≤ 3, so conforms (byte-count 6 would reject)",
+          "value": "01020009757466382d746578740006c3a9c3a9c3a9"
+        },
+        {
+          "conforms": false,
+          "note": "4 multi-byte chars (8 bytes) — char-count 4 > 3, rejected",
+          "value": "01020009757466382d746578740008c3a9c3a9c3a9c3a9"
+        },
+        {
+          "conforms": true,
+          "note": "1 astral char (4 bytes, 2 UTF-16 units) — char-count 1 within [1,3]",
+          "value": "01020009757466382d746578740004f09f9880"
+        },
+        {
+          "conforms": false,
+          "note": "not utf8-text",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e7400010001020003696e74000100",
+      "name": "text-len-0-0-empty",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the empty string has 0 chars",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": false,
+          "note": "1 char above hi=0",
+          "value": "01020009757466382d74657874000161"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01010011686f726f732f6b65792d6772616d6d6172",
+      "name": "key-grammar",
+      "values": [
+        {
+          "conforms": true,
+          "note": "single lowercase letter",
+          "value": "01020009757466382d74657874000161"
+        },
+        {
+          "conforms": true,
+          "note": "single digit (leading class allows 0-9)",
+          "value": "01020009757466382d74657874000130"
+        },
+        {
+          "conforms": true,
+          "note": "interior . _ - and alnum",
+          "value": "01020009757466382d746578740007612e625f632d31"
+        },
+        {
+          "conforms": true,
+          "note": "alnum mix",
+          "value": "01020009757466382d746578740006616263313233"
+        },
+        {
+          "conforms": false,
+          "note": "empty fails the leading [a-z0-9]",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": false,
+          "note": "uppercase not allowed",
+          "value": "01020009757466382d74657874000141"
+        },
+        {
+          "conforms": false,
+          "note": "leading '.' is not in [a-z0-9]",
+          "value": "01020009757466382d7465787400032e6162"
+        },
+        {
+          "conforms": false,
+          "note": "leading '-' is not in [a-z0-9]",
+          "value": "01020009757466382d7465787400032d6162"
+        },
+        {
+          "conforms": false,
+          "note": "space is not in the interior class",
+          "value": "01020009757466382d746578740003612062"
+        },
+        {
+          "conforms": false,
+          "note": "'/' is not in the interior class",
+          "value": "01020009757466382d746578740003612f62"
+        },
+        {
+          "conforms": true,
+          "note": "64 chars (1 leading + 63 tail) — the upper boundary",
+          "value": "01020009757466382d74657874004061626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262"
+        },
+        {
+          "conforms": false,
+          "note": "65 chars — one past the {0,63} tail bound",
+          "value": "01020009757466382d7465787400416162626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262"
+        },
+        {
+          "conforms": false,
+          "note": "the multi-byte 'é' is not in [a-z0-9._-]",
+          "value": "01020009757466382d746578740005636166c3a9"
+        },
+        {
+          "conforms": false,
+          "note": "not utf8-text",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01010014686f726f732f746578742d6e6f6e2d626c616e6b",
+      "name": "text-non-blank",
+      "values": [
+        {
+          "conforms": true,
+          "note": "a non-whitespace char",
+          "value": "01020009757466382d74657874000161"
+        },
+        {
+          "conforms": true,
+          "note": "has a non-whitespace char among spaces",
+          "value": "01020009757466382d7465787400052020782020"
+        },
+        {
+          "conforms": false,
+          "note": "empty has no non-whitespace char",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": false,
+          "note": "all spaces",
+          "value": "01020009757466382d746578740003202020"
+        },
+        {
+          "conforms": false,
+          "note": "tab/newline/CR are all whitespace",
+          "value": "01020009757466382d746578740003090a0d"
+        },
+        {
+          "conforms": true,
+          "note": "a multi-byte non-ASCII char is never whitespace → non-blank",
+          "value": "01020009757466382d746578740002c3a9"
+        },
+        {
+          "conforms": true,
+          "note": "U+00A0 NO-BREAK SPACE is not in the ASCII ws set → non-blank in all cores",
+          "value": "01020009757466382d746578740002c2a0"
+        },
+        {
+          "conforms": false,
+          "note": "not utf8-text",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01010014686f726f732f6c6f776572636173652d75756964",
+      "name": "lowercase-uuid",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the nil UUID",
+          "value": "01020009757466382d74657874002430303030303030302d303030302d303030302d303030302d303030303030303030303030"
+        },
+        {
+          "conforms": false,
+          "note": "first group has 16 hex chars, not 8 — bad shape",
+          "value": "01020009757466382d74657874002c303132333435363738396162636465662d383961622d636465662d303132332d343536373839616263646566"
+        },
+        {
+          "conforms": true,
+          "note": "a canonical lowercase UUID",
+          "value": "01020009757466382d74657874002439623265346331612d376433662d346538622d613163322d643365346635303631373238"
+        },
+        {
+          "conforms": false,
+          "note": "uppercase hex is not the LOWERCASE grammar",
+          "value": "01020009757466382d74657874002439423245344331412d374433462d344538422d413143322d443345344635303631373238"
+        },
+        {
+          "conforms": false,
+          "note": "missing the four hyphens",
+          "value": "01020009757466382d7465787400203962326534633161376433663465386261316332643365346635303631373238"
+        },
+        {
+          "conforms": false,
+          "note": "last group has 11 hex chars, not 12 — too short",
+          "value": "01020009757466382d74657874002339623265346331612d376433662d346538622d613163322d6433653466353036313732"
+        },
+        {
+          "conforms": false,
+          "note": "last group has 13 hex chars — too long",
+          "value": "01020009757466382d74657874002539623265346331612d376433662d346538622d613163322d64336534663530363137323839"
+        },
+        {
+          "conforms": false,
+          "note": "'g' is not a hex digit",
+          "value": "01020009757466382d74657874002439623265346331672d376433662d346538622d613163322d643365346635303631373238"
+        },
+        {
+          "conforms": false,
+          "note": "empty is not a UUID",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": false,
+          "note": "not utf8-text",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e740002000301020003696e7400020001",
+      "name": "wf-bad-text-len-lo-gt-hi",
+      "values": [
+        {
+          "conforms": false,
+          "note": "lo=3 > hi=1 is non-wf (mirrors atom-len), so nothing conforms",
+          "value": "01020009757466382d7465787400026162"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e740002010101020003696e7400020003",
+      "name": "wf-bad-text-len-neg-lo",
+      "values": [
+        {
+          "conforms": false,
+          "note": "lo<0 is non-wf; len 1 would lie in [-1,3] locally but the wf gate rejects it",
+          "value": "01020009757466382d74657874000161"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e7400010001020003696e7400110080000000000000000000000000000000",
+      "name": "wf-text-len-bound-2pow127",
+      "values": [
+        {
+          "conforms": false,
+          "note": "a hi bound of 2^127 is past i128::MAX → non-wf everywhere (the #18 cap, shared with atom-len)",
+          "value": "01020009757466382d74657874000178"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01020011686f726f732f6b65792d6772616d6d6172000178",
+      "name": "wf-bad-key-grammar-arity",
+      "values": [
+        {
+          "conforms": false,
+          "note": "key-grammar takes no args; an extra arg is non-wf",
+          "value": "01020009757466382d74657874000161"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720003696e74",
+      "name": "scalar-int",
+      "values": [
+        {
+          "conforms": true,
+          "note": "positive",
+          "value": "01020003696e7400020005"
+        },
+        {
+          "conforms": true,
+          "note": "negative",
+          "value": "01020003696e7400020101"
+        },
+        {
+          "conforms": false,
+          "note": "text, not int",
+          "value": "01020009757466382d74657874000135"
+        },
+        {
+          "conforms": false,
+          "note": "bare atom",
+          "value": "000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720009757466382d74657874",
+      "name": "scalar-text",
+      "values": [
+        {
+          "conforms": true,
+          "note": "text",
+          "value": "01020009757466382d7465787400026869"
+        },
+        {
+          "conforms": false,
+          "note": "int, not text",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "scalar-bool",
+      "values": [
+        {
+          "conforms": true,
+          "note": "bool",
+          "value": "01020004626f6f6c000101"
+        },
+        {
+          "conforms": false,
+          "note": "int, not bool",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e740101000a686f726f732f61746f6d",
+      "name": "tuple-int-atom",
+      "values": [
+        {
+          "conforms": true,
+          "note": "int then atom",
+          "value": "010201020003696e7400020001000178"
+        },
+        {
+          "conforms": false,
+          "note": "wrong arity",
+          "value": "010101020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "child 0 not an int",
+          "value": "0102000178000178"
+        },
+        {
+          "conforms": false,
+          "note": "not a tuple",
+          "value": "000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f7365710102000c686f726f732f7363616c61720003696e74",
+      "name": "seq-int",
+      "values": [
+        {
+          "conforms": true,
+          "note": "all ints",
+          "value": "010201020003696e740002000101020003696e7400020002"
+        },
+        {
+          "conforms": true,
+          "note": "empty (vacuous)",
+          "value": "0100"
+        },
+        {
+          "conforms": false,
+          "note": "a non-int child",
+          "value": "010201020003696e7400020001000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0104000e686f726f732f636f6d706f756e640005706f696e740102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720003696e74",
+      "name": "compound-point",
+      "values": [
+        {
+          "conforms": true,
+          "note": "point(1, 2)",
+          "value": "01030005706f696e7401020003696e740002000101020003696e7400020002"
+        },
+        {
+          "conforms": false,
+          "note": "wrong label",
+          "value": "010300046c696e6501020003696e740002000101020003696e7400020002"
+        },
+        {
+          "conforms": false,
+          "note": "wrong arity",
+          "value": "01020005706f696e7401020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720003696e74",
+      "name": "list-of-int",
+      "values": [
+        {
+          "conforms": true,
+          "note": "ints",
+          "value": "010300046c69737401020003696e740002000101020003696e7400020002"
+        },
+        {
+          "conforms": true,
+          "note": "empty list",
+          "value": "010100046c697374"
+        },
+        {
+          "conforms": false,
+          "note": "a non-int element",
+          "value": "010300046c69737401020003696e740002000101020009757466382d74657874000178"
+        },
+        {
+          "conforms": false,
+          "note": "not a list",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7365742d6f660101000a686f726f732f61746f6d",
+      "name": "set-of-atom",
+      "values": [
+        {
+          "conforms": true,
+          "note": "atoms",
+          "value": "01030003736574000178000179"
+        },
+        {
+          "conforms": false,
+          "note": "a list is not a set",
+          "value": "010200046c697374000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740102000c686f726f732f7363616c61720003696e74",
+      "name": "map-of-text-int",
+      "values": [
+        {
+          "conforms": true,
+          "note": "text->int",
+          "value": "010300036d6170010201020009757466382d7465787400016101020003696e7400020001010201020009757466382d7465787400016201020003696e7400020002"
+        },
+        {
+          "conforms": false,
+          "note": "a value is not an int",
+          "value": "010200036d6170010201020009757466382d7465787400016101020009757466382d74657874000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400046e616d6500037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d74657874000361676500036f70740102000c686f726f732f7363616c61720003696e74",
+      "name": "record-closed",
+      "values": [
+        {
+          "conforms": true,
+          "note": "required only",
+          "value": "010200036d6170010201020009757466382d7465787400046e616d6501020009757466382d746578740003616461"
+        },
+        {
+          "conforms": true,
+          "note": "required + optional",
+          "value": "010300036d6170010201020009757466382d74657874000361676501020003696e7400020024010201020009757466382d7465787400046e616d6501020009757466382d746578740003616461"
+        },
+        {
+          "conforms": false,
+          "note": "required name missing",
+          "value": "010200036d6170010201020009757466382d74657874000361676501020003696e7400020024"
+        },
+        {
+          "conforms": false,
+          "note": "name is not text",
+          "value": "010200036d6170010201020009757466382d7465787400046e616d6501020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "extra key under closed",
+          "value": "010300036d6170010201020009757466382d7465787400017801020003696e7400020001010201020009757466382d7465787400046e616d6501020009757466382d746578740003616461"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f7265636f726400046f70656e0104000b686f726f732f6669656c6401020009757466382d7465787400046e616d6500037265710102000c686f726f732f7363616c61720009757466382d74657874",
+      "name": "record-open",
+      "values": [
+        {
+          "conforms": true,
+          "note": "extra key allowed under open",
+          "value": "010300036d6170010201020009757466382d7465787400017801020003696e7400020001010201020009757466382d7465787400046e616d6501020009757466382d746578740003616461"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "union-int-bool",
+      "values": [
+        {
+          "conforms": true,
+          "note": "int alternative",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": true,
+          "note": "bool alternative",
+          "value": "01020004626f6f6c000101"
+        },
+        {
+          "conforms": false,
+          "note": "neither",
+          "value": "01020009757466382d74657874000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640101000a686f726f732f61746f6d0103000e686f726f732f61746f6d2d6c656e01020003696e740002000101020003696e7400020003",
+      "name": "and-atom-len",
+      "values": [
+        {
+          "conforms": true,
+          "note": "atom of len 2",
+          "value": "00026162"
+        },
+        {
+          "conforms": false,
+          "note": "fails the length bound",
+          "value": "0000"
+        },
+        {
+          "conforms": false,
+          "note": "not an atom",
+          "value": "0100"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f740102000c686f726f732f7363616c61720003696e74",
+      "name": "not-int",
+      "values": [
+        {
+          "conforms": false,
+          "note": "is an int",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": true,
+          "note": "not an int",
+          "value": "01020009757466382d74657874000178"
+        },
+        {
+          "conforms": true,
+          "note": "bare atom is not an int",
+          "value": "000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000b686f726f732f657861637401020003696e7400020007",
+      "name": "exact-7",
+      "values": [
+        {
+          "conforms": true,
+          "note": "equal",
+          "value": "01020003696e7400020007"
+        },
+        {
+          "conforms": false,
+          "note": "different value",
+          "value": "01020003696e7400020008"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300016c0103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d657861637400036e696c0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600016c",
+      "name": "rec-cons-list",
+      "values": [
+        {
+          "conforms": true,
+          "note": "[]",
+          "value": "00036e696c"
+        },
+        {
+          "conforms": true,
+          "note": "[1]",
+          "value": "010201020003696e740002000100036e696c"
+        },
+        {
+          "conforms": true,
+          "note": "[1, 2]",
+          "value": "010201020003696e7400020001010201020003696e740002000200036e696c"
+        },
+        {
+          "conforms": false,
+          "note": "head is not an int",
+          "value": "010201020009757466382d7465787400017800036e696c"
+        },
+        {
+          "conforms": false,
+          "note": "not nil, not a cons cell",
+          "value": "00056f74686572"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001740103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740104000e686f726f732f636f6d706f756e6400046e6f646501020009686f726f732f72656600017401020009686f726f732f726566000174",
+      "name": "rec-int-tree",
+      "values": [
+        {
+          "conforms": true,
+          "note": "a leaf int",
+          "value": "01020003696e7400020005"
+        },
+        {
+          "conforms": true,
+          "note": "node(1, 2) — two leaves",
+          "value": "010300046e6f646501020003696e740002000101020003696e7400020002"
+        },
+        {
+          "conforms": true,
+          "note": "node(1, node(2, 3)) — right subtree descends",
+          "value": "010300046e6f646501020003696e7400020001010300046e6f646501020003696e740002000201020003696e7400020003"
+        },
+        {
+          "conforms": true,
+          "note": "node(node(1, 2), 3) — left subtree descends",
+          "value": "010300046e6f6465010300046e6f646501020003696e740002000101020003696e740002000201020003696e7400020003"
+        },
+        {
+          "conforms": false,
+          "note": "left subtree is neither an int nor a node",
+          "value": "010300046e6f646501020009757466382d7465787400017801020003696e7400020002"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001780103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d657861637400046f6e696c0103000b686f726f732f7475706c6501030009686f726f732f7265630001780103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d65786163740004696e696c0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600017801020009686f726f732f726566000178",
+      "name": "rec-nested-shadow",
+      "values": [
+        {
+          "conforms": true,
+          "note": "outer base case",
+          "value": "00046f6e696c"
+        },
+        {
+          "conforms": true,
+          "note": "(inner-nil, outer-nil) — inner ref resolves to the inner cons-list",
+          "value": "01020004696e696c00046f6e696c"
+        },
+        {
+          "conforms": true,
+          "note": "((1, inil), onil) — first element is an inner int-list",
+          "value": "0102010201020003696e74000200010004696e696c00046f6e696c"
+        },
+        {
+          "conforms": false,
+          "note": "(onil, onil) — inner expects inil/(int,…), so the inner ref did NOT leak to the outer binding",
+          "value": "010200046f6e696c00046f6e696c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720009757466382d74657874",
+      "name": "map-of-int-key",
+      "values": [
+        {
+          "conforms": true,
+          "note": "int->text, key conforms",
+          "value": "010200036d6170010201020003696e740002000101020009757466382d74657874000161"
+        },
+        {
+          "conforms": false,
+          "note": "a text key fails the int KEY descriptor",
+          "value": "010200036d6170010201020009757466382d7465787400016b01020009757466382d74657874000161"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720005666c6f6174",
+      "name": "wf-bad-scalar-kind",
+      "values": [
+        {
+          "conforms": false,
+          "note": "non-wf descriptor never conforms",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e740002000301020003696e7400020001",
+      "name": "wf-bad-atom-len-lo-gt-hi",
+      "values": [
+        {
+          "conforms": false,
+          "note": "non-wf descriptor never conforms",
+          "value": "000178"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000c686f726f732f7265636f726400056d617962650104000b686f726f732f6669656c6401020009757466382d7465787400016e00037265710102000c686f726f732f7363616c61720003696e74",
+      "name": "wf-bad-record-mode",
+      "values": [
+        {
+          "conforms": false,
+          "note": "the field would conform, but the bad mode makes the descriptor non-wf",
+          "value": "010200036d6170010201020009757466382d7465787400016e01020003696e7400020001"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300017801020009686f726f732f726566000178",
+      "name": "wf-unguarded-rec",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an unguarded rec is non-wf, so nothing conforms",
+          "value": "0008616e797468696e67"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01020009686f726f732f726566000179",
+      "name": "wf-unbound-ref",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an unbound ref is non-wf, so nothing conforms",
+          "value": "0008616e797468696e67"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01010003696e74",
+      "name": "wf-not-a-descriptor",
+      "values": [
+        {
+          "conforms": false,
+          "note": "unreserved label is not a descriptor",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f726400046f70656e0104000b686f726f732f6669656c6401020009757466382d7465787400046e616d6500037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d7465787400046e616d6500036f70740102000c686f726f732f7363616c61720003696e74",
+      "name": "wf-dup-record-field",
+      "values": [
+        {
+          "conforms": false,
+          "note": "non-wf descriptor never conforms",
+          "value": "010200036d6170010201020009757466382d7465787400046e616d6501020009757466382d746578740003616461"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01020007686f726f732fff000178",
+      "name": "wf-non-utf8-label",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an invalid-UTF-8 label is not a descriptor",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e7400010001020003696e7400110080000000000000000000000000000000",
+      "name": "wf-atom-len-bound-2pow127",
+      "values": [
+        {
+          "conforms": false,
+          "note": "a bound of 2^127 is past i128::MAX → non-wf everywhere",
+          "value": "000178"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e740002010101020003696e7400020002",
+      "name": "wf-gate-atom-len-neg-lo",
+      "values": [
+        {
+          "conforms": false,
+          "note": "len 1 is in [-1, 2] locally, but lo<0 is non-wf → conforms gated false",
+          "value": "000178"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e01010009686f726f732f616e790101000767617262616765",
+      "name": "wf-gate-union-garbage-alt",
+      "values": [
+        {
+          "conforms": false,
+          "note": "7 matches the `any` alternative locally, but a non-wf alternative gates conforms false",
+          "value": "01020003696e7400020007"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f61746f6d2d696e010300037365740001780101000174",
+      "name": "wf-gate-atom-in-non-atom-elem",
+      "values": [
+        {
+          "conforms": false,
+          "note": "x is a set member locally, but a non-atom set element is non-wf → gated false",
+          "value": "000178"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f726400046f70656e0104000b686f726f732f6669656c6401020009757466382d7465787400016100037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d7465787400016100036f70740102000c686f726f732f7363616c61720009757466382d74657874",
+      "name": "wf-gate-record-dup-field",
+      "values": [
+        {
+          "conforms": false,
+          "note": "{a: text} satisfies both clauses locally, but the duplicate field is non-wf → gated false",
+          "value": "010200036d6170010201020009757466382d7465787400016101020009757466382d7465787400026869"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001780103000b686f726f732f756e696f6e01010009686f726f732f616e7901020009686f726f732f726566000178",
+      "name": "wf-gate-unguarded-rec-union",
+      "values": [
+        {
+          "conforms": false,
+          "note": "the `any` alternative matches locally, but the unguarded ref is non-wf → gated false",
+          "value": "0008616e797468696e67"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01020009686f726f732f7365710101000767617262616765",
+      "name": "wf-gate-seq-garbage-elem",
+      "values": [
+        {
+          "conforms": false,
+          "note": "() conforms vacuously locally, but a non-wf element descriptor gates conforms false",
+          "value": "0100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000c686f726f732f7365742d6f660101000a686f726f732f61746f6d",
+      "name": "canon-set-out-of-order",
+      "values": [
+        {
+          "conforms": false,
+          "note": "elements (\"b\", \"a\") are not strictly ascending → read_set rejects (UnsortedElements)",
+          "value": "01030003736574000162000161"
+        },
+        {
+          "conforms": true,
+          "note": "the canonical (\"a\", \"b\") spelling DOES conform — pins that only order, not content, differs",
+          "value": "01030003736574000161000162"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7365742d6f660101000a686f726f732f61746f6d",
+      "name": "canon-set-duplicate-elem",
+      "values": [
+        {
+          "conforms": false,
+          "note": "elements (\"a\", \"a\") repeat → read_set rejects (DuplicateElement)",
+          "value": "01030003736574000161000161"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740102000c686f726f732f7363616c61720003696e74",
+      "name": "canon-map-out-of-order",
+      "values": [
+        {
+          "conforms": false,
+          "note": "keys (\"b\", \"a\") are not strictly ascending → read_map rejects (UnsortedEntries)",
+          "value": "010300036d6170010201020009757466382d7465787400016201020003696e7400020002010201020009757466382d7465787400016101020003696e7400020001"
+        },
+        {
+          "conforms": true,
+          "note": "the canonical key order DOES conform — pins that only ordering, not content, differs",
+          "value": "010300036d6170010201020009757466382d7465787400016101020003696e7400020001010201020009757466382d7465787400016201020003696e7400020002"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740102000c686f726f732f7363616c61720003696e74",
+      "name": "canon-map-duplicate-key",
+      "values": [
+        {
+          "conforms": false,
+          "note": "key \"a\" repeats → read_map rejects (DuplicateKey)",
+          "value": "010300036d6170010201020009757466382d7465787400016101020003696e7400020001010201020009757466382d7465787400016101020003696e7400020002"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720003696e74",
+      "name": "canon-int-non-minimal",
+      "values": [
+        {
+          "conforms": false,
+          "note": "magnitude [0x00, 0x05] carries a leading zero → recognize_int rejects (non-minimal)",
+          "value": "01020003696e740003000005"
+        },
+        {
+          "conforms": true,
+          "note": "the minimal spelling of 5 ([0x00, 0x05]) DOES conform — pins recognition is on the canonical form",
+          "value": "01020003696e7400020005"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0101000b686f726f732f756e696f6e",
+      "name": "empty-union-is-bottom",
+      "values": [
+        {
+          "conforms": false,
+          "note": "union() has no alternative to satisfy → bottom (uninhabited)",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "even a bare atom does not conform to the empty union",
+          "value": "000178"
+        },
+        {
+          "conforms": false,
+          "note": "the empty tuple does not conform either",
+          "value": "0100"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01010009686f726f732f616e64",
+      "name": "empty-and-is-top",
+      "values": [
+        {
+          "conforms": true,
+          "note": "and() has no conjunct to fail → top (accepts everything)",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": true,
+          "note": "a bare atom conforms to the empty and",
+          "value": "000178"
+        },
+        {
+          "conforms": true,
+          "note": "an arbitrary tuple conforms to the empty and",
+          "value": "010201020003696e7400020001000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300016c0103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d657861637400036e696c0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600016c",
+      "name": "depth-170-in-bound-conforms",
+      "values": [
+        {
+          "conforms": true,
+          "note": "a 170-deep cons value stays within the depth cap → conforms, as a shallow list does",
+          "value": "010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e7400010000036e696c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300016c0103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d657861637400036e696c0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600016c",
+      "name": "depth-171-over-cap-false",
+      "values": [
+        {
+          "conforms": false,
+          "note": "a 171-deep cons value trips depth > MAX_RECURSION_DEPTH (512) at the same frame in all three cores → deterministic false, not a crash",
+          "value": "010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e74000100010201020003696e7400010000036e696c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720003696e74",
+      "name": "scalar-int-vs-decimal-null",
+      "values": [
+        {
+          "conforms": true,
+          "note": "an int conforms — sanity",
+          "value": "01020003696e7400020007"
+        },
+        {
+          "conforms": false,
+          "note": "the canonical decimal `decimal(0,0)` is NOT an int — recognize_int rejects the decimal embedding, so scalar(int) is a clean false, never a mis-read (horos#103: decimal is one of the two recognizers horos does not classify)",
+          "value": "01030007646563696d616c01020003696e7400010001020003696e74000100"
+        },
+        {
+          "conforms": false,
+          "note": "`null` is NOT an int — fail-closed (horos#103: the other unclassified recognizer)",
+          "value": "010100046e756c6c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01010009686f726f732f616e79",
+      "name": "any-accepts-decimal-null",
+      "values": [
+        {
+          "conforms": true,
+          "note": "`horos/any` accepts ANY ontos value — including an ontos-data decimal; the fail-closed boundary is at the recognizer-delegating descriptors (scalar/list-of/...), not at `any`",
+          "value": "01030007646563696d616c01020003696e7400010001020003696e74000100"
+        },
+        {
+          "conforms": true,
+          "note": "`any` accepts `null` too — the contrast that scopes the fail-closed pins above",
+          "value": "010100046e756c6c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720003696e74",
+      "name": "list-of-int-decimal-null-elem",
+      "values": [
+        {
+          "conforms": false,
+          "note": "a well-formed list with a decimal element — fail-closed at the element recognizer, not a mis-accept (horos#103)",
+          "value": "010300046c69737401020003696e740002000101030007646563696d616c01020003696e7400010001020003696e74000100"
+        },
+        {
+          "conforms": false,
+          "note": "a list with a `null` element — fail-closed the same way",
+          "value": "010300046c69737401020003696e7400020001010100046e756c6c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f740103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "not-union-int-bool",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int IS in the union → its complement rejects",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "a bool IS in the union → complement rejects",
+          "value": "01020004626f6f6c000101"
+        },
+        {
+          "conforms": true,
+          "note": "text is neither int nor bool → does not conform to the union → decidable complement holds (§6, not negation-as-failure)",
+          "value": "01020009757466382d74657874000178"
+        },
+        {
+          "conforms": true,
+          "note": "a bare atom is neither → complement holds",
+          "value": "000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f740103000e686f726f732f746578742d6c656e01020003696e740002000101020003696e7400020003",
+      "name": "not-text-len-1-3",
+      "values": [
+        {
+          "conforms": false,
+          "note": "a 2-char text IS within [1,3] → complement rejects",
+          "value": "01020009757466382d7465787400026162"
+        },
+        {
+          "conforms": true,
+          "note": "a 5-char text is outside [1,3] → complement holds",
+          "value": "01020009757466382d7465787400056162636465"
+        },
+        {
+          "conforms": true,
+          "note": "empty text is below lo → does not conform to text-len → complement holds",
+          "value": "01020009757466382d746578740000"
+        },
+        {
+          "conforms": true,
+          "note": "a non-text value does not conform to text-len at all → decidable complement holds (§6: complement of a refinement is total over wrong-kind values, not NAF)",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f7401020009686f726f732f6e6f740102000c686f726f732f7363616c61720003696e74",
+      "name": "not-not-int",
+      "values": [
+        {
+          "conforms": true,
+          "note": "double complement over a recognized value: not(not(int)) classifies an int as int does",
+          "value": "01020003696e7400020005"
+        },
+        {
+          "conforms": false,
+          "note": "a bare atom is not an int → not(not(int)) rejects it",
+          "value": "000178"
+        },
+        {
+          "conforms": false,
+          "note": "text is not an int → not(not(int)) rejects it",
+          "value": "01020009757466382d74657874000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "list-of-union-int-bool",
+      "values": [
+        {
+          "conforms": true,
+          "note": "every element is int-or-bool → the nested list-of(union) conforms",
+          "value": "010400046c69737401020003696e740002000101020004626f6f6c00010101020003696e7400020002"
+        },
+        {
+          "conforms": true,
+          "note": "an empty list vacuously conforms",
+          "value": "010100046c697374"
+        },
+        {
+          "conforms": false,
+          "note": "a text element is neither int nor bool → the list rejects",
+          "value": "010300046c69737401020003696e740002000101020009757466382d74657874000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740103000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400016b00037265710102000c686f726f732f7363616c61720003696e74",
+      "name": "map-of-record-closed",
+      "values": [
+        {
+          "conforms": true,
+          "note": "text -> a valid closed record {k: int}",
+          "value": "010200036d6170010201020009757466382d74657874000161010200036d6170010201020009757466382d7465787400016b01020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "the inner record's `k` is not an int → the nested map-of(record) rejects",
+          "value": "010200036d6170010201020009757466382d74657874000161010200036d6170010201020009757466382d7465787400016b01020009757466382d74657874000178"
+        },
+        {
+          "conforms": false,
+          "note": "the inner record is closed; an extra key is rejected through the map",
+          "value": "010200036d6170010201020009757466382d74657874000161010300036d6170010201020009757466382d7465787400016b01020003696e7400020001010201020009757466382d7465787400017801020003696e7400020002"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300017801030009686f726f732f616e6401010009686f726f732f616e7901020009686f726f732f726566000178",
+      "name": "wf-unguarded-rec-and",
+      "values": [
+        {
+          "conforms": false,
+          "note": "`and` is not a structural descent, so the ref under it is unguarded → non-wf (same rule as the union case)",
+          "value": "0008616e797468696e67"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300017801020009686f726f732f6e6f7401020009686f726f732f726566000178",
+      "name": "wf-unguarded-rec-not",
+      "values": [
+        {
+          "conforms": false,
+          "note": "`not` is not a structural descent → the ref under it is unguarded → non-wf",
+          "value": "0008616e797468696e67"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001780102000d686f726f732f6c6973742d6f6601020009686f726f732f726566000178",
+      "name": "rec-list-of-guarded",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the empty list is the base case (list-of vacuous)",
+          "value": "010100046c697374"
+        },
+        {
+          "conforms": true,
+          "note": "[[]] — one element, itself an empty list, conforms to `ref x`",
+          "value": "010200046c697374010100046c697374"
+        },
+        {
+          "conforms": true,
+          "note": "[[], [[]]] — every element is itself a list-of-x",
+          "value": "010300046c697374010100046c697374010200046c697374010100046c697374"
+        },
+        {
+          "conforms": false,
+          "note": "[1] — an int element is not a `list-of(ref x)`, so the list rejects",
+          "value": "010200046c69737401020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "a bare int is not a list at all",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000c686f726f732f7365742d6f660101000a686f726f732f61746f6d",
+      "name": "canon-nested-set-in-list",
+      "values": [
+        {
+          "conforms": true,
+          "note": "a list of one CANONICAL set of atoms",
+          "value": "010200046c69737401030003736574000161000162"
+        },
+        {
+          "conforms": false,
+          "note": "a canonical list whose element is a NON-canonical (out-of-order) set → read_set rejects the nested value → false in all three cores",
+          "value": "010200046c69737401030003736574000162000161"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740102000c686f726f732f7363616c61720003696e74",
+      "name": "canon-nested-int-in-map-value",
+      "values": [
+        {
+          "conforms": true,
+          "note": "text -> a canonical int value",
+          "value": "010200036d6170010201020009757466382d7465787400016101020003696e7400020005"
+        },
+        {
+          "conforms": false,
+          "note": "a canonical map whose VALUE is a non-minimal int — recognize_int rejects the nested value, so scalar(int) fails through the map",
+          "value": "010200036d6170010201020009757466382d7465787400016101020003696e740003000005"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f61746f6d2d696e01010003736574",
+      "name": "atom-in-empty",
+      "values": [
+        {
+          "conforms": false,
+          "note": "no atom is a member of the empty set",
+          "value": "000178"
+        },
+        {
+          "conforms": false,
+          "note": "not even the empty atom is a member of ∅",
+          "value": "0000"
+        },
+        {
+          "conforms": false,
+          "note": "a non-atom is rejected regardless",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0108000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400087265616c6d5f696400037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d74657874000767656e6573697300037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d74657874000673796d626f6c00037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d7465787400057363616c6500037265710102000c686f726f732f7363616c61720003696e740104000b686f726f732f6669656c6401020009757466382d74657874000a646976697369626c653f00037265710102000c686f726f732f7363616c61720004626f6f6c0104000b686f726f732f6669656c6401020009757466382d74657874000b737570706c795f6d6f646500037265710103000b686f726f732f756e696f6e0102000b686f726f732f657861637401020009757466382d74657874000566697865640102000b686f726f732f657861637401020009757466382d746578740007656c6173746963",
+      "name": "asset-id-preimage",
+      "values": [
+        {
+          "conforms": true,
+          "note": "canonical op-D asset_id preimage — divisible fixed-supply asset; realm_id/genesis as width-64 lowercase-hex content-address text",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": true,
+          "note": "indivisible elastic asset with a large (1e9) scale — magnitude is NOT a form bound (scale ruled bare int, int-range §5-principled-out)",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e740005003b9aca00010201020009757466382d74657874000673796d626f6c01020009757466382d7465787400044b494c4f010201020009757466382d74657874000767656e6573697301020009757466382d74657874004063646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364636463646364010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004061626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000100010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d746578740007656c6173746963"
+        },
+        {
+          "conforms": false,
+          "note": "required genesis missing — genesis is a form-load-bearing identity field in the re-factored preimage",
+          "value": "010600036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "required divisible? missing",
+          "value": "010600036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "extra key under closed preimage — a 7th field is not the frozen record",
+          "value": "010800036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d7465787400097a7a7a5f657874726101020003696e7400020001010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "supply_mode as an int discriminant — rejected; the symbol set is utf8-text",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020003696e74000100"
+        },
+        {
+          "conforms": false,
+          "note": "supply_mode text outside the closed {fixed, elastic} set — rejected",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400046275726e"
+        },
+        {
+          "conforms": false,
+          "note": "realm_id as a 32-byte atom — rejected; the re-factored form carries realm_id as utf8-text, not the voided PIN-2 atom-len(32,32)",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696400201111111111111111111111111111111111111111111111111111111111111111010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "genesis as a bare int — rejected; genesis is a utf8-text content-address embedding",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020003696e7400020001010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "symbol as a bare int — rejected; symbol is a utf8-text embedding",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020003696e7400020001010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c000101010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": false,
+          "note": "divisible? with an empty bool payload — rejected; scalar(bool) fails through the record",
+          "value": "010700036d6170010201020009757466382d7465787400057363616c6501020003696e7400020008010201020009757466382d74657874000673796d626f6c01020009757466382d746578740004474f4c44010201020009757466382d74657874000767656e6573697301020009757466382d74657874004061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130613061306130010201020009757466382d7465787400087265616c6d5f696401020009757466382d74657874004031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131010201020009757466382d74657874000a646976697369626c653f01020004626f6f6c0000010201020009757466382d74657874000b737570706c795f6d6f646501020009757466382d7465787400056669786564"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "divisible-flag-bool",
+      "values": [
+        {
+          "conforms": true,
+          "note": "canonical true",
+          "value": "01020004626f6f6c000101"
+        },
+        {
+          "conforms": true,
+          "note": "canonical false",
+          "value": "01020004626f6f6c000100"
+        },
+        {
+          "conforms": false,
+          "note": "empty payload — not a 1-byte bool",
+          "value": "01020004626f6f6c0000"
+        },
+        {
+          "conforms": false,
+          "note": "two-byte payload — a bool payload is exactly one byte",
+          "value": "01020004626f6f6c00020100"
+        },
+        {
+          "conforms": false,
+          "note": "payload byte 0x02 — outside the {0x00, 0x01} range",
+          "value": "01020004626f6f6c000102"
+        },
+        {
+          "conforms": false,
+          "note": "a bare int is not the bool embedding",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0102000b686f726f732f657861637401020009757466382d74657874000566697865640102000b686f726f732f657861637401020009757466382d746578740007656c6173746963",
+      "name": "supply-mode-symbol",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the fixed symbol",
+          "value": "01020009757466382d7465787400056669786564"
+        },
+        {
+          "conforms": true,
+          "note": "the elastic symbol",
+          "value": "01020009757466382d746578740007656c6173746963"
+        },
+        {
+          "conforms": false,
+          "note": "a utf8-text outside the closed set",
+          "value": "01020009757466382d7465787400046275726e"
+        },
+        {
+          "conforms": false,
+          "note": "an int discriminant — supply_mode is a utf8-text symbol, not an int",
+          "value": "01020003696e74000100"
+        },
+        {
+          "conforms": false,
+          "note": "a bare atom — not the utf8-text embedding of \"fixed\"",
+          "value": "00056669786564"
+        }
+      ],
+      "wf": true
+    }
+  ],
+  "note": "Hand-authored conformance oracle for horos. `descriptor` and `value` are ontos-codec-v1 lowercase hex; `wf`/`conforms` are the expected judgments, authored from docs/spec/horos.md. Every core decodes the hex and must agree byte-for-byte.",
+  "version": "horos-v1"
+}

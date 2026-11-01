@@ -1,0 +1,8 @@
+# Build output and vendored deps.
+dist/
+node_modules/
+
+# Generated / externally-owned files Prettier should not reflow.
+package-lock.json
+README.md
+.npmrc
