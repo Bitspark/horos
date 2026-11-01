@@ -43,7 +43,11 @@ func TestDiagnosticWFDepthAndScope(t *testing.T) {
 		}
 		return ty
 	}
-	field := func(ty Value) Value { return desc("field", data.EncodeText("next"), dAtom("opt"), ty) }
+	name, err := data.EncodeText("next")
+	if err != nil {
+		t.Fatal(err)
+	}
+	field := func(ty Value) Value { return desc("field", name, dAtom("opt"), ty) }
 	for _, inner := range []Value{
 		desc("rec", dAtom("x"), seqs(2, desc("any"))),
 		desc("record", dAtom("open"), field(seqs(2, desc("any")))),
