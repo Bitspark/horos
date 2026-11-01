@@ -2,12 +2,17 @@
 import base64
 import copy
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 import package
+
+spec = importlib.util.spec_from_file_location("finalize_release", Path(__file__).with_name("finalize-release.py"))
+finalize = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(finalize)
 
 
 class ReceiptTest(unittest.TestCase):
@@ -44,6 +49,56 @@ class ReceiptTest(unittest.TestCase):
                         check(data)
                 (root / entries[0]["file"]).write_bytes(b"tampered")
                 with self.assertRaises(AssertionError): check(original)
+
+
+class FinalizationTest(unittest.TestCase):
+    def test_incomplete_release_recovery(self):
+        accepted = {"source": "source", "version": "0.6.0", "oracle_sha256": "oracle",
+                    "packages": [{"file": "npm.tgz"}, {"file": "cargo.crate"}]}
+        verified = {"source": "source", "version": "0.6.0", "oracle_sha256": "oracle", "mode": "published",
+                    "anonymous_consumers": ["npm", "crates.io", "Go proxy"], "go_origin": {"Hash": "source"},
+                    "ci": "https://github.com/Bitspark/horos/actions/runs/1", "run_id": "2"}
+        for scenario in ("complete", "missing", "source", "version", "oracle_sha256", "mode", "consumers", "artifact"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temp:
+                directory = Path(temp)
+                remote = {name: name.encode() for name in ("npm.tgz", "cargo.crate", "candidate.json")}
+                for name, data in remote.items():
+                    (directory / name).write_bytes(data)
+                proof_name = "published-verification.json"
+                (directory / proof_name).write_text(json.dumps(verified))
+                original = dict(verified, run_id="1")
+                if scenario in ("source", "version", "oracle_sha256", "mode"):
+                    original[scenario] = "wrong"
+                if scenario == "consumers": original["anonymous_consumers"] = ["npm", "crates.io"]
+                if scenario != "missing": remote[proof_name] = json.dumps(original).encode()
+                if scenario == "artifact": remote["npm.tgz"] = b"different"
+                uploads = []
+
+                def gh(args, **kwargs):
+                    if args[2] == "download":
+                        destination = Path(args[args.index("--dir") + 1])
+                        selected = {proof_name} if "--pattern" in args else set(remote)
+                        for name in selected:
+                            (destination / name).write_bytes(remote[name])
+                    elif args[2] == "upload":
+                        self.assertNotIn("--clobber", args)
+                        uploaded = Path(args[4])
+                        self.assertEqual(uploaded.name, proof_name)
+                        self.assertNotIn(uploaded.name, remote)
+                        uploads.append(uploaded.name)
+                        remote[uploaded.name] = uploaded.read_bytes()
+                    else:
+                        self.fail(f"unexpected provider action: {args}")
+
+                with patch.object(finalize.subprocess, "run", side_effect=gh):
+                    if scenario in ("complete", "missing"):
+                        finalize.preserve_existing(directory, accepted, "Bitspark/horos")
+                        self.assertEqual(uploads, [proof_name] if scenario == "missing" else [])
+                        self.assertEqual(json.loads(remote[proof_name])["run_id"], "2" if scenario == "missing" else "1")
+                    else:
+                        with self.assertRaises(AssertionError):
+                            finalize.preserve_existing(directory, accepted, "Bitspark/horos")
+                        self.assertEqual(uploads, [])
 
 
 if __name__ == "__main__":
