@@ -408,11 +408,18 @@ fn diagnose_wf_in(t: &Value, bound: &Pending, pending: &Pending, depth: usize) -
         ("union", ts) | ("and", ts) => wf_all(ts, bound, pending),
         ("not", [t1]) => diagnose_wf_in(t1, bound, pending, depth + 1),
         ("rec", [name, body]) => match atom_bytes(name) {
-            Some(name) => diagnose_wf_in(body, &pushed_pending(bound, name), &pushed_pending(pending, name), depth + 1),
+            Some(name) => diagnose_wf_in(
+                body,
+                &pushed_pending(bound, name),
+                &pushed_pending(pending, name),
+                depth + 1,
+            ),
             None => Diagnosis::NotWellFormed,
         },
         ("ref", [name]) => match atom_bytes(name) {
-            Some(name) if bound.iter().any(|n| n == name) && !pending.iter().any(|n| n == name) => Diagnosis::Conforms,
+            Some(name) if bound.iter().any(|n| n == name) && !pending.iter().any(|n| n == name) => {
+                Diagnosis::Conforms
+            }
             _ => Diagnosis::NotWellFormed,
         },
         ("record", [mode, fields @ ..]) => {
@@ -422,8 +429,12 @@ fn diagnose_wf_in(t: &Value, bound: &Pending, pending: &Pending, depth: usize) -
             let mut names = Vec::new();
             let mut outcomes = Vec::new();
             for field in fields {
-                let Some((name, _, ty)) = read_field(field) else { return Diagnosis::NotWellFormed; };
-                if names.contains(&name) { return Diagnosis::NotWellFormed; }
+                let Some((name, _, ty)) = read_field(field) else {
+                    return Diagnosis::NotWellFormed;
+                };
+                if names.contains(&name) {
+                    return Diagnosis::NotWellFormed;
+                }
                 names.push(name);
                 outcomes.push(diagnose_wf_in(ty, bound, &[], depth + 1));
             }
@@ -477,13 +488,9 @@ mod tests {
     }
 
     fn load_oracle() -> serde_json::Value {
-        let path: PathBuf = [
-            env!("CARGO_MANIFEST_DIR"),
-            "testdata",
-            "conformance.json",
-        ]
-        .iter()
-        .collect();
+        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "testdata", "conformance.json"]
+            .iter()
+            .collect();
         serde_json::from_str(&std::fs::read_to_string(&path).expect("conformance.json")).unwrap()
     }
     fn from_hex(s: &str) -> Vec<u8> {

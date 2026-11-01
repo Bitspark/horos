@@ -113,9 +113,15 @@ exhausted sibling regardless of order. On completed inputs diagnostics agree
 with the boolean recognizer; exhaustion makes no completed classification claim.
 See the [diagnostic rules](../architecture/decisions/0008-diagnostic-outcomes-kleene.md).
 
-Rust consumers must also account for recursive destruction of very deeply nested
-ontos values. The CLI uses a larger thread stack; the recognizer's bound alone
-does not bound the stack needed to construct or drop an arbitrary value.
+Ontos 0.15.0 supplies stack-safe Rust value equality and destruction. The Rust CLI
+uses a larger thread stack for the checker's bounded descriptor/value traversal.
+Go and TypeScript compare `exact` literals iteratively; data inside a literal is
+not descriptor descent and does not consume the checker's depth budget.
+
+The Python source is a corpus-validation implementation, not a published runtime
+with the same deep-input qualification. Its host interpreter recursion limit can
+be reached before the logical depth cap; callers must not rely on it for arbitrary
+deep or adversarial inputs.
 
 ## Boundaries
 

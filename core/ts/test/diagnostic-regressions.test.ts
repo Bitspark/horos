@@ -10,6 +10,28 @@ const d = (ctor: string, ...args: Value[]): Value => tuple([a(`horos/${ctor}`), 
 const seqs = (n: number, ty: Value): Value => { for (let i = 0; i < n; i++) ty = d("seq", ty); return ty; };
 const field = (ty: Value): Value => d("field", encodeText("next"), a("opt"), ty);
 
+test("exact compares deep finite literals without native stack recursion", () => {
+  let v: Value = a("end"), equal: Value = a("end"), different: Value = a("other");
+  for (let i = 0; i < 20000; i++) { v = tuple([v]); equal = tuple([equal]); different = tuple([different]); }
+  const ty = d("exact", v);
+  assert.equal(wf(ty), true);
+  assert.equal(conforms(equal, ty), true);
+  assert.equal(diagnose(equal, ty).verdict, "conforms");
+  assert.equal(conforms(different, ty), false);
+  assert.equal(diagnose(different, ty).verdict, "mismatch");
+});
+
+test("a byte-order mark does not normalize a descriptor or field label", () => {
+  const invalid = tuple([a("\ufeffhoros/any")]);
+  const invalidField = tuple([a("\ufeffhoros/field"), encodeText("next"), a("opt"), d("any")]);
+  for (const ty of [invalid, d("record", a("open"), invalidField)]) {
+    assert.equal(wf(ty), false);
+    assert.equal(conforms(tuple([]), ty), false);
+    assert.equal(diagnoseWf(ty).verdict, "not_well_formed");
+    assert.equal(diagnose(tuple([]), ty).verdict, "not_well_formed");
+  }
+});
+
 test("diagnostics preserve arbitrary binary labels and recursion names", () => {
   const x = atom(new Uint8Array([0x80])), y = atom(new Uint8Array([0x81]));
   const label = d("compound", x);

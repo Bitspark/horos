@@ -33,7 +33,7 @@ import {
   MAX_RECURSION_DEPTH,
   NAMESPACE,
   readFieldDescriptor,
-} from "./index.js";
+} from "./core.js";
 
 /** The declared bound an `exhausted` outcome reached. */
 export type Limit = "recursion_depth";
@@ -180,7 +180,6 @@ interface Binding {
   readonly body: Value;
 }
 
-
 function head(t: Value): { ctor: string; args: readonly Value[] } | undefined {
   if (t.kind !== "tuple") return undefined;
   const items = t.items();
@@ -188,7 +187,7 @@ function head(t: Value): { ctor: string; args: readonly Value[] } | undefined {
   if (first === undefined || first.kind !== "atom") return undefined;
   let s: string;
   try {
-    s = new TextDecoder("utf-8", { fatal: true }).decode(first.bytes());
+    s = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(first.bytes());
   } catch {
     return undefined;
   }
@@ -290,7 +289,12 @@ function structuralChildren(
       const items = v.items();
       if (label === undefined || items.length !== args.length) return undefined;
       const got = atomBytesOf(items[0]!);
-      if (got === undefined || got.length !== label.length || got.some((b, i) => b !== label[i])) return undefined;
+      if (
+        got === undefined ||
+        got.length !== label.length ||
+        got.some((b, i) => b !== label[i])
+      )
+        return undefined;
       return args.slice(1).map((ct, i) => [items[i + 1]!, ct] as [Value, Value]);
     }
     case "list-of":
@@ -365,7 +369,12 @@ function recordChildren(
   return out;
 }
 
-function diagnoseWfIn(t: Value, bound: readonly string[], pending: readonly string[], depth: number): Diagnosis {
+function diagnoseWfIn(
+  t: Value,
+  bound: readonly string[],
+  pending: readonly string[],
+  depth: number,
+): Diagnosis {
   if (depth > MAX_RECURSION_DEPTH) return exhausted("recursion_depth");
   const h = head(t);
   if (h === undefined) return NOT_WF;
@@ -396,7 +405,9 @@ function diagnoseWfIn(t: Value, bound: readonly string[], pending: readonly stri
     case "and":
       return wfAll(args, pending);
     case "not":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, pending, depth + 1);
+      return args.length !== 1
+        ? NOT_WF
+        : diagnoseWfIn(args[0]!, bound, pending, depth + 1);
     case "rec": {
       if (args.length !== 2) return NOT_WF;
       const name = atomStringOf(args[0]!);
@@ -406,7 +417,9 @@ function diagnoseWfIn(t: Value, bound: readonly string[], pending: readonly stri
     case "ref": {
       if (args.length !== 1) return NOT_WF;
       const name = atomStringOf(args[0]!);
-      return name !== undefined && bound.includes(name) && !pending.includes(name) ? CONFORMS : NOT_WF;
+      return name !== undefined && bound.includes(name) && !pending.includes(name)
+        ? CONFORMS
+        : NOT_WF;
     }
     case "record": {
       if (args.length < 1) return NOT_WF;

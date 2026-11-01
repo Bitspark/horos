@@ -40,5 +40,5 @@ jobs:
         env:
           ONTOS_PY_ROOT: ${{ runner.temp }}/ontos
           npm_config_userconfig: /dev/null
-          npm_config_globalconfig: /dev/null
+          npm_config_globalconfig: ${{ runner.temp }}/empty-global-npmrc
         run: bash scripts/check.sh '${{ matrix.target }}'

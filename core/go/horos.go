@@ -399,7 +399,7 @@ func conformsIn(v, t Value, env *envScope, pending *nameScope, depth int) bool {
 		if len(args) != 1 {
 			return false
 		}
-		return core.Equal(v, args[0])
+		return exactEqual(v, args[0])
 
 	// Recursion. rec binds the name; ref unfolds it, but only when guarded.
 	case "rec":
