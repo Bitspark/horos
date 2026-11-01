@@ -35,6 +35,8 @@ else:
     assert receipt["mode"] == "rehearse" and receipt["version"] == "0.6.0"
     assert receipt["run_id"] == run_id and receipt["source"] == run["head_sha"]
     source = receipt["source"]
+    if mode == "provenance":
+        assert source == os.environ["GITHUB_SHA"], "provenance must identify the actual dispatch revision"
     assert api(base)["private"] is False and repo.lower() == "bitspark/horos"
     for tag in ("v0.6.0", "core/go/v0.6.0"):
         assert api(f"{base}/commits/{urllib.parse.quote(tag, safe='')}")["sha"] == source, tag
