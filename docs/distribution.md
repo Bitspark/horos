@@ -5,10 +5,10 @@ private history and are not tags in this repository.
 
 | Surface | Distribution | Dependency |
 | --- | --- | --- |
-| TypeScript | npmjs `@bitspark/horos@0.6.0` | Ontos core, codec and data 0.15.0 |
+| TypeScript | npmjs `@bitspark/horos@0.6.0` | ontos core, codec and data 0.15.0 |
 | Rust | crates.io `bitspark-horos@0.6.0`, library `horos` | bitspark-ontos-core/codec/data 0.15.0 |
 | Go | `github.com/Bitspark/horos/core/go@v0.6.0` | github.com/bitspark/ontos v0.15.0 |
-| Python | Source-only validation lane | Ontos v0.15.0 Python source |
+| Python | Source-only validation lane | ontos v0.15.0 Python source |
 
 The root `v0.6.0` and nested `core/go/v0.6.0` tags identify the same commit. There
 are no private runtime dependencies, hidden registry routes or compatibility

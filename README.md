@@ -32,8 +32,8 @@ cargo add bitspark-horos@0.6.0
 go get github.com/Bitspark/horos/core/go@v0.6.0
 ```
 
-The Rust package's library name is `horos`. All three packages use public Ontos
-0.15.0, retaining a single Ontos value type in each dependency graph. The
+The Rust package's library name is `horos`. All three packages use public ontos
+0.15.0, retaining a single ontos value type in each dependency graph. The
 TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 

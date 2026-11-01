@@ -113,7 +113,7 @@ exhausted sibling regardless of order. On completed inputs diagnostics agree
 with the boolean recognizer; exhaustion makes no completed classification claim.
 See the [diagnostic rules](../architecture/decisions/0008-diagnostic-outcomes-kleene.md).
 
-Ontos 0.15.0 supplies stack-safe Rust value equality and destruction. The Rust CLI
+ontos 0.15.0 supplies stack-safe Rust value equality and destruction. The Rust CLI
 uses a larger thread stack for the checker's bounded descriptor/value traversal.
 Go and TypeScript compare `exact` literals iteratively; data inside a literal is
 not descriptor descent and does not consume the checker's depth budget.

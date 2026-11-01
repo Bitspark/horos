@@ -21,7 +21,7 @@ concurrency:
   group: release-0.6.0
   cancel-in-progress: false
 env:
-  CANDIDATE: ${{ github.workspace }}/../candidate
+  CANDIDATE: ${{ github.workspace }}/.artifacts/candidate
 jobs:
   gate:
     runs-on: ubuntu-latest
