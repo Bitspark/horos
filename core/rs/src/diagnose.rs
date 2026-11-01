@@ -407,16 +407,29 @@ fn diagnose_wf_in(t: &Value, bound: &Pending, pending: &Pending, depth: usize) -
         ]),
         ("union", ts) | ("and", ts) => wf_all(ts, bound, pending),
         ("not", [t1]) => diagnose_wf_in(t1, bound, pending, depth + 1),
-        // Everything else (records, rec/ref, arity errors, unknown ctors) is decided by the
-        // frozen `wf` for THIS node; only the recursive shapes above can hide an exhaustion,
-        // and they are handled explicitly here.
-        _ => {
-            if crate::wf(t) {
-                Diagnosis::Conforms
-            } else {
-                Diagnosis::NotWellFormed
+        ("rec", [name, body]) => match atom_bytes(name) {
+            Some(name) => diagnose_wf_in(body, &pushed_pending(bound, name), &pushed_pending(pending, name), depth + 1),
+            None => Diagnosis::NotWellFormed,
+        },
+        ("ref", [name]) => match atom_bytes(name) {
+            Some(name) if bound.iter().any(|n| n == name) && !pending.iter().any(|n| n == name) => Diagnosis::Conforms,
+            _ => Diagnosis::NotWellFormed,
+        },
+        ("record", [mode, fields @ ..]) => {
+            if !matches!(atom_bytes(mode), Some(b"open" | b"closed")) {
+                return Diagnosis::NotWellFormed;
             }
+            let mut names = Vec::new();
+            let mut outcomes = Vec::new();
+            for field in fields {
+                let Some((name, _, ty)) = read_field(field) else { return Diagnosis::NotWellFormed; };
+                if names.contains(&name) { return Diagnosis::NotWellFormed; }
+                names.push(name);
+                outcomes.push(diagnose_wf_in(ty, bound, &[], depth + 1));
+            }
+            kleene_all(outcomes)
         }
+        _ => Diagnosis::NotWellFormed,
     }
 }
 
@@ -466,9 +479,7 @@ mod tests {
     fn load_oracle() -> serde_json::Value {
         let path: PathBuf = [
             env!("CARGO_MANIFEST_DIR"),
-            "..",
-            "..",
-            "vectors",
+            "testdata",
             "conformance.json",
         ]
         .iter()

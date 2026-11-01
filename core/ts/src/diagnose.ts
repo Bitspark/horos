@@ -33,7 +33,6 @@ import {
   MAX_RECURSION_DEPTH,
   NAMESPACE,
   readFieldDescriptor,
-  wf,
 } from "./index.js";
 
 /** The declared bound an `exhausted` outcome reached. */
@@ -158,7 +157,7 @@ function kleeneAll(outcomes: readonly Diagnosis[]): Diagnosis {
  * — the distinction horos-internal#211 asks for by name.
  */
 export function diagnoseWf(t: Value): Diagnosis {
-  return diagnoseWfIn(t, [], 0);
+  return diagnoseWfIn(t, [], [], 0);
 }
 
 /**
@@ -181,7 +180,6 @@ interface Binding {
   readonly body: Value;
 }
 
-const dec = new TextDecoder();
 
 function head(t: Value): { ctor: string; args: readonly Value[] } | undefined {
   if (t.kind !== "tuple") return undefined;
@@ -204,7 +202,11 @@ function atomBytesOf(v: Value): Uint8Array | undefined {
 
 function atomStringOf(v: Value): string | undefined {
   const b = atomBytesOf(v);
-  return b === undefined ? undefined : dec.decode(b);
+  if (b === undefined) return undefined;
+  // One code point per byte: arbitrary atom names must never alias through UTF-8 replacement.
+  let key = "";
+  for (const byte of b) key += String.fromCharCode(byte);
+  return key;
 }
 
 function diagnoseIn(
@@ -288,7 +290,7 @@ function structuralChildren(
       const items = v.items();
       if (label === undefined || items.length !== args.length) return undefined;
       const got = atomBytesOf(items[0]!);
-      if (got === undefined || dec.decode(got) !== dec.decode(label)) return undefined;
+      if (got === undefined || got.length !== label.length || got.some((b, i) => b !== label[i])) return undefined;
       return args.slice(1).map((ct, i) => [items[i + 1]!, ct] as [Value, Value]);
     }
     case "list-of":
@@ -363,7 +365,7 @@ function recordChildren(
   return out;
 }
 
-function diagnoseWfIn(t: Value, pending: readonly string[], depth: number): Diagnosis {
+function diagnoseWfIn(t: Value, bound: readonly string[], pending: readonly string[], depth: number): Diagnosis {
   if (depth > MAX_RECURSION_DEPTH) return exhausted("recursion_depth");
   const h = head(t);
   if (h === undefined) return NOT_WF;
@@ -371,32 +373,55 @@ function diagnoseWfIn(t: Value, pending: readonly string[], depth: number): Diag
   if (isLeafCtor(ctor)) return leafWellFormed(t) ? CONFORMS : NOT_WF;
 
   const wfAll = (ts: readonly Value[], p: readonly string[]): Diagnosis =>
-    kleeneAll(ts.map((ct) => diagnoseWfIn(ct, p, depth + 1)));
+    kleeneAll(ts.map((ct) => diagnoseWfIn(ct, bound, p, depth + 1)));
 
   switch (ctor) {
     case "tuple":
       return wfAll(args, []);
     case "seq":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, [], depth + 1);
+      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, [], depth + 1);
     case "compound":
       if (args.length < 1 || atomBytesOf(args[0]!) === undefined) return NOT_WF;
       return wfAll(args.slice(1), []);
     case "list-of":
     case "set-of":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, [], depth + 1);
+      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, [], depth + 1);
     case "map-of":
       if (args.length !== 2) return NOT_WF;
       return kleeneAll([
-        diagnoseWfIn(args[0]!, [], depth + 1),
-        diagnoseWfIn(args[1]!, [], depth + 1),
+        diagnoseWfIn(args[0]!, bound, [], depth + 1),
+        diagnoseWfIn(args[1]!, bound, [], depth + 1),
       ]);
     case "union":
     case "and":
       return wfAll(args, pending);
     case "not":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, pending, depth + 1);
+      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, pending, depth + 1);
+    case "rec": {
+      if (args.length !== 2) return NOT_WF;
+      const name = atomStringOf(args[0]!);
+      if (name === undefined) return NOT_WF;
+      return diagnoseWfIn(args[1]!, [...bound, name], [...pending, name], depth + 1);
+    }
+    case "ref": {
+      if (args.length !== 1) return NOT_WF;
+      const name = atomStringOf(args[0]!);
+      return name !== undefined && bound.includes(name) && !pending.includes(name) ? CONFORMS : NOT_WF;
+    }
+    case "record": {
+      if (args.length < 1) return NOT_WF;
+      const mode = atomStringOf(args[0]!);
+      if (mode !== "open" && mode !== "closed") return NOT_WF;
+      const names = new Set<string>();
+      const outcomes: Diagnosis[] = [];
+      for (const field of args.slice(1)) {
+        const fd = readFieldDescriptor(field);
+        if (fd === undefined || names.has(fd.name)) return NOT_WF;
+        names.add(fd.name);
+        outcomes.push(diagnoseWfIn(fd.ty, bound, [], depth + 1));
+      }
+      return kleeneAll(outcomes);
+    }
   }
-  // Everything else (records, rec/ref, arity errors, unknown ctors) is decided by the frozen
-  // wf for THIS node; only the recursive shapes above can hide an exhaustion.
-  return wf(t) ? CONFORMS : NOT_WF;
+  return NOT_WF;
 }

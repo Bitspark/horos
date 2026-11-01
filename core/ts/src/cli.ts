@@ -15,7 +15,9 @@ try {
   } else if (args[0] === "conforms" && args.length === 3) {
     console.log(conforms(value(args[2]!), value(args[1]!)));
   } else {
-    throw new Error("usage: horos-conform wf <descriptor> | conforms <descriptor> <value>");
+    throw new Error(
+      "usage: horos-conform wf <descriptor> | conforms <descriptor> <value>",
+    );
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

@@ -517,11 +517,43 @@ func diagnoseWFIn(t Value, bound, pending [][]byte, depth int) Diagnosis {
 			return notWellFormed
 		}
 		return diagnoseWFIn(args[0], bound, pending, depth+1)
-	}
-	// Everything else (records, rec/ref, arity errors, unknown ctors) is decided by the frozen
-	// WF for THIS node; only the recursive shapes above can hide an exhaustion.
-	if WF(t) {
-		return conformsD
+	case "rec":
+		if len(args) != 2 {
+			return notWellFormed
+		}
+		name, ok := atomBytes(args[0])
+		if !ok {
+			return notWellFormed
+		}
+		return diagnoseWFIn(args[1], diagPushName(bound, name), diagPushName(pending, name), depth+1)
+	case "ref":
+		if len(args) != 1 {
+			return notWellFormed
+		}
+		name, ok := atomBytes(args[0])
+		if ok && containsName(bound, name) && !containsName(pending, name) {
+			return conformsD
+		}
+		return notWellFormed
+	case "record":
+		if len(args) < 1 {
+			return notWellFormed
+		}
+		mode, ok := atomBytes(args[0])
+		if !ok || (string(mode) != "open" && string(mode) != "closed") {
+			return notWellFormed
+		}
+		names := make(map[string]bool)
+		outcomes := make([]Diagnosis, 0, len(args)-1)
+		for _, field := range args[1:] {
+			name, _, ty, ok := readField(field)
+			if !ok || names[name] {
+				return notWellFormed
+			}
+			names[name] = true
+			outcomes = append(outcomes, diagnoseWFIn(ty, bound, nil, depth+1))
+		}
+		return kleeneAll(outcomes)
 	}
 	return notWellFormed
 }

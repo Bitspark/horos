@@ -49,7 +49,7 @@ func dDeepCons(n int) Value {
 // it agrees with the frozen boolean. Where it reports Exhausted the boolean is unconstrained.
 // This is also the anti-drift gate between the two recursions.
 func TestDiagnosisAgreesWithTheBooleanOnCompleted(t *testing.T) {
-	path := filepath.Join("..", "..", "vectors", "conformance.json")
+	path := filepath.Join("testdata", "conformance.json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)

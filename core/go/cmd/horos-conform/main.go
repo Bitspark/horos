@@ -16,15 +16,23 @@ func run(args []string) (bool, error) {
 	}
 	decode := func(s string) (horos.Value, error) {
 		b, err := hex.DecodeString(s)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return codec.Decode(b)
 	}
 	desc, err := decode(args[1])
-	if err != nil { return false, err }
-	if args[0] == "wf" && len(args) == 2 { return horos.WF(desc), nil }
+	if err != nil {
+		return false, err
+	}
+	if args[0] == "wf" && len(args) == 2 {
+		return horos.WF(desc), nil
+	}
 	if args[0] == "conforms" && len(args) == 3 {
 		value, err := decode(args[2])
-		if err != nil { return false, err }
+		if err != nil {
+			return false, err
+		}
 		return horos.Conforms(value, desc), nil
 	}
 	return false, fmt.Errorf("unknown judgment or wrong arity")
@@ -32,6 +40,9 @@ func run(args []string) (bool, error) {
 
 func main() {
 	v, err := run(os.Args[1:])
-	if err != nil { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	fmt.Println(v)
 }

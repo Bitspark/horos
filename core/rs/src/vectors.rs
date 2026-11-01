@@ -1726,10 +1726,7 @@ fn emit(cases: &[Case]) {
 /// and TS cores run, so the three agree on one oracle.
 #[test]
 fn vectors_replay() {
-    let path = format!(
-        "{}/testdata/conformance.json",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let path = format!("{}/testdata/conformance.json", env!("CARGO_MANIFEST_DIR"));
     let txt = std::fs::read_to_string(&path)
         .expect("vectors/conformance.json missing — run with HOROS_EMIT_VECTORS=1 first");
     let doc: serde_json::Value = serde_json::from_str(&txt).unwrap();

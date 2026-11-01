@@ -1,5 +1,10 @@
 //! The horos descriptor checker over ontos values. See docs/spec/horos.md.
 
+#![forbid(unsafe_code)]
+
+#[cfg(test)]
+mod diagnostic_regressions;
+
 use std::collections::HashMap;
 
 use ontos_core::Value;

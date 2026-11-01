@@ -4,15 +4,36 @@
   "description": "Types and schemas over ontos values: descriptor well-formedness, conformance and diagnostics.",
   "license": "Apache-2.0",
   "type": "module",
-  "repository": { "type": "git", "url": "git+https://github.com/Bitspark/horos.git", "directory": "core/ts" },
-  "publishConfig": { "registry": "https://registry.npmjs.org/", "access": "public", "provenance": true },
-  "files": ["dist/src", "LICENSE", "LICENSE-MIT", "NOTICE"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bitspark/horos.git",
+    "directory": "core/ts"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/src",
+    "LICENSE",
+    "LICENSE-MIT",
+    "NOTICE"
+  ],
   "exports": {
-    ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" },
-    "./diagnose": { "types": "./dist/src/diagnose.d.ts", "import": "./dist/src/diagnose.js" },
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./diagnose": {
+      "types": "./dist/src/diagnose.d.ts",
+      "import": "./dist/src/diagnose.js"
+    },
     "./package.json": "./package.json"
   },
-  "bin": { "horos-conform": "./dist/src/cli.js" },
+  "bin": {
+    "horos-conform": "./dist/src/cli.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
