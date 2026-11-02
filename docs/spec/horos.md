@@ -130,3 +130,9 @@ Two descriptors may classify the same values while remaining distinct ontos
 values. Naming, generic templates, specialization, schema migration, native type
 generation, cross-field relations and behavioral contracts are separate work.
 Library names such as Function, Stream and Cell are not built-in descriptor kinds.
+
+The [declaration proposal](declarations.md) specifies a separate layer for named
+modules, generic slots and applications, reusing descriptor positions and
+specializing to this existing vocabulary. Its format is proposed, not accepted
+by the 0.6.0 checker. Declaration semantics belong to horos; syntax and native
+generation belong to bittype. It does not add new ground descriptor constructors.
