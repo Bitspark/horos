@@ -20,7 +20,7 @@ func Resolve(root core.Value, dependencies []core.Value) (*Program, error) {
 
 func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits) (*Program, error) {
 	if !limits.valid() {
-		return nil, failure(Invalid, "invalid checking limits")
+		return nil, failure(InvalidOptions, "invalid checking limits")
 	}
 	if len(dependencies) >= limits.MaxModules {
 		return nil, failure(Exhausted, "supplied-module limit reached")
@@ -31,11 +31,17 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 	var rootPin Digest
 	for i, value := range all {
 		if err := input.value(value, 0); err != nil {
+			if detail, ok := err.(*Error); ok && i > 0 && detail.Code == Invalid {
+				copy := *detail
+				copy.Subject = SubjectContext
+				return nil, &copy
+			}
 			return nil, err
 		}
 		pin := sha256.Sum256(codec.Encode(value))
 		if previous, exists := pool[pin]; exists && !core.Equal(previous, value) {
-			return nil, failure(Invalid, "distinct module values have the same digest")
+			return nil, &Error{Code: Invalid, Subject: SubjectContext, Dependency: pin,
+				Message: "distinct module values have the same digest"}
 		}
 		pool[pin] = value
 		if i == 0 {
@@ -53,27 +59,49 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 			return failure(Exhausted, "import depth limit reached")
 		}
 		if state[pin] == 1 {
-			return failure(Cycle, "cyclic module imports")
+			return sourceFailure(&Error{Code: Cycle, Subject: SubjectSource, Module: pin,
+				Message: "cyclic module imports"}, rootPin)
 		}
 		if state[pin] == 2 {
 			return nil
 		}
 		value, ok := pool[pin]
 		if !ok {
-			return failure(Resolution, "missing pinned module "+pin.String())
+			return &Error{Code: MissingDependency, Subject: SubjectContext, Dependency: pin,
+				Message: "missing pinned module " + pin.String()}
 		}
 		m, err := readModule(pin, value)
 		if err != nil {
+			if detail, ok := err.(*Error); ok {
+				copy := *detail
+				copy.Module = pin
+				if pin != rootPin {
+					copy.Subject = SubjectContext
+					copy.Dependency = pin
+				}
+				return &copy
+			}
 			return err
 		}
 		state[pin] = 1
 		p.modules[pin] = m
 		for _, imported := range m.imports {
 			if err := load(imported.pin, depth+1); err != nil {
+				if detail, ok := err.(*Error); ok && detail.Subject == SubjectContext && detail.ImportAlias == "" {
+					copy := *detail
+					copy.Module = m.pin
+					copy.ImportAlias = imported.alias
+					copy.Dependency = imported.pin
+					copy.ExpectedName = imported.name
+					return &copy
+				}
 				return err
 			}
 			if p.modules[imported.pin].name != imported.name {
-				return failure(Resolution, "imported module name does not match its pin")
+				return &Error{Code: ImportMismatch, Subject: SubjectContext, Module: m.pin,
+					ImportAlias: imported.alias, Dependency: imported.pin, ExpectedName: imported.name,
+					ActualName: p.modules[imported.pin].name,
+					Message:    "imported module name does not match its pin"}
 			}
 		}
 		state[pin] = 2
@@ -99,7 +127,7 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 				err = descriptorWF(skeleton)
 			}
 			if err != nil {
-				return nil, locate(err, declaration.id, nil)
+				return nil, sourceFailure(locate(err, declaration.id, nil), p.root)
 			}
 			declaration.expression = expression
 		}
@@ -116,6 +144,19 @@ func locate(err error, id DeclarationID, path []int) error {
 		copy.Module = id.Module
 		copy.Declaration = id.Name
 		copy.Path = slices.Clone(path)
+		return &copy
+	}
+	return err
+}
+
+// A located failure in supplied dependency source is about this program's
+// context. Keep its defining location rather than moving it to an outer import.
+// Exhaustion is a request outcome and must not become a context rejection.
+func sourceFailure(err error, root Digest) error {
+	if detail, ok := err.(*Error); ok && detail.Subject == SubjectSource && detail.Module != root {
+		copy := *detail
+		copy.Subject = SubjectContext
+		copy.Dependency = detail.Module
 		return &copy
 	}
 	return err
@@ -189,6 +230,7 @@ type expressionReader struct {
 func (r *expressionReader) target(value core.Value, owner DeclarationID) (DeclarationID, error) {
 	module := r.program.modules[owner.Module]
 	var name string
+	var importAlias string
 	pin := owner.Module
 	if args, ok := form(value, "local", 1); ok {
 		var err error
@@ -204,15 +246,18 @@ func (r *expressionReader) target(value core.Value, owner DeclarationID) (Declar
 		}
 		imported, found := module.importByName[alias]
 		if !found {
-			return DeclarationID{}, failure(Resolution, "unknown import alias "+alias)
+			return DeclarationID{}, &Error{Code: UnknownImport, Subject: SubjectSource,
+				ImportAlias: alias, Message: "unknown import alias " + alias}
 		}
+		importAlias = alias
 		pin = imported.pin
 	} else {
 		return DeclarationID{}, failure(Invalid, "expected local or imported target")
 	}
 	id := DeclarationID{Module: pin, Name: name}
 	if _, ok := r.program.declarations[id]; !ok {
-		return DeclarationID{}, failure(Resolution, "unknown declaration "+name)
+		return DeclarationID{}, &Error{Code: UnknownDeclaration, Subject: SubjectSource,
+			ImportAlias: importAlias, Target: id, Message: "unknown declaration " + name}
 	}
 	return id, nil
 }
@@ -356,7 +401,7 @@ func (r *expressionReader) acyclic() error {
 	for _, module := range r.program.order {
 		for _, declaration := range module.declarations {
 			if err := visit(declaration.id, 0); err != nil {
-				return fmt.Errorf("declaration graph: %w", err)
+				return fmt.Errorf("declaration graph: %w", sourceFailure(err, r.program.root))
 			}
 		}
 	}
