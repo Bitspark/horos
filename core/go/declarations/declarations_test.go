@@ -17,10 +17,10 @@ import (
 
 type value = core.Value
 
-func a(s string) value       { return core.NewAtom([]byte(s)) }
-func text(s string) value    { return data.MustEncodeText(s) }
-func integer(i int64) value  { return data.EncodeInt(big.NewInt(i)) }
-func list(v ...value) value  { return data.EncodeList(v) }
+func a(s string) value      { return core.NewAtom([]byte(s)) }
+func text(s string) value   { return data.MustEncodeText(s) }
+func integer(i int64) value { return data.EncodeInt(big.NewInt(i)) }
+func list(v ...value) value { return data.EncodeList(v) }
 func h(tag string, v ...value) value {
 	return core.NewTuple(append([]value{a("horos/" + tag)}, v...)...)
 }
