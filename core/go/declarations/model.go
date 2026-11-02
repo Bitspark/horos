@@ -89,7 +89,7 @@ type Operand struct {
 }
 
 func (o Operand) Path() []int             { return slices.Clone(o.path) }
-func (o Operand) Expression() *Expression { return o.expression }
+func (o Operand) Expression() *Expression { return copyExpression(o.expression) }
 
 // Expression is immutable. Values are immutable Ontos values; slice accessors
 // return independent storage. Application arguments keep their caller bindings.
@@ -107,7 +107,13 @@ func (e *Expression) Kind() Kind               { return e.kind }
 func (e *Expression) Value() core.Value        { return e.value }
 func (e *Expression) Constructor() string      { return e.constructor }
 func (e *Expression) Operands() []Operand      { return slices.Clone(e.operands) }
-func (e *Expression) Arguments() []*Expression { return slices.Clone(e.arguments) }
+func (e *Expression) Arguments() []*Expression {
+	result := make([]*Expression, len(e.arguments))
+	for i, child := range e.arguments {
+		result[i] = copyExpression(child)
+	}
+	return result
+}
 func (e *Expression) Parameter() (ParameterID, bool) {
 	return e.parameter, e.kind == Parameter
 }
@@ -134,7 +140,7 @@ type Declaration struct {
 
 func (d *Declaration) ID() DeclarationID       { return d.id }
 func (d *Declaration) Parameters() []string    { return slices.Clone(d.parameters) }
-func (d *Declaration) Expression() *Expression { return d.expression }
+func (d *Declaration) Expression() *Expression { return copyExpression(d.expression) }
 
 type Module struct {
 	pin          Digest
@@ -148,7 +154,13 @@ func (m *Module) Pin() Digest                  { return m.pin }
 func (m *Module) Name() string                 { return m.name }
 func (m *Module) Value() core.Value            { return m.value }
 func (m *Module) Imports() []Import            { return slices.Clone(m.imports) }
-func (m *Module) Declarations() []*Declaration { return slices.Clone(m.declarations) }
+func (m *Module) Declarations() []*Declaration {
+	result := make([]*Declaration, len(m.declarations))
+	for i, declaration := range m.declarations {
+		result[i] = copyDeclaration(declaration)
+	}
+	return result
+}
 
 // Program is a checked, immutable transitive module closure, safe for concurrent
 // reading and specialization. Its zero value is not a resolved program.
@@ -161,12 +173,44 @@ type Program struct {
 }
 
 func (p *Program) Root() Digest       { return p.root }
-func (p *Program) Modules() []*Module { return slices.Clone(p.order) }
+func (p *Program) Modules() []*Module {
+	result := make([]*Module, len(p.order))
+	for i, module := range p.order {
+		result[i] = copyModule(module)
+	}
+	return result
+}
 func (p *Program) Module(pin Digest) (*Module, bool) {
 	m, ok := p.modules[pin]
-	return m, ok
+	return copyModule(m), ok
 }
 func (p *Program) Declaration(id DeclarationID) (*Declaration, bool) {
 	d, ok := p.declarations[id]
-	return d, ok
+	return copyDeclaration(d), ok
+}
+
+// Exported structs can be overwritten even though their fields are private.
+// Each accessor returns a separate handle; descendants are copied on access.
+func copyModule(m *Module) *Module {
+	if m == nil {
+		return nil
+	}
+	copy := *m
+	return &copy
+}
+
+func copyDeclaration(d *Declaration) *Declaration {
+	if d == nil {
+		return nil
+	}
+	copy := *d
+	return &copy
+}
+
+func copyExpression(e *Expression) *Expression {
+	if e == nil {
+		return nil
+	}
+	copy := *e
+	return &copy
 }

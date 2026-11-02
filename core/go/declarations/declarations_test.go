@@ -388,6 +388,9 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
+			handle, _ := p.Declaration(id(p, "PeoplePage"))
+			*handle.Expression() = decl.Expression{}
+			*handle = decl.Declaration{}
 			result, err := p.Specialize(id(p, "PeoplePage"), nil)
 			if err != nil || !core.Equal(result, page(person())) {
 				t.Error("concurrent specialization changed the program", err)
@@ -403,4 +406,41 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 	}
 	_, err = (*decl.Program)(nil).Specialize(pageID, nil)
 	expectCode(t, err, decl.Invalid)
+}
+
+func TestWholeHandleOverwriteCannotMutateCheckedProgram(t *testing.T) {
+	pages, people := pagination(t)
+	p := resolve(t, people, pages)
+	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
+	assertUnchanged := func() {
+		t.Helper()
+		actual, err := p.Specialize(id(p, "PeoplePage"), nil)
+		if err != nil || !core.Equal(actual, page(person())) || p.Root() != pin(t, people) {
+			t.Fatal("an overwritten public handle changed the checked program", err)
+		}
+	}
+	for _, module := range p.Modules() {
+		for _, declaration := range module.Declarations() {
+			*declaration = decl.Declaration{}
+		}
+		*module = decl.Module{}
+	}
+	assertUnchanged()
+	module, _ := p.Module(p.Root())
+	*module = decl.Module{}
+	assertUnchanged()
+	declaration, _ := p.Declaration(pageID)
+	expression := declaration.Expression()
+	for _, operand := range expression.Operands() {
+		*operand.Expression() = decl.Expression{}
+	}
+	*expression = decl.Expression{}
+	*declaration = decl.Declaration{}
+	assertUnchanged()
+	applied, _ := p.Declaration(id(p, "PeoplePage"))
+	for _, argument := range applied.Expression().Arguments() {
+		*argument = decl.Expression{}
+	}
+	*applied.Expression() = decl.Expression{}
+	assertUnchanged()
 }
