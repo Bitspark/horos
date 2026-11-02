@@ -241,8 +241,8 @@ func TestRejectedDeclarations(t *testing.T) {
 		{"extra parameter operand", d("param", integer(0), integer(1)), []string{"T"}, decl.Invalid},
 		{"duplicate parameter", param(0), []string{"T", "T"}, decl.Invalid},
 		{"invalid parameter name", param(0), []string{"T.A"}, decl.Invalid},
-		{"unknown target", local("Missing"), nil, decl.Resolution},
-		{"unknown import", imported("missing", "X"), nil, decl.Resolution},
+		{"unknown target", local("Missing"), nil, decl.UnknownDeclaration},
+		{"unknown import", imported("missing", "X"), nil, decl.UnknownImport},
 		{"bare target", d("local", text("Generic")), nil, decl.Invalid},
 		{"unknown descriptor", h("function", param(0)), []string{"T"}, decl.Invalid},
 		{"literal scalar kind", h("scalar", param(0)), []string{"T"}, decl.Invalid},
@@ -302,17 +302,17 @@ func TestModulePinsAndImports(t *testing.T) {
 		t.Fatal("pin is not plain SHA-256 of codec-v1 bytes")
 	}
 	_, err := decl.Resolve(people, nil)
-	expectCode(t, err, decl.Resolution)
+	expectCode(t, err, decl.MissingDependency)
 	wrongName := module("people", mapping(entry("p", importValue(t, "wrong.name", pages))))
 	_, err = decl.Resolve(wrongName, []value{pages})
-	expectCode(t, err, decl.Resolution)
+	expectCode(t, err, decl.ImportMismatch)
 	other := module("unrelated", mapping(), entry("X", definition(h("any"))))
 	_, err = decl.Resolve(people, []value{other})
-	expectCode(t, err, decl.Resolution)
+	expectCode(t, err, decl.MissingDependency)
 	bridge := module("bridge", mapping(entry("p", importValue(t, "example.pagination", pages))))
 	root := module("root", mapping(entry("bridge", importValue(t, "bridge", bridge))))
 	_, err = decl.Resolve(root, []value{bridge})
-	expectCode(t, err, decl.Resolution) // Unused transitive import is still required.
+	expectCode(t, err, decl.MissingDependency) // Unused transitive import is still required.
 	if len(resolve(t, root, bridge, pages).Modules()) != 3 {
 		t.Fatal("transitive closure lost a module")
 	}
@@ -352,7 +352,7 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 	_, err = decl.PinWithLimits(a("large"), limits)
 	expectCode(t, err, decl.Exhausted)
 	_, err = decl.ResolveWithLimits(people, nil, decl.Limits{})
-	expectCode(t, err, decl.Invalid)
+	expectCode(t, err, decl.InvalidOptions)
 	var nilAtom *core.Atom
 	for _, invalid := range []value{nil, nilAtom} {
 		_, err := decl.Pin(invalid)

@@ -64,7 +64,7 @@ func Pin(value core.Value) (Digest, error) {
 
 func PinWithLimits(value core.Value, limits Limits) (Digest, error) {
 	if !limits.valid() {
-		return Digest{}, failure(Invalid, "invalid checking limits")
+		return Digest{}, failure(InvalidOptions, "invalid checking limits")
 	}
 	if err := (&budget{limits: limits}).value(value, 0); err != nil {
 		return Digest{}, err

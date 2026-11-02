@@ -33,27 +33,65 @@ type ParameterID struct {
 type Code string
 
 const (
-	Invalid    Code = "invalid"
-	Resolution Code = "resolution"
-	Cycle      Code = "cycle"
-	Exhausted  Code = "exhausted"
+	Invalid            Code = "invalid"
+	MissingDependency  Code = "missing-dependency"
+	ImportMismatch     Code = "import-mismatch"
+	UnknownImport      Code = "unknown-import"
+	UnknownDeclaration Code = "unknown-declaration"
+	InvalidOptions     Code = "invalid-options"
+	Cycle              Code = "cycle"
+	Exhausted          Code = "exhausted"
 )
 
-// Error distinguishes malformed/unresolved input from an incomplete attempt.
-// Path is a tuple-index path within the declaration body (empty for module errors).
+// Subject identifies what a failed operation establishes a result about.
+// A rejected dependency context does not establish that the root source is
+// invalid under a different, valid context. Exhaustion is about the bounded
+// request, never a rejection of source or context.
+type Subject string
+
+const (
+	SubjectSource        Subject = "source"
+	SubjectContext       Subject = "context"
+	SubjectConfiguration Subject = "configuration"
+	SubjectRequest       Subject = "request"
+)
+
+// Error supplies stable classification and details without interpreting Message.
+// Path is a tuple-index path within the declaration body. For a located import
+// failure, Module identifies the importing module and ImportAlias its import;
+// Dependency is the required pin. ExpectedName and ActualName describe a name
+// mismatch. Target identifies a missing declaration when its module is known.
+// Details are absent when the operation could not establish them.
 type Error struct {
-	Code        Code
-	Module      Digest
-	Declaration string
-	Path        []int
-	Message     string
+	Code         Code
+	Subject      Subject
+	Module       Digest
+	Declaration  string
+	Path         []int
+	ImportAlias  string
+	Dependency   Digest
+	ExpectedName string
+	ActualName   string
+	Target       DeclarationID
+	Message      string
 }
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("horos declarations %s: %s (%s %s %v)", e.Code, e.Message, e.Module, e.Declaration, e.Path)
 }
 
-func failure(code Code, message string) error { return &Error{Code: code, Message: message} }
+func failure(code Code, message string) error {
+	subject := SubjectSource
+	switch code {
+	case MissingDependency, ImportMismatch:
+		subject = SubjectContext
+	case InvalidOptions:
+		subject = SubjectConfiguration
+	case Exhausted:
+		subject = SubjectRequest
+	}
+	return &Error{Code: code, Subject: subject, Message: message}
+}
 
 // Limits bound each operation, including literal data and expansion work.
 // MaxDepth must be in [1,512]; all other limits must be positive.

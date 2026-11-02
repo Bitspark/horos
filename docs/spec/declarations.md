@@ -283,8 +283,8 @@ establish authority, library ownership or lawful behavioral substitution.
 
 ## 9. Checking and acceptance examples
 
-The future declaration checker must check the lifted descriptor grammar and
-bindings, not only replace every parameter with `any` and call `WF`.
+The declaration checker checks the lifted descriptor grammar and bindings before
+running the final descriptor well-formedness check.
 
 | Input | Required outcome |
 | --- | --- |
@@ -295,7 +295,9 @@ bindings, not only replace every parameter with `any` and call `WF`.
 | Bare parameter in a zero-parameter declaration | Reject unbound slot |
 | `Page` with zero or two arguments | Reject arity mismatch |
 | A generic target supplied as an argument without application | Reject; no higher-kinded arguments |
-| Unknown declaration/import alias, missing dependency or wrong module name/pin | Reject resolution |
+| Unknown declaration or import alias in admitted source | Reject the source expression |
+| Required pin absent from the supplied pool | Incomplete context; no validity conclusion |
+| Available pinned module contradicts the import's expected name | Reject the supplied context |
 | Duplicate map key or parameter name; wrong tag/arity/revision | Reject structure |
 | Parameter used as a record mode or field name | Reject; that operand is literal, not a type position |
 | Parameter-shaped tuple inside `exact` | Preserve literal data, without interpreting a slot |
@@ -308,6 +310,18 @@ pagination conformance through the existing checker, nested binding, literal
 boundaries, invalid inputs and explicit exhaustion. Native generation remains
 separate future work; existing cross-language ground-descriptor vectors remain
 unchanged.
+
+The Go tooling's structured diagnostics distinguish source rejection, incomplete
+dependency context, invalid caller configuration and resource exhaustion. Every
+failed resolution returns no program. Validity is not inferred from an error's
+message or from missing output; consumers inspect its code and subject as
+documented in the [Go API](../../core/go/declarations/README.md).
+
+The dependency pool supplies unlabelled values. An unrelated supplied value does
+not assert that it satisfies a missing pin. A wrong expected module name is a
+contradiction about the supplied context, not proof that the root source is
+invalid under every other context. These diagnostic distinctions do not change
+the canonical format or any declaration/descriptor rule.
 
 ## 10. Ownership and delivery boundary
 

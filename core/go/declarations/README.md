@@ -29,10 +29,39 @@ program and checks the result through `DiagnoseWF`. Use the existing Horos
 checker for value conformance. Every failure returns a nil descriptor, including
 resource exhaustion; no partial or widened result is usable.
 
-Errors have codes `invalid`, `resolution`, `cycle` and `exhausted`. Use
-`errors.As` to inspect `*declarations.Error`; a located expression error retains
-its module, declaration and tuple path. Exhaustion is not a completed semantic
-rejection. Invalid limits are an input error.
+Use `errors.As` to inspect `*declarations.Error`. `Code` and `Subject` supply
+machine-readable results; do not parse `Message`. The former ambiguous
+`resolution` code is removed without an alias.
+
+| Code | Subject | Meaning |
+| --- | --- | --- |
+| `missing-dependency` | `context` | A required pin is absent from the supplied pool; checking is incomplete |
+| `import-mismatch` | `context` | A pinned module is available but its name contradicts the import's expected name |
+| `unknown-import` | `source` | An expression names an alias absent from its defining module |
+| `unknown-declaration` | `source` | An expression names a declaration absent from the verified target module |
+| `invalid` | `source` or `context` | Malformed root/declaration input, or malformed dependency input, respectively |
+| `cycle` | `source` | A forbidden import or declaration cycle |
+| `invalid-options` | `configuration` | Caller-supplied checking limits are invalid |
+| `exhausted` | `request` | Valid resource limits prevented completion; source/context is not rejected |
+
+`Specialize` also reports `invalid` or `unknown-declaration` about `request` for
+a missing checked program, wrong argument count, or requested declaration outside
+that program. Those are invocation errors, not conclusions about checked source.
+Every failed operation retains its existing empty-output guarantee.
+
+A located expression failure retains `Module`, `Declaration` and the tuple-index
+`Path` within that declaration body. Unknown declaration errors also expose the
+resolved `Target` identity. A located import failure identifies the importing
+`Module`, `ImportAlias`, required `Dependency` digest and `ExpectedName`; a name
+mismatch additionally records `ActualName`. Nested import failures retain the
+innermost failing import. No location is invented if input admission failed before
+one was known.
+
+The dependency pool is unlabelled. Supplying an unrelated value while omitting a
+required pin is still `missing-dependency`; it does not prove a contradicted pin
+assertion. A rejected supplied context does not establish that the root source is
+invalid under every valid context. A missing dependency or resource exhaustion
+must not become a completed negative semantic verdict.
 
 Default limits are depth 256, 100,000 node visits/work steps, 16 MiB of canonical
 encoded bytes and 256 supplied modules including the root. Depth is configurable

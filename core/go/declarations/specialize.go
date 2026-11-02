@@ -7,14 +7,16 @@ import core "github.com/bitspark/ontos/core/go"
 // On any failure (including exhaustion), the returned descriptor is nil.
 func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Value, error) {
 	if p == nil || !p.limits.valid() {
-		return nil, failure(Invalid, "expected a resolved program")
+		return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected a resolved program"}
 	}
 	declaration, ok := p.declarations[id]
 	if !ok {
-		return nil, failure(Resolution, "declaration is outside this program")
+		return nil, &Error{Code: UnknownDeclaration, Subject: SubjectRequest, Target: id,
+			Message: "declaration is outside this program"}
 	}
 	if len(arguments) != len(declaration.parameters) {
-		return nil, failure(Invalid, "specialization argument arity mismatch")
+		return nil, &Error{Code: Invalid, Subject: SubjectRequest, Module: id.Module,
+			Declaration: id.Name, Message: "specialization argument arity mismatch"}
 	}
 	work := &budget{limits: p.limits}
 	for _, argument := range arguments {
