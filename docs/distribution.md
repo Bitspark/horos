@@ -30,15 +30,22 @@ standard statement and Sigstore implementation. The resulting bundle is checked
 against the archive, source, workflow, repository identity and transparency log.
 Its signer must be this repository's `release.yml` on `main`.
 
-An authenticated maintainer can then publish that exact archive with
-`npm publish <archive> --access=public --ignore-scripts --workspaces=false
---registry=https://registry.npmjs.org/ --provenance-file=<bundle>` and native MFA.
-If local configuration maps the scope elsewhere, add the command-local
-`--@bitspark:registry=https://registry.npmjs.org/` override. Do not enable
-`--provenance` alongside the supplied bundle. This follows npm's
-[supplied-provenance publishing support](https://docs.npmjs.com/cli/v12/commands/npm-publish/).
-Keep the original CI artifact and its hashes; do not repack or copy login
-credentials into CI. Once the package exists, configure its trusted GitHub
-publisher for `Bitspark/horos`, `release.yml` and environment `release`. Resume
-`publish`/`verify` with the original rehearsal so all registries and anonymous
-consumers are checked before the GitHub release is finalized.
+For a first publication, npm's
+[libnpmpublish API](https://github.com/npm/cli/tree/latest/workspaces/libnpmpublish)
+accepts the original archive buffer, its manifest and the signed bundle through
+`provenanceFile`. Use the normal native npm configuration and write-MFA flow,
+public access and explicit npmjs registry routing for `@bitspark`. Supply only
+`provenanceFile`; automatic provenance generation must remain disabled.
+
+The npm 12.2.1 CLI cannot combine this package's `publishConfig.provenance: true`
+with `--provenance-file`. Adding `--provenance=false` also fails its argument
+validation. The native publishing API avoids that option conflict while retaining
+bundle verification and registry authentication. Keep the original CI artifact
+and its hashes; do not repack, edit the archive, synthesize CI identity or copy
+login credentials into CI.
+
+Once the package exists, configure its trusted GitHub publisher for
+`Bitspark/horos`, `release.yml` and environment `release`. Resume `publish`/`verify`
+with the original rehearsal so all registries and anonymous consumers are checked
+before the GitHub release is finalized. Later publications use the trusted
+publisher in the hosted workflow; the first-publication bootstrap is unnecessary.
