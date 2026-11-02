@@ -39,7 +39,7 @@ TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 
 ## Scope
 
-horos owns the descriptor model and value checking. Language syntax, AST
+horos owns the data-only descriptor model and value checking. Language syntax, AST
 transformations and source generation belong to bittype. Function, Stream, Cell
 and other behavioral contracts belong to ordinary libraries; they are not horos
 constructors. The [canonical declaration model](docs/spec/declarations.md)
@@ -49,10 +49,11 @@ implements resolution and specialization in current source. These APIs are not
 in the published 0.6.0 packages; Rust and TypeScript remain ground-descriptor
 implementations. Bittype owns AST projections and future native transformations.
 
-The [hydrated type proposal](docs/spec/hydrated-types.md) documents a future Wire
-primitive and exact library-owned Function, Cell and Stream declarations. It
-types the existing hydrated value domain without changing ontos. This proposal
-is not implemented or part of the installed packages.
+The [data/hydration boundary](docs/spec/hydrated-types.md) keeps Ontos and Horos
+data-only. Bittype owns the proposed Wire type and mixed data/capability
+declarations; existing Wire/runtime hydration stays above Horos. No Horos Wire
+constructor or declaration revision is introduced. Function, Cell and Stream
+remain library-owned above that boundary.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. The boolean API preserves its existing bounded behavior,
