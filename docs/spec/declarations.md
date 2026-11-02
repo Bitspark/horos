@@ -1,8 +1,10 @@
-# Proposed canonical declarations
+# Canonical declarations, revision 1
 
-**2 November 2026. Status: exact format proposed for review, not implemented or
-published.** The revision `1` below identifies this proposal; it is not a claim
-that horos 0.6.0 accepts these values. This change is documentation only.
+**2 November 2026. Status: implemented in the Go declarations tooling package,
+not included in published 0.6.0 packages.** The owner authorized the declaration
+model and bittype AST after reviewing this format. The existing ground descriptor
+APIs remain separate. Rust and TypeScript declaration tooling, readable source
+syntax, native generators and runtime bindings are outside this increment.
 
 The owner selected horos for the canonical data type model and bittype for
 syntax, AST/CST infrastructure and native type generation. This declaration
@@ -301,9 +303,11 @@ bindings, not only replace every parameter with `any` and call `WF`.
 | A recursion `ref` captured from outside an application argument | Reject the open recursion boundary |
 | `next` absent / present text / present null | Valid / valid / invalid for the example |
 
-These are authored specification cases, not claims of passing executable tests.
-Implementation will need independent vectors for resolution, substitution,
-literal boundaries, pins and diagnostics, followed by native generation tests.
+These authored cases are exercised by the Go declaration tests, including
+pagination conformance through the existing checker, nested binding, literal
+boundaries, invalid inputs and explicit exhaustion. Native generation remains
+separate future work; existing cross-language ground-descriptor vectors remain
+unchanged.
 
 ## 10. Ownership and delivery boundary
 
@@ -325,7 +329,8 @@ Forbidden in general generators, engine, Wire, runtime and hydration:
 - Replacing the canonical input with extraction from a native language.
 - Hiding adapter, request/reply, stream or Cell implementations in type generation.
 
-No implementation, parser, canonical AST, generator, package version or runtime
-API changes accompany this document. The next separately authorized increment
-is declaration checking and the Horos frontend, then four explicit AST-to-AST
-type transformations. Reverse native-to-Horos migration remains later work.
+The Go [declarations API](../../core/go/declarations/README.md) supplies checked
+modules, immutable resolved expressions, binding identities and concrete
+specialization. Bittype consumes it as an AST-only frontend. This increment adds
+no native generator, text parser, formatter, behavioral binding or package release.
+Reverse native-to-Horos migration remains later work.

@@ -13,11 +13,11 @@ Source generation belongs to bittype. Behavioral contracts remain library-owned.
 Do not add their names, adapters or protocols to the checker. A descriptor change
 requires a concrete type-model case and corresponding cross-language evidence.
 
-The [canonical declaration format](docs/spec/declarations.md) is a documentation
-proposal. Keep its modules, generic binders, application and specialization rules
-in horos, with syntax/AST projections and native generators in bittype. Do not
-present proposed declaration values as supported by the released checker or add
-an implementation while the task is limited to documentation.
+The [canonical declaration format](docs/spec/declarations.md) is implemented by
+the Go declarations tooling package. Keep module, binder, application and
+specialization rules in horos, with syntax/AST projections and native generators
+in bittype. Ground-descriptor APIs do not accept open templates. Keep source
+capabilities separate from published versions and other language implementations.
 
 Release versions and tags are immutable. Maintainers rehearse the exact candidate,
 review its receipt, publish it and verify installations from the public registries.

@@ -37,8 +37,23 @@ jobs:
         if: matrix.target == 'python'
         run: git -c credential.helper= clone --depth 1 --branch v0.15.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
       - name: Check
+        id: check
         env:
           ONTOS_PY_ROOT: ${{ runner.temp }}/ontos
           npm_config_userconfig: /dev/null
           npm_config_globalconfig: ${{ runner.temp }}/empty-global-npmrc
         run: bash scripts/check.sh '${{ matrix.target }}'
+      - name: Capture Go formatting corrections
+        if: failure() && matrix.target == 'go' && steps.check.outcome == 'failure'
+        shell: bash
+        run: |
+          git ls-files -z 'core/go/*.go' 'core/go/**/*.go' | xargs -0 -r gofmt -w
+          git diff --binary -- core/go > "$RUNNER_TEMP/gofmt.patch"
+      - name: Save Go formatting corrections
+        if: failure() && matrix.target == 'go'
+        uses: actions/upload-artifact@v6
+        with:
+          name: gofmt-patch
+          path: ${{ runner.temp }}/gofmt.patch
+          if-no-files-found: ignore
+          retention-days: 7

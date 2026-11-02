@@ -131,8 +131,9 @@ values. Naming, generic templates, specialization, schema migration, native type
 generation, cross-field relations and behavioral contracts are separate work.
 Library names such as Function, Stream and Cell are not built-in descriptor kinds.
 
-The [declaration proposal](declarations.md) specifies a separate layer for named
+The [declaration model](declarations.md) specifies a separate layer for named
 modules, generic slots and applications, reusing descriptor positions and
-specializing to this existing vocabulary. Its format is proposed, not accepted
-by the 0.6.0 checker. Declaration semantics belong to horos; syntax and native
-generation belong to bittype. It does not add new ground descriptor constructors.
+specializing to this existing vocabulary. The Go declarations package implements
+that layer in current source; the published 0.6.0 checker does not accept module
+or open-template values. Declaration semantics belong to horos; syntax and native
+generation belong to bittype. No ground descriptor constructor is added.
