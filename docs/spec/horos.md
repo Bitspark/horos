@@ -138,7 +138,8 @@ that layer in current source; the published 0.6.0 checker does not accept module
 or open-template values. Declaration semantics belong to horos; syntax and native
 generation belong to bittype. No ground descriptor constructor is added.
 
-The [hydrated type proposal](hydrated-types.md) separately describes types over
-bitwire's existing live value domain. Its proposed `horos/wire` expression does
-not extend this v1 vocabulary or the current ground checker APIs. Function,
-Stream and Cell compose from it in libraries, with behavior outside type checking.
+The [data/hydration boundary](hydrated-types.md) keeps Horos data-only. Bittype
+owns the proposed Wire type and mixed data/capability compositions above Horos;
+hydration stays in the existing Wire/runtime layers. There is no Horos Wire
+constructor or widened ground judgment. Function, Stream and Cell belong to
+ordinary libraries above that boundary.

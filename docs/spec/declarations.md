@@ -325,16 +325,18 @@ the canonical format or any declaration/descriptor rule.
 
 ## 10. Ownership and delivery boundary
 
-Horos owns this semantic layer, its encoding, resolution/substitution rules and
-eventual declaration checking/specialization APIs. Bittype owns readable syntax,
+Horos owns this data semantic layer, its encoding, resolution/substitution rules
+and declaration checking/specialization APIs. Bittype owns readable syntax,
 AST/CST projections, located frontend diagnostics, AST transformations and
 native source generation. Its frontend must implement/delegate the horos rules,
 not define another data type algebra. Horos must not depend on bittype.
 
 Function, Stream, Cell and future behavioral contracts remain library-owned.
-This data-only proposal does not model a live function or stream as an ontos
+These data-only declarations do not model a live function or stream as an ontos
 data value or supply their bindings. Their eventual declarations and realizations
-must compose explicitly through library identity, outside this milestone.
+compose explicitly through library identity in the Bittype-owned layer above
+Horos. Generic data parameters remain data-only; using a template over live
+capabilities requires an explicit upper-layer lifting interpretation.
 
 Forbidden in general generators, engine, Wire, runtime and hydration:
 
@@ -349,8 +351,7 @@ specialization. Bittype consumes it as an AST-only frontend. This increment adds
 no native generator, text parser, formatter, behavioral binding or package release.
 Reverse native-to-Horos migration remains later work.
 
-The separate [hydrated type proposal](hydrated-types.md) specifies a possible
-revision 2 with one Wire message-type primitive and ordinary library compositions
-for Function, Cell and Stream. It includes exact module value equations and the
-ground/live boundary. It is documentation only; revision 1 and its Go tooling
-do not accept that format.
+The [data/hydration boundary](hydrated-types.md) records the owner's correction:
+Ontos and Horos remain data-only. Bittype owns the proposed Wire type and mixed
+declarations; hydration stays above Horos. The former proposed Horos revision 2
+and `horos/wire` are superseded, with no implementation or compatibility format.
