@@ -348,3 +348,9 @@ modules, immutable resolved expressions, binding identities and concrete
 specialization. Bittype consumes it as an AST-only frontend. This increment adds
 no native generator, text parser, formatter, behavioral binding or package release.
 Reverse native-to-Horos migration remains later work.
+
+The separate [hydrated type proposal](hydrated-types.md) specifies a possible
+revision 2 with one Wire message-type primitive and ordinary library compositions
+for Function, Cell and Stream. It includes exact module value equations and the
+ground/live boundary. It is documentation only; revision 1 and its Go tooling
+do not accept that format.

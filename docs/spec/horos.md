@@ -137,3 +137,8 @@ specializing to this existing vocabulary. The Go declarations package implements
 that layer in current source; the published 0.6.0 checker does not accept module
 or open-template values. Declaration semantics belong to horos; syntax and native
 generation belong to bittype. No ground descriptor constructor is added.
+
+The [hydrated type proposal](hydrated-types.md) separately describes types over
+bitwire's existing live value domain. Its proposed `horos/wire` expression does
+not extend this v1 vocabulary or the current ground checker APIs. Function,
+Stream and Cell compose from it in libraries, with behavior outside type checking.
