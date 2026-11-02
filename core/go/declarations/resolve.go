@@ -59,7 +59,8 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 			return failure(Exhausted, "import depth limit reached")
 		}
 		if state[pin] == 1 {
-			return failure(Cycle, "cyclic module imports")
+			return sourceFailure(&Error{Code: Cycle, Subject: SubjectSource, Module: pin,
+				Message: "cyclic module imports"}, rootPin)
 		}
 		if state[pin] == 2 {
 			return nil
@@ -126,7 +127,7 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 				err = descriptorWF(skeleton)
 			}
 			if err != nil {
-				return nil, locate(err, declaration.id, nil)
+				return nil, sourceFailure(locate(err, declaration.id, nil), p.root)
 			}
 			declaration.expression = expression
 		}
@@ -143,6 +144,19 @@ func locate(err error, id DeclarationID, path []int) error {
 		copy.Module = id.Module
 		copy.Declaration = id.Name
 		copy.Path = slices.Clone(path)
+		return &copy
+	}
+	return err
+}
+
+// A located failure in supplied dependency source is about this program's
+// context. Keep its defining location rather than moving it to an outer import.
+// Exhaustion is a request outcome and must not become a context rejection.
+func sourceFailure(err error, root Digest) error {
+	if detail, ok := err.(*Error); ok && detail.Subject == SubjectSource && detail.Module != root {
+		copy := *detail
+		copy.Subject = SubjectContext
+		copy.Dependency = detail.Module
 		return &copy
 	}
 	return err
@@ -387,7 +401,7 @@ func (r *expressionReader) acyclic() error {
 	for _, module := range r.program.order {
 		for _, declaration := range module.declarations {
 			if err := visit(declaration.id, 0); err != nil {
-				return fmt.Errorf("declaration graph: %w", err)
+				return fmt.Errorf("declaration graph: %w", sourceFailure(err, r.program.root))
 			}
 		}
 	}

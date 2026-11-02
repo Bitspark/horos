@@ -37,25 +37,30 @@ machine-readable results; do not parse `Message`. The former ambiguous
 | --- | --- | --- |
 | `missing-dependency` | `context` | A required pin is absent from the supplied pool; checking is incomplete |
 | `import-mismatch` | `context` | A pinned module is available but its name contradicts the import's expected name |
-| `unknown-import` | `source` | An expression names an alias absent from its defining module |
-| `unknown-declaration` | `source` | An expression names a declaration absent from the verified target module |
+| `unknown-import` | `source` or `context` | An expression names an alias absent from its defining module |
+| `unknown-declaration` | `source` or `context` | An expression names a declaration absent from the verified target module |
 | `invalid` | `source` or `context` | Malformed root/declaration input, or malformed dependency input, respectively |
-| `cycle` | `source` | A forbidden import or declaration cycle |
+| `cycle` | `source` or `context` | A forbidden import or declaration cycle |
 | `invalid-options` | `configuration` | Caller-supplied checking limits are invalid |
 | `exhausted` | `request` | Valid resource limits prevented completion; source/context is not rejected |
 
 `Specialize` also reports `invalid` or `unknown-declaration` about `request` for
-a missing checked program, wrong argument count, or requested declaration outside
-that program. Those are invocation errors, not conclusions about checked source.
+a missing checked program, wrong argument count, invalid/non-ground argument, or
+requested declaration outside that program. Those are invocation errors, not
+conclusions about checked source.
 Every failed operation retains its existing empty-output guarantee.
 
-A located expression failure retains `Module`, `Declaration` and the tuple-index
-`Path` within that declaration body. Unknown declaration errors also expose the
-resolved `Target` identity. A located import failure identifies the importing
-`Module`, `ImportAlias`, required `Dependency` digest and `ExpectedName`; a name
-mismatch additionally records `ActualName`. Nested import failures retain the
-innermost failing import. No location is invented if input admission failed before
-one was known.
+A located expression failure retains its defining `Module`, `Declaration` and
+the tuple-index `Path` within that declaration body. A failure in imported source
+has subject `context` and also identifies that defining module in `Dependency`;
+the same declaration checked as the root has subject `source`. Unknown declaration
+errors expose the resolved `Target` identity.
+
+When `Declaration` is empty and `ImportAlias` is present, a located import failure
+identifies the importing `Module`, required `Dependency` digest and `ExpectedName`;
+a name mismatch additionally records `ActualName`. Nested import failures retain
+the innermost failing import. No location is invented if input admission failed
+before one was known.
 
 The dependency pool is unlabelled. Supplying an unrelated value while omitting a
 required pin is still `missing-dependency`; it does not prove a contradicted pin

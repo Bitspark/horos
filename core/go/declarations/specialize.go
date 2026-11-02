@@ -21,10 +21,10 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 	work := &budget{limits: p.limits}
 	for _, argument := range arguments {
 		if err := work.value(argument, 0); err != nil {
-			return nil, err
+			return nil, argumentFailure(err, id)
 		}
 		if err := descriptorWF(argument); err != nil {
-			return nil, err
+			return nil, argumentFailure(err, id)
 		}
 	}
 	var expand func(*Expression, []core.Value, int) (core.Value, error)
@@ -70,4 +70,16 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 		return nil, locate(err, id, nil)
 	}
 	return result, nil
+}
+
+// Explicit arguments belong to the invocation, not to the immutable source
+// already admitted into Program. Resource exhaustion keeps its distinct code.
+func argumentFailure(err error, target DeclarationID) error {
+	if detail, ok := err.(*Error); ok {
+		copy := *detail
+		copy.Subject = SubjectRequest
+		copy.Target = target
+		return &copy
+	}
+	return err
 }

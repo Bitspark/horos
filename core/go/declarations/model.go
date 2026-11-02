@@ -57,11 +57,13 @@ const (
 )
 
 // Error supplies stable classification and details without interpreting Message.
-// Path is a tuple-index path within the declaration body. For a located import
-// failure, Module identifies the importing module and ImportAlias its import;
-// Dependency is the required pin. ExpectedName and ActualName describe a name
-// mismatch. Target identifies a missing declaration when its module is known.
-// Details are absent when the operation could not establish them.
+// Path is a tuple-index path within the declaration body. A dependency body
+// failure keeps its defining Module/Declaration/Path and identifies that module
+// in Dependency. When Declaration is empty and ImportAlias is present, Module
+// identifies the importing module and Dependency is the required pin.
+// ExpectedName and ActualName describe an import name mismatch. Target identifies
+// a missing declaration, or the declaration requested by invalid specialization
+// arguments. Details are absent when the operation could not establish them.
 type Error struct {
 	Code         Code
 	Subject      Subject
