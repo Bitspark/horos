@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	decl "github.com/Bitspark/horos/core/go/declarations"
+	core "github.com/bitspark/ontos/core/go"
 )
 
 func TestFailureCategoriesSeparateContextAndSource(t *testing.T) {
@@ -152,4 +153,72 @@ func TestInvalidConfigurationAndExhaustionAreNotSourceRejection(t *testing.T) {
 	diagnostic(t, err, decl.Invalid, decl.SubjectRequest)
 	_, err = program.Specialize(decl.DeclarationID{Module: program.Root(), Name: "Missing"}, nil)
 	diagnostic(t, err, decl.UnknownDeclaration, decl.SubjectRequest)
+}
+
+func TestSpecializationArgumentsAreRequestFailures(t *testing.T) {
+	pages, people := pagination(t)
+	program := resolve(t, people, pages)
+	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
+	for _, argument := range []value{nil, a("not-a-descriptor"), param(0), h("ref", a("outside"))} {
+		result, err := program.Specialize(pageID, []value{argument})
+		if result != nil {
+			t.Fatal("invalid argument published a partial descriptor")
+		}
+		diagnostic(t, err, decl.Invalid, decl.SubjectRequest)
+		unchanged, err := program.Specialize(id(program, "PeoplePage"), nil)
+		if err != nil || !core.Equal(unchanged, page(person())) {
+			t.Fatalf("invalid specialization argument changed checked source: %v", err)
+		}
+	}
+	literal := h("exact", param(0))
+	result, err := program.Specialize(pageID, []value{literal})
+	if err != nil || !core.Equal(result, page(literal)) {
+		t.Fatalf("declaration-shaped literal was not a valid ground argument: %v", err)
+	}
+}
+
+func TestDependencyBodyFailuresKeepContextSubject(t *testing.T) {
+	tests := []struct {
+		name string
+		body value
+		code decl.Code
+		path []int
+	}{
+		{"unknown target", h("list-of", local("Missing")), decl.UnknownDeclaration, []int{1}},
+		{"invalid type", h("list-of", a("not-a-descriptor")), decl.Invalid, []int{1}},
+		{"cycle", local("Broken"), decl.Cycle, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dependency := module("dependency", mapping(), entry("Broken", definition(test.body)))
+			dependencyPin := pin(t, dependency)
+			_, err := decl.Resolve(dependency, nil)
+			diagnostic(t, err, test.code, decl.SubjectSource)
+			for _, transitive := range []bool{false, true} {
+				t.Run(fmt.Sprintf("transitive=%t", transitive), func(t *testing.T) {
+					importedModule := dependency
+					importedName := "dependency"
+					pool := []value{dependency}
+					if transitive {
+						importedModule = module("bridge", mapping(entry("dep", importValue(t, "dependency", dependency))))
+						importedName = "bridge"
+						pool = append(pool, importedModule)
+					}
+					root := module("root", mapping(entry("dep", importValue(t, importedName, importedModule))))
+					program, err := decl.Resolve(root, pool)
+					if program != nil {
+						t.Fatal("bad dependency body published a partial program")
+					}
+					detail := diagnostic(t, err, test.code, decl.SubjectContext)
+					if detail.Module != dependencyPin || detail.Declaration != "Broken" ||
+						detail.Dependency != dependencyPin || !slices.Equal(detail.Path, test.path) {
+						t.Fatalf("dependency failure lost its defining source: %+v", detail)
+					}
+					if test.code == decl.UnknownDeclaration && detail.Target != (decl.DeclarationID{Module: dependencyPin, Name: "Missing"}) {
+						t.Fatal("dependency failure lost its resolved target identity")
+					}
+				})
+			}
+		})
+	}
 }
