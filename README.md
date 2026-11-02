@@ -43,7 +43,10 @@ horos owns the descriptor model and value checking. Language syntax, AST
 transformations and source generation belong to bittype. Function, Stream, Cell
 and other behavioral contracts belong to ordinary libraries; they are not horos
 constructors. Named generic declarations and specialization are not implemented
-by the current descriptor format.
+by the current descriptor format. The [canonical declaration proposal](docs/spec/declarations.md)
+specifies modules, immutable imports, indexed type parameters and applications,
+using pagination. Horos owns those semantics; bittype will provide their syntax
+and native transformations. This is a documentation proposal, not a 0.6.0 API.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. The boolean API preserves its existing bounded behavior,
