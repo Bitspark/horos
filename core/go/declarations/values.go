@@ -107,12 +107,22 @@ func identifier(name string) bool {
 }
 
 func moduleName(name string) bool {
-	for _, part := range strings.Split(name, ".") {
-		if !identifier(part) {
+	first := true
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c == '.' {
+			if first {
+				return false
+			}
+			first = true
+			continue
+		}
+		if !(c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || !first && c >= '0' && c <= '9') {
 			return false
 		}
+		first = false
 	}
-	return true
+	return !first
 }
 
 func index(value core.Value) (int, bool) {

@@ -103,10 +103,10 @@ type Expression struct {
 	arguments   []*Expression
 }
 
-func (e *Expression) Kind() Kind               { return e.kind }
-func (e *Expression) Value() core.Value        { return e.value }
-func (e *Expression) Constructor() string      { return e.constructor }
-func (e *Expression) Operands() []Operand      { return slices.Clone(e.operands) }
+func (e *Expression) Kind() Kind          { return e.kind }
+func (e *Expression) Value() core.Value   { return e.value }
+func (e *Expression) Constructor() string { return e.constructor }
+func (e *Expression) Operands() []Operand { return slices.Clone(e.operands) }
 func (e *Expression) Arguments() []*Expression {
 	result := make([]*Expression, len(e.arguments))
 	for i, child := range e.arguments {
@@ -147,13 +147,14 @@ type Module struct {
 	name         string
 	value        core.Value
 	imports      []Import
+	importByName map[string]Import
 	declarations []*Declaration
 }
 
-func (m *Module) Pin() Digest                  { return m.pin }
-func (m *Module) Name() string                 { return m.name }
-func (m *Module) Value() core.Value            { return m.value }
-func (m *Module) Imports() []Import            { return slices.Clone(m.imports) }
+func (m *Module) Pin() Digest       { return m.pin }
+func (m *Module) Name() string      { return m.name }
+func (m *Module) Value() core.Value { return m.value }
+func (m *Module) Imports() []Import { return slices.Clone(m.imports) }
 func (m *Module) Declarations() []*Declaration {
 	result := make([]*Declaration, len(m.declarations))
 	for i, declaration := range m.declarations {
@@ -172,7 +173,7 @@ type Program struct {
 	limits       Limits
 }
 
-func (p *Program) Root() Digest       { return p.root }
+func (p *Program) Root() Digest { return p.root }
 func (p *Program) Modules() []*Module {
 	result := make([]*Module, len(p.order))
 	for i, module := range p.order {

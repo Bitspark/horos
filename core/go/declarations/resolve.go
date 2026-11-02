@@ -139,7 +139,7 @@ func readModule(pin Digest, value core.Value) (*Module, error) {
 	if err != nil {
 		return nil, failure(Invalid, "declarations must be a canonical map")
 	}
-	m := &Module{pin: pin, name: name, value: value}
+	m := &Module{pin: pin, name: name, value: value, importByName: make(map[string]Import)}
 	for _, entry := range imports {
 		alias, err := data.ReadText(entry[0])
 		args, ok := form(entry[1], "import", 2)
@@ -151,7 +151,9 @@ func readModule(pin Digest, value core.Value) (*Module, error) {
 		if err != nil || !moduleName(name) || !ok {
 			return nil, failure(Invalid, "invalid import module name or digest")
 		}
-		m.imports = append(m.imports, Import{alias: alias, name: name, pin: pin})
+		imported := Import{alias: alias, name: name, pin: pin}
+		m.imports = append(m.imports, imported)
+		m.importByName[alias] = imported
 	}
 	for _, entry := range declarations {
 		name, err := data.ReadText(entry[0])
@@ -200,17 +202,11 @@ func (r *expressionReader) target(value core.Value, owner DeclarationID) (Declar
 		if err != nil || !identifier(alias) || !identifier(name) {
 			return DeclarationID{}, failure(Invalid, "invalid imported declaration target")
 		}
-		found := false
-		for _, imported := range module.imports {
-			if imported.alias == alias {
-				pin = imported.pin
-				found = true
-				break
-			}
-		}
+		imported, found := module.importByName[alias]
 		if !found {
 			return DeclarationID{}, failure(Resolution, "unknown import alias "+alias)
 		}
+		pin = imported.pin
 	} else {
 		return DeclarationID{}, failure(Invalid, "expected local or imported target")
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"testing"
 
@@ -318,6 +319,7 @@ func TestModulePinsAndImports(t *testing.T) {
 	for _, invalid := range []value{
 		d("module", integer(2), text("m"), mapping(), mapping()),
 		d("module", integer(1), text("bad..name"), mapping(), mapping()),
+		d("module", integer(1), text(strings.Repeat(".", 1<<16)), mapping(), mapping()),
 		d("module", integer(1), text("m"), list(), mapping()),
 		d("module", integer(1), text("m"), mapping(), mapping(), h("any")),
 		module("m", mapping(entry("p", d("import", text("p"), a("short"))))),
@@ -443,4 +445,20 @@ func TestWholeHandleOverwriteCannotMutateCheckedProgram(t *testing.T) {
 	}
 	*applied.Expression() = decl.Expression{}
 	assertUnchanged()
+}
+
+func TestManyAliasesAndRepeatedLateTargets(t *testing.T) {
+	dependency := module("dependency", mapping(), entry("Identity", definition(param(0), "T")))
+	importedValue := importValue(t, "dependency", dependency)
+	var imports, declarations [][2]value
+	for i := 0; i < 1024; i++ {
+		imports = append(imports, entry(fmt.Sprintf("shared_prefix_alias_%04d", i), importedValue))
+		declarations = append(declarations, entry(fmt.Sprintf("Use%04d", i),
+			definition(imported("shared_prefix_alias_1023", "Identity", h("scalar", a("int"))))))
+	}
+	p := resolve(t, module("wide", mapping(imports...), declarations...), dependency)
+	actual, err := p.Specialize(id(p, "Use1023"), nil)
+	if err != nil || !core.Equal(actual, h("scalar", a("int"))) {
+		t.Fatal("late alias was not indexed correctly", err)
+	}
 }
