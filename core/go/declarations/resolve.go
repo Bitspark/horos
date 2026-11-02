@@ -100,7 +100,7 @@ func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits
 				return &Error{Code: ImportMismatch, Subject: SubjectContext, Module: m.pin,
 					ImportAlias: imported.alias, Dependency: imported.pin, ExpectedName: imported.name,
 					ActualName: p.modules[imported.pin].name,
-					Message: "imported module name does not match its pin"}
+					Message:    "imported module name does not match its pin"}
 			}
 		}
 		state[pin] = 2
