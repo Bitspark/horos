@@ -1,7 +1,7 @@
-// Package declarations implements revision 1 of the Horos declaration model.
+// Package declmodel implements shared immutable declaration and binding mechanics.
 //
 // It resolves supplied Ontos module values without IO, preserves open generic
-// bindings, and specializes concrete applications to existing Horos descriptors.
+// bindings, and specializes applications using a caller-owned fixed grammar.
 // It supplies no source parser, native generator, value codec or runtime binding.
 package declmodel
 

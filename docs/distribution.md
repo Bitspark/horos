@@ -49,3 +49,8 @@ Once the package exists, configure its trusted GitHub publisher for
 with the original rehearsal so all registries and anonymous consumers are checked
 before the GitHub release is finalized. Later publications use the trusted
 publisher in the hosted workflow; the first-publication bootstrap is unnecessary.
+
+Current Go source additionally contains `declarations` and optional `wire`
+subpackages in the same `core/go` module. They are absent from the published
+0.6.0 package; tooling consumers must pin an immutable source revision until a
+later release. No corresponding Rust or TypeScript declaration APIs are claimed.

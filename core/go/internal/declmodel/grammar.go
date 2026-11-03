@@ -26,12 +26,15 @@ func (p *Program) Limits() Limits { return p.limits }
 
 // Work is request-local accounting shared by declaration transformations.
 // It has no grammar or registry knowledge.
-type Work struct { budget budget }
+type Work struct{ budget budget }
+
 func NewWork(limits Limits) (*Work, error) {
-	if !limits.valid() { return nil, failure(InvalidOptions, "invalid checking limits") }
+	if !limits.valid() {
+		return nil, failure(InvalidOptions, "invalid checking limits")
+	}
 	return &Work{budget: budget{limits: limits}}, nil
 }
-func (w *Work) Step(depth int) error { return w.budget.step(depth) }
+func (w *Work) Step(depth int) error         { return w.budget.step(depth) }
 func (w *Work) Value(value core.Value) error { return w.budget.value(value, 0) }
-func Identifier(name string) bool { return identifier(name) }
-func ModuleName(name string) bool { return moduleName(name) }
+func Identifier(name string) bool            { return identifier(name) }
+func ModuleName(name string) bool            { return moduleName(name) }
