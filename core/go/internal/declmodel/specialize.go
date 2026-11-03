@@ -1,4 +1,4 @@
-package declarations
+package declmodel
 
 import core "github.com/bitspark/ontos/core/go"
 
@@ -23,10 +23,22 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 		if err := work.value(argument, 0); err != nil {
 			return nil, argumentFailure(err, id)
 		}
-		if err := descriptorWF(argument); err != nil {
+		if err := p.grammar.WF(argument); err != nil {
 			return nil, argumentFailure(err, id)
 		}
 	}
+	return p.expand(declaration.expression, arguments, work, id)
+}
+
+// Close expands a caller-selected subtree only if it is independently closed.
+func (p *Program) Close(expression *Expression) (core.Value, error) {
+ if p == nil || !p.limits.valid() || expression == nil || expression.context != p {
+  return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected an expression from this checked program"}
+ }
+ return p.expand(expression, nil, &budget{limits: p.limits}, DeclarationID{})
+}
+
+func (p *Program) expand(expression *Expression, arguments []core.Value, work *budget, id DeclarationID) (core.Value, error) {
 	var expand func(*Expression, []core.Value, int) (core.Value, error)
 	expand = func(expression *Expression, env []core.Value, depth int) (core.Value, error) {
 		if err := work.step(depth); err != nil {
@@ -34,6 +46,9 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 		}
 		switch expression.kind {
 		case Parameter:
+            if expression.parameter.Index >= len(env) {
+                return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expression has a free generic parameter"}
+            }
 			return env[expression.parameter.Index], nil
 		case Application:
 			actual := make([]core.Value, len(expression.arguments))
@@ -57,7 +72,7 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 			return replaceOperands(expression.value, expression.operands, children), nil
 		}
 	}
-	result, err := expand(declaration.expression, arguments, 0)
+	result, err := expand(expression, arguments, 0)
 	if err != nil {
 		return nil, locate(err, id, nil)
 	}
@@ -66,7 +81,7 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 	if err := (&budget{limits: p.limits}).value(result, 0); err != nil {
 		return nil, locate(err, id, nil)
 	}
-	if err := descriptorWF(result); err != nil {
+	if err := p.grammar.WF(result); err != nil {
 		return nil, locate(err, id, nil)
 	}
 	return result, nil
