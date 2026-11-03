@@ -137,6 +137,7 @@ type liftState struct {
 	options          LiftOptions
 	work             *model.Work
 	closed           *model.Work
+	expansion        *model.Work
 	bodies           map[ground.DeclarationID]core.Value
 	active           map[ground.DeclarationID]bool
 	imports          map[ground.Digest]map[string]ground.Digest
@@ -162,7 +163,8 @@ func Lift(source *ground.Program, roots []ground.DeclarationID, options LiftOpti
 		return nil, model.Failure(InvalidOptions, "expected bounded selected roots")
 	}
 	closed, _ := model.NewWork(options.Limits)
-	s := &liftState{source: checked, options: options, work: work, closed: closed,
+	expansion, _ := model.NewWork(options.Limits)
+	s := &liftState{source: checked, options: options, work: work, closed: closed, expansion: expansion,
 		bodies: make(map[ground.DeclarationID]core.Value), active: make(map[ground.DeclarationID]bool),
 		imports: make(map[ground.Digest]map[string]ground.Digest), names: make(map[ground.Digest]string), declarationNames: make(map[ground.DeclarationID]string)}
 	// Capture configuration by constructing owned maps. Unknown configuration
@@ -331,7 +333,7 @@ func (s *liftState) expression(e *ground.Expression, owner ground.DeclarationID,
 		}
 		return core.NewTuple(parts...), nil
 	}
-	closed, err := s.source.Close(e)
+	closed, err := model.CloseWithWork(e, s.expansion)
 	if err != nil {
 		var detail *Error
 		if errors.As(err, &detail) && detail.Code == Exhausted {

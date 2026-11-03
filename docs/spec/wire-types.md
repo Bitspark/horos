@@ -481,8 +481,9 @@ Before implementation is claimed, independently authored cases must cover:
 - Depth/node/byte and expansion exhaustion at each relevant stage, with preserved
   diagnostics and no usable partial output or semantic mismatch verdict.
 
-No implementation, parser, builder, checker change, runtime adapter, dependency,
-test vector or release is added now. Forbidden remain: widening ground APIs;
+The static Go implementation is qualified by the tests described in its
+[package guide](../../core/go/wire/README.md). No readable parser, public builder,
+runtime adapter or new release is added. Forbidden remain: widening ground APIs;
 retaining the superseded Bittype namespace as a compatibility decoder; automatic
 profile selection by Wire occurrence; named-contract kinds, switches, imports,
 registrations or fingerprints in general machinery; and replacing hydration

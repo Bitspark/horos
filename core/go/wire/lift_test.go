@@ -1,6 +1,7 @@
 package wire_test
 
 import (
+	"fmt"
 	"testing"
 
 	hor "github.com/Bitspark/horos/core/go"
@@ -9,6 +10,39 @@ import (
 	core "github.com/bitspark/ontos/core/go"
 	data "github.com/bitspark/ontos/data/go"
 )
+
+func TestLiftChargesAggregateClosedExpansion(t *testing.T) {
+	var declarations [][2]value
+	for i := 0; i < 200; i++ {
+		body := h("scalar", a("int"))
+		if i < 199 {
+			body = glocal(fmt.Sprintf("Alias%d", i+1))
+		}
+		declarations = append(declarations, entry(fmt.Sprintf("Alias%d", i), gdefinition(body)))
+	}
+	parts := make([]value, 1000)
+	for i := range parts {
+		parts[i] = h("not", glocal("Alias0"))
+	}
+	declarations = append(declarations, entry("Root", gdefinition(h("tuple", parts...))))
+	source := gresolve(t, gmodule("example.expansion", mapping(), declarations...))
+	id := ground.DeclarationID{Module: source.Root(), Name: "Root"}
+	declaration, _ := source.Declaration(id)
+	// Each subtree individually closes under the same default limits.
+	if _, err := source.Close(declaration.Expression().Operands()[0].Expression()); err != nil {
+		t.Fatal(err)
+	}
+	got, err := wire.Lift(source, []ground.DeclarationID{id}, wire.DefaultLiftOptions())
+	if got != nil {
+		t.Fatal("aggregate expansion exhaustion published a derivation")
+	}
+	expect(t, err, wire.Exhausted)
+	larger := wire.DefaultLiftOptions()
+	larger.Limits.MaxNodes = 300000
+	if _, err := wire.Lift(source, []ground.DeclarationID{id}, larger); err != nil {
+		t.Fatalf("larger request budget should allow the same semantics: %v", err)
+	}
+}
 
 func gdefinition(body value, params ...string) value {
 	names := make([]value, len(params))
