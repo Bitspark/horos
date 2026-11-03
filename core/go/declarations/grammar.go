@@ -1,13 +1,13 @@
 package declarations
 
 import (
- horos "github.com/Bitspark/horos/core/go"
- model "github.com/Bitspark/horos/core/go/internal/declmodel"
- core "github.com/bitspark/ontos/core/go"
+	horos "github.com/Bitspark/horos/core/go"
+	model "github.com/Bitspark/horos/core/go/internal/declmodel"
+	core "github.com/bitspark/ontos/core/go"
 )
 
 func grammar() model.Grammar {
- return model.Grammar{DeclarationPrefix: "horos/decl/", DescriptorPrefix: "horos/", Any: descriptorAny, Positions: descriptorPositions, WF: descriptorWF}
+	return model.Grammar{DeclarationPrefix: "horos/decl/", DescriptorPrefix: "horos/", Any: descriptorAny, Positions: descriptorPositions, WF: descriptorWF}
 }
 
 func descriptorWF(value core.Value) error {

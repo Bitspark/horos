@@ -32,10 +32,10 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 
 // Close expands a caller-selected subtree only if it is independently closed.
 func (p *Program) Close(expression *Expression) (core.Value, error) {
- if p == nil || !p.limits.valid() || expression == nil || expression.context != p {
-  return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected an expression from this checked program"}
- }
- return p.expand(expression, nil, &budget{limits: p.limits}, DeclarationID{})
+	if p == nil || !p.limits.valid() || expression == nil || expression.context != p {
+		return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected an expression from this checked program"}
+	}
+	return p.expand(expression, nil, &budget{limits: p.limits}, DeclarationID{})
 }
 
 func (p *Program) expand(expression *Expression, arguments []core.Value, work *budget, id DeclarationID) (core.Value, error) {
@@ -46,9 +46,9 @@ func (p *Program) expand(expression *Expression, arguments []core.Value, work *b
 		}
 		switch expression.kind {
 		case Parameter:
-            if expression.parameter.Index >= len(env) {
-                return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expression has a free generic parameter"}
-            }
+			if expression.parameter.Index >= len(env) {
+				return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expression has a free generic parameter"}
+			}
 			return env[expression.parameter.Index], nil
 		case Application:
 			actual := make([]core.Value, len(expression.arguments))

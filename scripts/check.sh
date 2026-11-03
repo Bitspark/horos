@@ -15,9 +15,11 @@ prepare_bins() {
 case "${1:-all}" in
   go)
     cd core/go
-    test -z "$(gofmt -l .)"
+    format_status=0
+    test -z "$(gofmt -l .)" || format_status=1
     go vet -mod=readonly ./...
     go test -mod=readonly -race -count=1 ./...
+    test "$format_status" -eq 0
     ;;
   rust)
     cargo fmt --all -- --check

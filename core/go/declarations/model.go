@@ -25,43 +25,75 @@ type Declaration = model.Declaration
 type Module = model.Module
 
 const (
-	Invalid = model.Invalid
-	MissingDependency = model.MissingDependency
-	ImportMismatch = model.ImportMismatch
-	UnknownImport = model.UnknownImport
-	UnknownDeclaration = model.UnknownDeclaration
-	InvalidOptions = model.InvalidOptions
-	Cycle = model.Cycle
-	Exhausted = model.Exhausted
-	SubjectSource = model.SubjectSource
-	SubjectContext = model.SubjectContext
+	Invalid              = model.Invalid
+	MissingDependency    = model.MissingDependency
+	ImportMismatch       = model.ImportMismatch
+	UnknownImport        = model.UnknownImport
+	UnknownDeclaration   = model.UnknownDeclaration
+	InvalidOptions       = model.InvalidOptions
+	Cycle                = model.Cycle
+	Exhausted            = model.Exhausted
+	SubjectSource        = model.SubjectSource
+	SubjectContext       = model.SubjectContext
 	SubjectConfiguration = model.SubjectConfiguration
-	SubjectRequest = model.SubjectRequest
-	Descriptor = model.Descriptor
-	Parameter = model.Parameter
-	Application = model.Application
+	SubjectRequest       = model.SubjectRequest
+	Descriptor           = model.Descriptor
+	Parameter            = model.Parameter
+	Application          = model.Application
 )
 
-type Program struct { inner *model.Program }
+type Program struct{ inner *model.Program }
 
-func DefaultLimits() Limits { return model.DefaultLimits() }
+func DefaultLimits() Limits                { return model.DefaultLimits() }
 func Pin(value core.Value) (Digest, error) { return model.Pin(value) }
-func PinWithLimits(value core.Value, limits Limits) (Digest, error) { return model.PinWithLimits(value, limits) }
+func PinWithLimits(value core.Value, limits Limits) (Digest, error) {
+	return model.PinWithLimits(value, limits)
+}
 func Resolve(root core.Value, dependencies []core.Value) (*Program, error) {
 	return ResolveWithLimits(root, dependencies, DefaultLimits())
 }
 func ResolveWithLimits(root core.Value, dependencies []core.Value, limits Limits) (*Program, error) {
 	p, err := model.Resolve(root, dependencies, limits, grammar())
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return &Program{inner: p}, nil
 }
-func (p *Program) Root() Digest { if p == nil || p.inner == nil { return Digest{} }; return p.inner.Root() }
-func (p *Program) Limits() Limits { if p == nil || p.inner == nil { return Limits{} }; return p.inner.Limits() }
-func (p *Program) Modules() []*Module { if p == nil || p.inner == nil { return nil }; return p.inner.Modules() }
-func (p *Program) Module(pin Digest) (*Module, bool) { if p == nil || p.inner == nil { return nil, false }; return p.inner.Module(pin) }
-func (p *Program) Declaration(id DeclarationID) (*Declaration, bool) { if p == nil || p.inner == nil { return nil, false }; return p.inner.Declaration(id) }
+func (p *Program) Root() Digest {
+	if p == nil || p.inner == nil {
+		return Digest{}
+	}
+	return p.inner.Root()
+}
+func (p *Program) Limits() Limits {
+	if p == nil || p.inner == nil {
+		return Limits{}
+	}
+	return p.inner.Limits()
+}
+func (p *Program) Modules() []*Module {
+	if p == nil || p.inner == nil {
+		return nil
+	}
+	return p.inner.Modules()
+}
+func (p *Program) Module(pin Digest) (*Module, bool) {
+	if p == nil || p.inner == nil {
+		return nil, false
+	}
+	return p.inner.Module(pin)
+}
+func (p *Program) Declaration(id DeclarationID) (*Declaration, bool) {
+	if p == nil || p.inner == nil {
+		return nil, false
+	}
+	return p.inner.Declaration(id)
+}
 func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Value, error) {
-	var inner *model.Program; if p != nil { inner = p.inner }
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
+	}
 	return inner.Specialize(id, arguments)
 }
 
@@ -69,6 +101,9 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 // It permits explicit closed embedding of a subtree without lifting its generic
 // dependencies. Open or foreign expressions fail; literal data is never scanned.
 func (p *Program) Close(expression *Expression) (core.Value, error) {
-	var inner *model.Program; if p != nil { inner = p.inner }
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
+	}
 	return inner.Close(expression)
 }
