@@ -333,10 +333,12 @@ not define another data type algebra. Horos must not depend on bittype.
 
 Function, Stream, Cell and future behavioral contracts remain library-owned.
 These data-only declarations do not model a live function or stream as an ontos
-data value or supply their bindings. Their eventual declarations and realizations
-compose explicitly through library identity in the Bittype-owned layer above
-Horos. Generic data parameters remain data-only; using a template over live
-capabilities requires an explicit upper-layer lifting interpretation.
+data value or supply their bindings. Their eventual declarations compose through
+explicit library identity in the optional [horos/wire profile](wire-types.md),
+with separate library-owned runtime realizations. Generic data parameters remain
+data-only; using a template over capabilities requires that profile's explicit
+partial lifting interpretation and a separately identified derived declaration.
+Bittype implements the tooling transformation, not another canonical type model.
 
 Forbidden in general generators, engine, Wire, runtime and hydration:
 
@@ -351,7 +353,11 @@ specialization. Bittype consumes it as an AST-only frontend. This increment adds
 no native generator, text parser, formatter, behavioral binding or package release.
 Reverse native-to-Horos migration remains later work.
 
-The [data/hydration boundary](hydrated-types.md) records the owner's correction:
-Ontos and Horos remain data-only. Bittype owns the proposed Wire type and mixed
-declarations; hydration stays above Horos. The former proposed Horos revision 2
-and `horos/wire` are superseded, with no implementation or compatibility format.
+The [data/hydration boundary](hydrated-types.md) records the 3 November owner
+direction: existing Ontos and Horos cores stay data-only, while optional
+`ontos/wire` and `horos/wire` extensions own proposed mixed values and types.
+This supersedes Bittype's ownership of the proposed contract model without
+changing this ground revision. The earlier idea of a Wire constructor in ground
+Horos revision 2 remains superseded; the optional profile has a separate envelope
+and interpretation. Neither old proposal is accepted as a compatibility format.
+Hydration remains above the value/type models in the Wire/runtime layers.

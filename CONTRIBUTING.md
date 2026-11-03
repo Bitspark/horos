@@ -20,10 +20,16 @@ and native generators in bittype. Ground-descriptor APIs do not accept open
 templates. Keep source capabilities separate from published versions and other
 language implementations.
 
-Ontos and Horos remain data-only. Follow the [data/hydration boundary](docs/spec/hydrated-types.md):
-Bittype owns the proposed Wire type and mixed declarations above Horos; existing
-Wire/runtime hydration stays above it. Do not widen Horos generic arguments or
-ground judgments to capabilities, or add a Horos Wire constructor.
+The existing Ontos and Horos cores remain data-only. Follow the
+[data/hydration boundary](docs/spec/hydrated-types.md) and proposed optional
+[horos/wire profile](docs/spec/wire-types.md), selected by the owner on
+3 November 2026 to replace the Bittype-owned contract model proposal. Horos owns
+that future profile's canonical type/declaration and lifting semantics; Bittype
+owns its tooling projections and transformations. Do not widen revision 1's
+generic arguments or ground judgments, infer a profile from Wire occurrences,
+or revive a superseded syntax as an alias. The optional profile is unimplemented;
+no dependency, checker or runtime change follows from this documentation.
+Hydration and library protocols stay with their existing owners.
 
 Release versions and tags are immutable. Maintainers rehearse the exact candidate,
 review its receipt, publish it and verify installations from the public registries.

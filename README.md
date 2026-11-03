@@ -49,11 +49,15 @@ implements resolution and specialization in current source. These APIs are not
 in the published 0.6.0 packages; Rust and TypeScript remain ground-descriptor
 implementations. Bittype owns AST projections and future native transformations.
 
-The [data/hydration boundary](docs/spec/hydrated-types.md) keeps Ontos and Horos
-data-only. Bittype owns the proposed Wire type and mixed data/capability
-declarations; existing Wire/runtime hydration stays above Horos. No Horos Wire
-constructor or declaration revision is introduced. Function, Cell and Stream
-remain library-owned above that boundary.
+The [data/hydration boundary](docs/spec/hydrated-types.md) keeps the existing
+Ontos and Horos cores data-only. Optional `ontos/wire` and
+[horos/wire](docs/spec/wire-types.md) extensions are documentation proposals for
+mixed values and their type/declaration semantics. They replace the earlier
+Bittype-owned contract model proposal; Bittype supplies tooling for the canonical
+definitions. Existing ground APIs and declaration revision 1 are unchanged.
+Hydration remains in Wire/runtime, and Function, Cell and Stream remain ordinary
+library declarations with library-owned behavior. No extension is implemented or
+published by this documentation.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. The boolean API preserves its existing bounded behavior,
