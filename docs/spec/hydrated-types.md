@@ -1,8 +1,8 @@
 # Data cores, optional Wire extensions and hydration
 
-**Owner direction, 3 November 2026. Status: documentation proposal only.**
+**Owner direction, 3 November 2026. Status: static Go extension implemented.**
 The existing Ontos and Horos cores remain data-only. Optional `ontos/wire` and
-`horos/wire` extensions would own mixed values and their type/declaration
+`horos/wire` extensions own mixed values and their type/declaration
 semantics. Bittype supplies tooling for those canonical definitions; hydration
 remains in the existing Wire/runtime layers.
 
@@ -12,7 +12,8 @@ ground Horos declaration revision 2 also remains superseded. Neither proposal
 was implemented, and neither becomes a compatibility format. The optional
 [horos/wire profile](wire-types.md) has its own envelope, revision and
 interpretation. No existing Horos constructor, generic domain or ground judgment
-changes as a consequence of this documentation.
+changes. The [static Go API](../../core/go/wire/README.md) implements the optional
+declaration profile and explicit lifting; live runtime integration remains separate.
 
 ## What Horos describes
 

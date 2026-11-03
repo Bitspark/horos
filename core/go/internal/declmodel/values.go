@@ -1,11 +1,10 @@
-package declarations
+package declmodel
 
 import (
 	"crypto/sha256"
 	"encoding/binary"
 	"strings"
 
-	horos "github.com/Bitspark/horos/core/go"
 	codec "github.com/bitspark/ontos/codec/go"
 	core "github.com/bitspark/ontos/core/go"
 	data "github.com/bitspark/ontos/data/go"
@@ -88,8 +87,8 @@ func head(value core.Value, prefix string) (string, []core.Value, bool) {
 	return strings.TrimPrefix(name, prefix), tuple.Items()[1:], true
 }
 
-func form(value core.Value, name string, arity int) ([]core.Value, bool) {
-	tag, args, ok := head(value, "horos/decl/")
+func (g Grammar) form(value core.Value, name string, arity int) ([]core.Value, bool) {
+	tag, args, ok := head(value, g.DeclarationPrefix)
 	return args, ok && tag == name && len(args) == arity
 }
 
@@ -141,22 +140,6 @@ func digest(value core.Value) (Digest, bool) {
 	var pin Digest
 	copy(pin[:], atom.Bytes())
 	return pin, true
-}
-
-func descriptorWF(value core.Value) error {
-	result := horos.DiagnoseWF(value)
-	switch result.Verdict {
-	case horos.VerdictConforms:
-		return nil
-	case horos.VerdictExhausted:
-		return failure(Exhausted, "Horos descriptor checking limit reached")
-	default:
-		return failure(Invalid, "malformed or unguarded Horos descriptor")
-	}
-}
-
-func descriptorAny() core.Value {
-	return core.NewTuple(core.NewAtom([]byte("horos/any")))
 }
 
 func at(value core.Value, path []int) core.Value {

@@ -51,13 +51,14 @@ implementations. Bittype owns AST projections and future native transformations.
 
 The [data/hydration boundary](docs/spec/hydrated-types.md) keeps the existing
 Ontos and Horos cores data-only. Optional `ontos/wire` and
-[horos/wire](docs/spec/wire-types.md) extensions are documentation proposals for
+[horos/wire](docs/spec/wire-types.md) extensions separately own
 mixed values and their type/declaration semantics. They replace the earlier
 Bittype-owned contract model proposal; Bittype supplies tooling for the canonical
 definitions. Existing ground APIs and declaration revision 1 are unchanged.
 Hydration remains in Wire/runtime, and Function, Cell and Stream remain ordinary
-library declarations with library-owned behavior. No extension is implemented or
-published by this documentation.
+library declarations with library-owned behavior. The [optional Go package](core/go/wire/README.md)
+implements static resolution, specialization and lifting in current source; it
+is not included in 0.6.0 and does not implement live value checking or hydration.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. The boolean API preserves its existing bounded behavior,

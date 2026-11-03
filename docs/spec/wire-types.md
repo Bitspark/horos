@@ -1,11 +1,13 @@
 # Optional horos/wire type and declaration profile
 
-**Owner direction, 3 November 2026. Status: documentation proposal only.**
-`horos/wire` is an optional type/declaration extension over the proposed
+**Owner direction, 3 November 2026. Status: static Go implementation.**
+`horos/wire` is an optional type/declaration extension over the
 `ontos/wire` value profile. Its canonical meaning belongs to Horos; Bittype
 supplies syntax/AST projections, analysis integration and transformations.
-Neither extension, its APIs nor its package names are implemented by this
-document. Existing ground descriptors and declaration revision 1 are unchanged.
+The [Go package](../../core/go/wire/README.md) implements resolution, generic
+specialization and explicit partial lifting with provenance. Mixed application-value
+checking and runtime capability recognition are not implemented. Existing ground
+descriptors and declaration revision 1 are unchanged.
 
 This replaces the Bittype-owned `bittype/contract/*` model proposal. It does not
 revive the earlier proposal to add `horos/wire` directly to ground declaration
@@ -14,7 +16,7 @@ The [boundary decision](hydrated-types.md) records the explicit supersession.
 
 ## 1. Profile and value domains
 
-The proposed semantic profile is the pair **(`horos/wire`, revision `1`)**.
+The semantic profile is the pair **(`horos/wire`, revision `1`)**.
 Its module tag and revision below distinguish it from the implemented ground
 declaration envelope `horos/decl/module`, revision 1. A profile identity fixes
 syntax and interpretation; a module pin identifies particular canonical bytes.
@@ -67,7 +69,7 @@ Data(G)        = W("data", G)
 Wire(E)        = W("wire", E)
 ```
 
-These are proposed exact value equations, not implemented builders or a readable
+These are exact value equations, not public builders or a readable
 source grammar. Pins contain exactly 32 raw bytes. Canonical map ordering,
 duplicate rejection and exact text/integer embeddings retain their ground
 meaning. Descriptions use the existing Ontos codec; no live-value codec follows.
@@ -479,8 +481,9 @@ Before implementation is claimed, independently authored cases must cover:
 - Depth/node/byte and expansion exhaustion at each relevant stage, with preserved
   diagnostics and no usable partial output or semantic mismatch verdict.
 
-No implementation, parser, builder, checker change, runtime adapter, dependency,
-test vector or release is added now. Forbidden remain: widening ground APIs;
+The static Go implementation is qualified by the tests described in its
+[package guide](../../core/go/wire/README.md). No readable parser, public builder,
+runtime adapter or new release is added. Forbidden remain: widening ground APIs;
 retaining the superseded Bittype namespace as a compatibility decoder; automatic
 profile selection by Wire occurrence; named-contract kinds, switches, imports,
 registrations or fingerprints in general machinery; and replacing hydration
