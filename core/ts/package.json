@@ -46,7 +46,7 @@
     "@bitspark/ontos-data": "0.16.0"
   },
   "devDependencies": {
-    "typescript": "^5.7",
+    "typescript": "^7.0",
     "@types/node": "^22",
     "eslint": "9.39.4",
     "@eslint/js": "9.39.4",
