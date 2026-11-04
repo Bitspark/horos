@@ -5,11 +5,24 @@ import (
 
 	horos "github.com/Bitspark/horos/core/go"
 	model "github.com/Bitspark/horos/core/go/internal/declmodel"
+	"github.com/Bitspark/horos/core/go/internal/kindmodel"
 	core "github.com/bitspark/ontos/core/go"
 )
 
 func grammar() model.Grammar {
-	return model.Grammar{DeclarationPrefix: "horos/decl/", DescriptorPrefix: "horos/", Any: descriptorAny, Positions: descriptorPositions, WF: descriptorWF, Rule: descriptorRule, Data: descriptorData}
+	return model.Grammar{
+		DeclarationPrefix: "horos/decl/",
+		DescriptorPrefix:  "horos/",
+		Any:               descriptorAny,
+		Positions:         descriptorPositions,
+		WF:                descriptorWF,
+		GroundWF:          groundWF,
+		Metadata:          descriptorMetadata,
+		Schema:            descriptorSchema(),
+		Prelude:           Prelude(),
+		OperandKind:       descriptorOperandKind,
+		GroundKind:        preludeReference("Data"),
+	}
 }
 
 func groundWF(value core.Value) error {
@@ -24,46 +37,38 @@ func groundWF(value core.Value) error {
 	}
 }
 
+// descriptorWF checks primitive syntax, literal operands and recursion guards.
+// Operand membership belongs to the ordinary kinds in the formation profile.
+// Each Wire message is independently closed under its own recursion binders.
 func descriptorWF(value core.Value) error {
-	_, err := descriptorData(value)
-	return err
-}
-
-// The ground skeleton checks only descriptor syntax/guards. Data obligations
-// are checked separately, including symbolically in open generic declarations.
-func descriptorData(value core.Value) (bool, error) {
-	var visit func(core.Value) (core.Value, bool, error)
-	visit = func(value core.Value) (core.Value, bool, error) {
+	var visit func(core.Value) (core.Value, error)
+	visit = func(value core.Value) (core.Value, error) {
 		constructor, args, ok := model.Head(value, "horos/")
 		if !ok {
-			return nil, false, model.Failure(Invalid, "expected a closed Horos type expression")
+			return nil, model.Failure(Invalid, "expected a closed Horos type expression")
 		}
 		positions, err := descriptorPositions(constructor, args)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
-		rule := descriptorRule(constructor, args)
-		isData := !rule.Capability
+		if _, err := descriptorMetadata(constructor, args); err != nil {
+			return nil, err
+		}
 		items := value.(core.Tuple).Items()
 		for _, path := range positions {
 			child := value
 			for _, index := range path {
 				child = child.(core.Tuple).At(index)
 			}
-			skeleton, childData, err := visit(child)
+			skeleton, err := visit(child)
 			if err != nil {
-				return nil, false, operandFailure(err, path)
+				return nil, operandFailure(err, path)
 			}
-			if rule.RequiresData && !childData {
-				return nil, false, operandFailure(model.Failure(BoundViolation, "constructor operand requires Data"), path)
-			}
-			if rule.Capability {
-				// A message schema is closed under its own recursion binders.
+			if constructor == "wire" {
 				if err := groundWF(skeleton); err != nil {
-					return nil, false, operandFailure(err, path)
+					return nil, operandFailure(err, path)
 				}
 			}
-			isData = isData && childData
 			if len(path) == 1 {
 				items[path[0]] = skeleton
 			} else {
@@ -72,19 +77,16 @@ func descriptorData(value core.Value) (bool, error) {
 				items[path[0]] = core.NewTuple(field...)
 			}
 		}
-		if rule.Capability {
-			return descriptorAny(), false, nil
+		if constructor == "wire" {
+			return descriptorAny(), nil
 		}
-		return core.NewTuple(items...), isData, nil
+		return core.NewTuple(items...), nil
 	}
-	skeleton, isData, err := visit(value)
+	skeleton, err := visit(value)
 	if err != nil {
-		return false, err
+		return err
 	}
-	if err := groundWF(skeleton); err != nil {
-		return false, err
-	}
-	return isData, nil
+	return groundWF(skeleton)
 }
 
 // Grammar failures carry paths relative to their checked expression. The
@@ -98,30 +100,94 @@ func operandFailure(err error, path []int) error {
 	return err
 }
 
-func descriptorRule(constructor string, args []core.Value) model.DomainRule {
+// Formation contracts refer to ordinary definitions in the supplied prelude.
+// They do not interpret those definitions or dispatch on a user kind's name.
+func descriptorOperandKind(constructor string, args []core.Value) core.Value {
 	switch constructor {
-	case "wire":
-		return model.DomainRule{Capability: true}
-	case "tuple", "compound", "list-of", "union":
-		return model.DomainRule{}
+	case "seq", "set-of", "map-of", "and", "not", "rec":
+		return preludeReference("Data")
 	case "record":
 		if len(args) > 0 {
-			if mode, ok := args[0].(core.Atom); ok && string(mode.Bytes()) == "closed" {
-				return model.DomainRule{}
+			if mode, ok := args[0].(core.Atom); ok && string(mode.Bytes()) == "open" {
+				return preludeReference("Data")
 			}
 		}
 	}
-	return model.DomainRule{RequiresData: true}
+	return preludeForm("top", preludeForm("sort-proper"))
+}
+
+func descriptorMetadata(constructor string, args []core.Value) ([]kindmodel.Selector, error) {
+	switch constructor {
+	case "scalar":
+		if len(args) != 1 {
+			return nil, model.Failure(Invalid, "wrong scalar descriptor arity")
+		}
+		selector, ok := args[0].(core.Atom)
+		if !ok {
+			return nil, model.Failure(Invalid, "scalar selector must be an atom")
+		}
+		name := string(selector.Bytes())
+		if name != "int" && name != "utf8-text" && name != "bool" {
+			return nil, model.Failure(Invalid, "unknown scalar selector")
+		}
+		return []kindmodel.Selector{{Key: "selector", Value: name}}, nil
+	case "record":
+		if len(args) == 0 {
+			return nil, model.Failure(Invalid, "missing record mode")
+		}
+		mode, ok := args[0].(core.Atom)
+		if !ok {
+			return nil, model.Failure(Invalid, "record mode must be an atom")
+		}
+		name := string(mode.Bytes())
+		if name != "open" && name != "closed" {
+			return nil, model.Failure(Invalid, "unknown record mode")
+		}
+		return []kindmodel.Selector{{Key: "mode", Value: name}}, nil
+	}
+	return nil, nil
+}
+
+func descriptorSchema() kindmodel.Schema {
+	forms := make([]kindmodel.Form, 0, 24)
+	for _, name := range []string{
+		"any", "atom", "atom-exact", "atom-len", "atom-in", "exact",
+		"text-len", "key-grammar", "text-non-blank", "lowercase-uuid",
+	} {
+		forms = append(forms, kindmodel.Form{Name: name, MaxChildren: 0})
+	}
+	forms = append(forms, kindmodel.Form{
+		Name: "scalar",
+		Selectors: []kindmodel.SelectorDomain{{
+			Key: "selector", Values: []string{"int", "utf8-text", "bool"},
+		}},
+		MaxChildren: 0,
+	})
+	for _, name := range []string{"wire", "seq", "list-of", "set-of", "not"} {
+		forms = append(forms, kindmodel.Form{Name: name, MinChildren: 1, MaxChildren: 1})
+	}
+	forms = append(forms, kindmodel.Form{Name: "map-of", MinChildren: 2, MaxChildren: 2})
+	for _, name := range []string{"tuple", "compound", "union", "and"} {
+		forms = append(forms, kindmodel.Form{Name: name, MaxChildren: -1})
+	}
+	forms = append(forms, kindmodel.Form{
+		Name: "record",
+		Selectors: []kindmodel.SelectorDomain{{
+			Key: "mode", Values: []string{"open", "closed"},
+		}},
+		MaxChildren: -1,
+	})
+	return kindmodel.Schema{Forms: forms}
 }
 
 func descriptorAny() core.Value {
 	return core.NewTuple(core.NewAtom([]byte("horos/any")))
 }
 
-// Only existing descriptor type positions admit parameters/applications. Literal constraints,
-// record uniqueness and recursion guards are still checked by Horos DiagnoseWF.
-// Checked parameters/applications are replaced with any only in that final
-// descriptor-grammar pass, after scope, arity and argument closure were checked.
+// Only existing descriptor type positions admit parameters and applications.
+// Literal constraints, record uniqueness and recursion guards remain the
+// ground checker's responsibility. Observation lowering adds an open record's
+// implicit any tail separately; there is no source operand to substitute there.
 func descriptorPositions(constructor string, args []core.Value) ([][]int, error) {
 	var positions [][]int
 	switch constructor {

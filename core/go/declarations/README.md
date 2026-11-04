@@ -1,178 +1,162 @@
 # Go declaration tooling
 
-The package `github.com/Bitspark/horos/core/go/declarations` supplies the
-[revision-3 declaration model](../../../docs/spec/declarations.md). It consumes
-Ontos 0.16.0 module values and provides no source parser, native generator or
-runtime binding. Hosted qualification and publication of the current source are
-tracked separately by release receipts.
+**Revision-4 API, implemented in Go source, 4 November 2026.** The
+package `github.com/Bitspark/horos/core/go/declarations` is the public Go boundary
+for [canonical declarations](../../../docs/spec/declarations.md) and
+[general structural kinds](../../../docs/spec/kinds.md). It consumes Ontos
+module values and supplies no source parser, native generator or runtime binding.
+The internal kind-model engine is separate from primitive Horos formation and
+from the existing ground checker.
 
 ## Resolution and identity
 
-Use `Resolve(root, dependencies)` to check a root and the supplied transitive
-dependency values. Resolution verifies canonical maps/lists, module pins and
-names, interfaces, every reference and parameter, argument kinds and arity,
-descriptor positions, recursion closure, acyclic declaration dependencies and
-Data obligations. It checks unused imports, declarations and arguments too.
-Unreferenced pool values are bounded and fingerprinted but are not included in
-the resulting closure. There is no implicit IO or registry.
+`Resolve(root, dependencies)` admits a root and its supplied transitive dependency
+values. It resolves canonical imports, kind and type names, parameter slots,
+sorts, primitive operands and constructor contracts. Every required obligation
+must be established before a checked `Program` is returned. Unused imports,
+declarations and arguments remain subject to admission. An ignored argument
+cannot make an invalid type or contract acceptable.
 
-`Pin(value)` computes SHA-256 over codec-v1 bytes after bounded input admission;
-it does not validate module meaning. `ResolveWithLimits` and `PinWithLimits`
-accept explicit `Limits`. Every failed resolution returns a nil program.
+Module pins identify canonical bytes; import declarations also state the expected
+module name. `Pin(value)` determines that identity without establishing the
+module's meaning. `ResolveWithLimits` and `PinWithLimits` accept explicit limits.
+There is no implicit IO or registry. Unreferenced pool values consume admission
+resources but do not enter the resolved closure.
 
-A checked `Program` exposes immutable modules, declarations and expressions.
-Declaration IDs retain the module digest and declaration name; parameter IDs add
-the ordered slot index. Named references preserve definition scope, and
-application arguments preserve caller scope. Slice accessors return independent
-storage. Ontos values are immutable.
+The ordinary kind prelude is exposed through:
 
-## Kinds, interfaces and expression facts
+```go
+Prelude() core.Value
+PreludePin() Digest
+PreludeImport() core.Value
+```
 
-`Claim` has `TypeClaim` and `DataClaim`. Data is a refined kind of proper types
-established data-only; erasing that refinement gives the proper shape kind Type.
-It is not the ground value descriptor `any` or a runtime wrapper.
+Its module name is `horos.kinds`. `PreludeImport()` supplies the canonical import
+value; the importing module chooses its alias. Resolution uses the exact bundled
+prelude internally for primitive formation contracts. A user must still import
+it explicitly to refer to Type, Data, Scalar, List or any other prelude name.
+A local declaration called Data does not replace those bound formation contracts.
 
-Construct immutable interfaces with `ProperInterface(claim)` and
-`ConstructorInterface(inputs, resultClaim)`, each returning `(Interface, error)`.
-Constructor inputs are nonempty; all results are proper. `Interface` exposes
-`IsConstructor()`, `Inputs()`, `Result()`, `Kind()` and `Equal(other)`. Its erased
-`Kind` exposes `IsConstructor()`, `Inputs()` and `Equal(other)`. Shape kinds have
-no independently supplied Data annotation. Constructor inputs can themselves be
-constructor interfaces, but partial application and constructor-valued results
-are not admitted.
+A checked Program retains immutable source values, declarations, resolved
+references and binding environments. Declaration identity contains its module
+identity and name; parameter identity adds its ordered slot. Named references
+retain definition scope, while arguments retain caller scope. Kind-definition
+parameters and type-declaration parameters have separate binding domains.
 
-`Declaration.Parameters()` returns `TypeParameter{Name, Interface}` slots.
-`Result()` returns the explicit result claim, `Interface()` its declared
-admission/result interface, and `Kind()` its erased kind. The body is always a
-proper type. A Type claim does not discard stronger inferred Data evidence.
+## Checked kinds and type values
 
-The expression-form tag is `ExpressionKind`, distinct from a shape kind:
+The public API uses `KindHandle` and `TypeValue`. Both are sealed to the checked
+Program that creates them. Zero handles and handles from a different Program are
+invalid, even when the other Program resolved equal canonical bytes. There is no
+implicit cross-Program import.
 
-| Expression tag | Accessors and meaning |
+| Program method | Result and purpose |
 | --- | --- |
-| `Descriptor` | `Constructor()` and schema-designated `Operands()` |
-| `Parameter` | `Parameter()` yields the stable binder identity |
-| `Reference` | `Target()` yields the resolved declaration identity |
-| `Application` | `Callee()` and ordered `Arguments()` retain checked expressions |
+| `CompileKind(module Digest, expr core.Value)` | `(KindHandle, error)`; compile a canonical kind expression in the named module's scope |
+| `Value(id)` | `(TypeValue, error)`; obtain the checked value of a type declaration |
+| `Proper(expr core.Value)` | `(TypeValue, error)`; admit a closed proper type expression |
+| `Apply(callee TypeValue, arguments []TypeValue)` | `(TypeValue, error)`; apply one complete nonempty argument list |
+| `Satisfies(value TypeValue, kind KindHandle)` | `(Verdict, error)`; establish membership or a constructor guarantee |
+| `Includes(actual KindHandle, expected KindHandle)` | `(Verdict, error)`; establish actual ⊆ expected |
+| `Descriptor(value TypeValue)` | `(core.Value, error)`; materialize a closed proper type expression |
+| `GroundDescriptor(value TypeValue)` | `(core.Value, error)`; establish ordinary ground-kind membership and return a ground descriptor |
 
-`Target()` applies to Reference only. Application does not hide a declaration
-ID in place of its callee. `Value()` retains canonical source and `Path()` gives
-the exact tuple-index path within the body. `Interface()` and `KindShape()`
-expose the checked interface and erased shape. Descriptor operands also expose
-exact paths; tooling must not search inside `exact` literals for apparent syntax.
+A type value may be proper or a constructor. `Value` preserves that distinction:
+a zero-parameter alias of Page is still a constructor. `Apply` can return another
+constructor when the declaration's result sort requires it. Every application is
+fully saturated at its current stage; a following application can consume the
+constructor result. There is no partial application or source type lambda.
 
-`DataSummary()` exposes an immutable symbolic summary for a proper expression
-or declaration body. Its `Kind()` is `SummaryTrue`, `SummaryFalse`, `SummaryNeed`,
-`SummaryAnd` or `SummaryProbe`. `Parameter()` identifies a Need binder;
-`Children()` returns conjunction children; `Probe()` returns the checked
-Reference or Application origin, preserving its callee and argument structure.
-A probe's arguments are interpreted in their retained binding environment.
-These summaries are checked semantic facts, not new canonical source operands.
+Kind and expression projections retain canonical source through `Value()` and
+expose checked sort/contract metadata through `Sort()` and `Contract()`. A sort is
+a finite simple shape, such as proper or `(proper) -> proper`. A contract is an
+ordinary kind expression, including unions or intersections of arrows. It is not
+a privileged Type/Data flag or a replacement for source syntax. An expression's
+contract is its static source-context guarantee, separate from its published
+membership facts.
 
-`DataStatus()` reports `DataProven`, `DataFailed` or `DataConditional` under the
-available interfaces. Failed means the compositional Data criterion failed, not
-that a non-data inhabitant was found. Conditional retains unresolved Need/Probe
-evidence that may become provable with actual arguments. Resource exhaustion is
-an error, not a Data status. Constructor expressions have no proper-type Data
-summary: their `DataSummary()` is nil and `DataStatus()` is empty.
+Declarations and expressions expose source-context `Membership` facts.
+`Membership.Kind()` identifies the established kind and `Assumptions()` returns
+its assumptions; each `Assumption` exposes `Parameter()` and `Kind()`. A
+declaration's full checked contract has no assumptions. Body and operand facts
+can depend on the original parameter contracts. Queries do not mutate this
+published fact set, and it is not a principal-kind inference API.
 
-`program.Satisfies(declarationID, expectedInterface)` returns `(bool, error)`.
-It checks original admission before evaluating the known declaration's result
-under fresh rigid expected inputs. This can establish Page's `Data -> Data`
-interface or Ignore's `Type -> Data` interface without another declaration.
-Abstract constructor parameters use only their declared guarantees. A completed
-false result is distinct from exhaustion or an invalid request.
+## Guarantees and uncertainty
 
-## Typed specialization
+Type and Data are ordinary named kind definitions. Closed proper membership
+inspects the observed type graph: aliases and known applications are resolved,
+rec/ref become lexical backedges, exact literals remain opaque, and open records
+include their implicit any tail. Membership is exact within the admitted positive
+recursive fragment, subject to resource limits.
 
-Build invocation arguments through the checked program:
+Proper-kind inclusion uses positive recursive hedge automata, finite child
+sequences and finite cuts at live states. It reasons over a free observation
+universe containing all admitted Horos observations. Free-shape inclusion is
+sufficient for a Horos guarantee; a failed free-shape comparison need not supply
+an admissible Horos counterexample. `Includes` reports that inconclusive case as
+Unproved; it does not fabricate a realizing descriptor. This is not a general
+parity engine.
 
-- `program.Proper(value)` returns a checked closed proper-type `Argument`.
-- `program.Constructor(declarationID)` returns a checked named-constructor
-  `Argument` from that program.
+Constructor reasoning is sound but incomplete. A known constructor retains its
+body and environment: the checker admits a requested input domain against the
+original contracts, introduces rigid inputs, and establishes the requested result.
+An abstract constructor exposes its declared promises. Intersections retain joint
+promises; unions retain alternatives. Repeated uses of one rigid input remain
+correlated when cases split.
 
-Both return `(Argument, error)`. Argument internals are sealed. Zero-value
-Argument handles and handles from another Program are rejected, including a different Program
-resolving the same canonical bytes. A matching declaration ID alone does not
-establish checked ownership. There is no implicit cross-Program import.
+For example, the existing Page body can establish `Data => Data` and
+`Scalar => Record<Scalar | List<Scalar>>`. These use the same general machinery as
+an unrelated user kind. Under an abstract `F: Flat => Rows` and `A: Flat`, `F<A>`
+establishes Rows; a record containing it has `Record<Rows>` structure. An
+`F: Flat => Flat` promise alone cannot establish Rows. No principal inferred
+regular kind is promised for every symbolic body.
 
-`program.Specialize(declarationID, []Argument)` validates all original input
-contracts and produces a closed proper type expression. Use nil for the argument
-list of a zero-parameter declaration. `program.DataDescriptor` has the same
-argument API and additionally establishes Data, returning the existing ground
-descriptor for WF/Conforms. A mixed result fails with `BoundViolation`; there is
-no live-value validator. Both operations return nil on every failure, including
-exhaustion, and preserve the original open program.
+| Verdict | Meaning |
+| --- | --- |
+| `Proven` | The requested guarantee is established |
+| `Refuted` | Closed membership fails, or an admissible counterexample establishes failure |
+| `Unproved` | The available assumptions or supported proof rules do not establish the claim |
 
-All arguments are checked even when unused. Actual constructors retain their
-identity and defining environment when passed through parameters. Proving Data
-for a known application never repairs an invalid open declaration. Data
-preservation also does not establish recursion guardedness: application
-arguments remain independently recursion-closed, and closed output is checked
-again after expansion.
+Malformed syntax, binding, sort or handle ownership yields an `Invalid` error.
+A resource limit yields `Exhausted`. Neither error is a membership verdict.
+Unproved is not false, and a missing membership fact asserts nothing. A required
+Unproved obligation prevents creation of a checked Program. Completed resolution
+does not enumerate every true membership.
 
-## Diagnostics
+## Materialization and the ground boundary
 
-Use `errors.As` to inspect `*declarations.Error`. `Code` and `Subject` supply
-machine-readable outcomes; do not parse `Message`.
+`Descriptor` requires a closed proper value. Its result can contain Wire, so it
+is not automatically a descriptor for ground `WF` or `Conforms`.
+`GroundDescriptor` additionally establishes membership in the bundled ordinary
+ground kind, materializes the result and applies the unchanged ground WF rules.
+It returns the existing ground descriptor rather than a wrapper or another
+value profile. Each stage can exhaust independently.
 
-| Code | Subject | Meaning |
-| --- | --- | --- |
-| `missing-dependency` | `context` | A required pin is absent from the supplied pool; checking is incomplete |
-| `import-mismatch` | `context` | A pinned module's name contradicts its import |
-| `unknown-import` | `source` or `context` | An expression names an absent import alias |
-| `unknown-declaration` | `source`, `context` or `request` | A reference or requested operation names a declaration outside the verified closure |
-| `invalid` | `source`, `context` or `request` | Malformed source/context or an invalid invocation |
-| `kind-mismatch` | `source`, `context` or `request` | A constructor/proper shape does not fit its expression position or argument slot |
-| `bound-violation` | `source`, `context` or `request` | An interface or Data obligation is not established |
-| `cycle` | `source` or `context` | A forbidden import or declaration-reference cycle |
-| `invalid-options` | `configuration` | Caller-supplied checking limits are invalid |
-| `exhausted` | `request` | Valid resource limits prevented completion; source/context is not rejected |
+All original argument contracts apply even when the body ignores an argument.
+A query cannot repair an invalid open declaration. Kind membership does not add
+a ground recursion guard: arguments remain independently recursion-closed and
+materialized output must satisfy the appropriate ground rules. Exact literals
+and other non-type operands are never searched for apparent declarations.
 
-An expression failure retains its defining `Module`, `Declaration` and `Path`.
-An application callee has path component `1`; argument i has suffix `2, i+1`.
-`CalleeParameter` identifies a parameter callee where applicable, and `Expected`
-retains the required interface. A failure in dependency source has subject
-`context` and identifies its defining module in `Dependency`. Unknown named
-references expose `Target`. No location is invented if admission failed before
-one could be established.
+Neither method creates a live value, recognizes an endpoint, grants authority or
+establishes protocol compliance. Function, Stream and Cell remain ordinary
+library declarations whose runtime meanings belong to their libraries.
 
-When `Declaration` is empty and `ImportAlias` is present, an import failure
-identifies the importing `Module`, required `Dependency` and `ExpectedName`.
-Name mismatches also record `ActualName`. Nested failures retain the innermost
-failing import. An unrelated supplied value while a pin is missing is still
-`missing-dependency`; it is not evidence of a contradicted pin. Rejected context
-does not establish that root source is invalid under every other context.
-
-## Limits and qualification
+## Resource bounds
 
 Default limits are depth 256, 100,000 node visits/work steps, 16 MiB of canonical
 bytes and 256 supplied modules including the root. Depth lies in 1..512; other
-limits must be positive. Admission counts the full input pool, including
-literals, before encoding. One semantic-work budget covers expression reading,
-dependency checking, interface comparison, typed environments, symbolic
-evaluation and cache growth. It is not reset per phase, declaration or query.
-Generated interface and environment keys consume that operation's byte allowance
-before allocation. Evaluation caches are operation-local and keyed by exact
-bindings and interfaces.
+limits must be positive. Raw admission counts the full pool, including literals.
+Aggregate semantic work covers compilation, automata, comparisons, case splits,
+environments and cache growth. It is not reset for each phase or declaration.
 
-Specialization bounds argument admission and expansion, then independently
-admits the complete expanded output before descriptor checking. Repeated output
-occurrences count even when immutable subtrees share storage. Existing Horos
-checker limits remain in force. A small shared source graph may prove Data
-cheaply while its expanded descriptor exceeds the output budget.
+Expanded-output admission is separate. Repeated occurrences consume the output
+budget even when immutable subtrees share storage. Ground checker limits remain
+in force. Caches are operation-local and retain exact identities and bindings;
+a failed operation exposes no usable partial Program, handle or output.
 
-The package reuses the ground checker for literal forms and guarded recursion.
-Only checked proper expressions in designated descriptor positions can be
-replaced by `any` in an internal grammar skeleton. Shape, binding, arity and
-independent argument closure are established for this syntax/guard pass;
-interface obligations are checked separately before publishing a Program.
-This is not a rule that substitutes arbitrary tuples or constructor kinds with
-`any`.
-
-The maintained hosted Go gate (`scripts/check.sh go`) must qualify higher-order
-interfaces, independent eager-expansion/Data agreement, cache-order permutations,
-invalid open bodies and unused arguments, imported identity, literal opacity,
-cycles, recursion boundaries, sealed handles, diagnostics, limits and concurrent
-immutable access. Retain the complete ground cross-language conformance gate.
-The presence of tests or this contract is not a passing hosted receipt.
+Revision 4 replaces Claim, Interface, DataSummary, named-constructor Argument and
+the Specialize/DataDescriptor API. It has no revision-3 reader or compatibility
+aliases. Source and runtime integrations should use the canonical revision-4
+contract and the checked value operations above.

@@ -27,17 +27,16 @@ and [distribution](docs/distribution.md).
 ## Install
 
 ```sh
-npm install @bitspark/horos@0.10.0
-cargo add bitspark-horos@0.10.0
-go get github.com/Bitspark/horos/core/go@v0.10.0
+npm install @bitspark/horos@0.9.0
+cargo add bitspark-horos@0.9.0
+go get github.com/Bitspark/horos/core/go@v0.10.1
 ```
 
 The Rust package's library name is `horos`. All three packages use public ontos
 0.16.0, retaining a single ontos value type in each dependency graph. Consumers
 must upgrade their Ontos dependencies together; no old-version adapter or copied
-value implementation is provided. The commands name the 0.10.0 release target;
-publication and installed-consumer qualification require the corresponding
-[release receipt](docs/releases/v0.10.0.md).
+value implementation is provided. The [Go 0.10.1 release](docs/releases/v0.10.1.md)
+changes declaration tooling; it does not publish new npm or Cargo packages.
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
@@ -45,19 +44,27 @@ The TypeScript package exports its checker at `@bitspark/horos` and diagnostics 
 
 Horos owns ground data descriptors and conformance, plus one
 [canonical declaration language](docs/spec/declarations.md) for modules, immutable
-imports, kinds, interfaces and applications. Its [Go tooling](core/go/declarations/README.md)
-checks higher-kinded constructor parameters and Data guarantees, and specializes
-data or capability types. `Page<T>` is authored once; the same Page can be passed
-as a constructor and can establish `Data -> Data`. `DataPage<D: Data> = Page<D>`
-adds an explicit input restriction. Ground `any` and value checking remain
-data-only. Revision 3 cleanly replaces the bound-only revision-2 grammar without
-compatibility readers.
+imports, type declarations and applications. The revision-4 contract is
+implemented in the [Go declarations layer](core/go/declarations/README.md).
+It replaces the closed Type/Data interface model with
+[general structural kinds](docs/spec/kinds.md), finite constructor contracts,
+constructor aliases and constructor-valued results.
+
+Type and Data are ordinary definitions in the explicitly imported `horos.kinds`
+module. User-defined categories use the same node patterns, finite child
+sequences, unions, intersections and positive recursion. `Page<T>` is authored
+once: its body can establish `Data => Data` or guarantees involving unrelated
+kinds such as Scalar and Rows. The kind engine is separate from Horos primitive
+formation and ground value checking. Ground `any` remains data-only. Revision 4
+has no compatibility reader or new module signature field.
 
 Rust and TypeScript retain their ground descriptor implementations. Bittype owns
-AST/CST projections, semantic facts and separately qualified native transformations. Function,
-Stream and Cell remain ordinary libraries with library-owned behavior, as shown
-by the [Wire type examples](docs/spec/wire-types.md). There are no generators,
-runtime bindings or live capability validators in this change. The
+AST/CST projections, semantic facts and native transformations with explicit
+supported profiles. Kind validity does not imply native support for constructor
+values. Function, Stream and Cell remain ordinary libraries with library-owned
+behavior, as shown by the [Wire type examples](docs/spec/wire-types.md). The
+declarations layer adds no native generator, runtime binding or live capability
+validator. The
 [data/hydration boundary](docs/spec/hydrated-types.md) preserves Ontos's value
 models and the existing Wire/runtime responsibilities.
 

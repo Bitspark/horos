@@ -16,7 +16,16 @@ type budget struct {
 	bytes  int
 }
 
-// Generated interface/environment keys share the operation's byte allowance.
+func (b *budget) Step(depth uint64) error {
+	if depth > uint64(b.limits.MaxDepth) { return failure(Exhausted,"semantic depth limit reached") }
+	return b.step(int(depth))
+}
+func (b *budget) Bytes(size uint64) error {
+	if size > uint64(b.limits.MaxBytes) { return failure(Exhausted,"semantic byte limit reached") }
+	return b.reserveBytes(int(size))
+}
+
+// Generated kind/environment keys share the operation's byte allowance.
 // Reserve before allocation; map/value records also consume node-work steps.
 func (b *budget) reserveBytes(size int) error {
 	if size < 0 || size > b.limits.MaxBytes-b.bytes {
