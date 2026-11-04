@@ -72,7 +72,7 @@ namespaces, selected explicitly by the target form. Record field names retain
 horos's existing text semantics; they are not restricted to these identifiers.
 
 The module revision fixes this declaration grammar and the v1 descriptor
-vocabulary retained by horos 0.6.0, using ontos 0.16.0 embeddings and codec v1.
+vocabulary retained by horos 0.7.0, using ontos 0.16.0 embeddings and codec v1.
 A package version does not silently extend a document's admitted grammar.
 
 ## 3. Type expressions reuse descriptor positions

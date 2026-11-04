@@ -134,12 +134,12 @@ Library names such as Function, Stream and Cell are not built-in descriptor kind
 The [declaration model](declarations.md) specifies a separate layer for named
 modules, generic slots and applications, reusing descriptor positions and
 specializing to this existing vocabulary. The Go declarations package implements
-that layer in current source; the published 0.6.0 checker does not accept module
+that layer in 0.7.0; the separate ground checker does not accept module
 or open-template values. Declaration semantics belong to horos; syntax and native
 generation belong to bittype. No ground descriptor constructor is added.
 
-The [data/hydration boundary](hydrated-types.md) keeps Horos data-only. Bittype
-owns the proposed Wire type and mixed data/capability compositions above Horos;
-hydration stays in the existing Wire/runtime layers. There is no Horos Wire
-constructor or widened ground judgment. Function, Stream and Cell belong to
+The [data/hydration boundary](hydrated-types.md) keeps ground Horos data-only.
+Optional horos/wire owns mixed type/declaration semantics; Bittype supplies
+tooling projections. Hydration stays in the existing Wire/runtime layers.
+There is no ground Horos Wire constructor or widened ground judgment. Function, Stream and Cell belong to
 ordinary libraries above that boundary.

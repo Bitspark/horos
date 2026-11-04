@@ -36,8 +36,7 @@ The Rust package's library name is `horos`. All three packages use public ontos
 0.16.0, retaining a single ontos value type in each dependency graph. Consumers
 must upgrade their Ontos dependencies together; no old-version adapter or copied
 value implementation is provided. See the [0.7.0 release](docs/releases/v0.7.0.md).
-The
-TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
+The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
 ## Scope

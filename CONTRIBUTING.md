@@ -21,7 +21,7 @@ templates. Keep source capabilities separate from published versions and other
 language implementations.
 
 The existing Ontos and Horos cores remain data-only. Follow the
-[data/hydration boundary](docs/spec/hydrated-types.md) and proposed optional
+[data/hydration boundary](docs/spec/hydrated-types.md) and optional
 [horos/wire profile](docs/spec/wire-types.md), selected by the owner on
 3 November 2026 to replace the Bittype-owned contract model proposal. Horos owns
 that profile's canonical type/declaration and lifting semantics; Bittype
