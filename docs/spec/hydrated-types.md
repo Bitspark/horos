@@ -3,7 +3,8 @@
 **Owner directions, 3-4 November 2026; unified declaration decision supersedes
 the two-profile design.** Ontos ground values and Horos ground checks remain
 data-only. Horos now has one declaration language for data and capability types,
-with explicit Type/Data generic bounds. There is no separate Horos/Wire language.
+with explicit constructor interfaces, higher-kinded parameters and Data proofs.
+There is no separate Horos/Wire language.
 Ontos/wire remains an optional *value* model, not a second declaration grammar.
 
 A live capability depends on runtime authority and lifetime. Its description can
@@ -55,13 +56,16 @@ mixed-value checker or changes ground descriptor checking.
 | Deixis | Generic structure over opaque contents |
 | Ontos core | Ground data values, structural identity and encoding |
 | Optional ontos/wire | Mixed value structure and exact ground embedding/recovery |
-| Horos | Ground descriptors/conformance; unified declarations, bounds, resolution and specialization |
-| Bittype | AST/CST and semantic projections, provider composition and future transformations |
+| Horos | Ground descriptors/conformance; unified declarations, kinds/interfaces, Data proofs, resolution and specialization |
+| Bittype | AST/CST and semantic projections, provider composition and separately qualified transformations |
 | Bitwire / bitruntime | Sending capabilities and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |
 
-The [declaration model](declarations.md) authors `Page<T>` once, with a Type-bound
-slot. `DataPage<D: Data> = Page<D>` restricts arguments through an ordinary alias.
+The [declaration model](declarations.md) authors `Page<T>` once, with a Type
+interface. It accepts arbitrary proper types and can establish `Data -> Data`
+when used as a constructor. `DataPage<D: Data> = Page<D>` restricts arguments
+through an ordinary alias. Data names the refined kind of types established
+data-only; a Data argument alone does not guarantee a constructor's result.
 Data arguments need no wrapper. Closed data specialization returns the existing
 ground descriptor; mixed specialization stays a static type expression. The
 [Wire examples](wire-types.md) show library-owned composition. No lifting,

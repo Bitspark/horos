@@ -1,101 +1,173 @@
 # Go declaration tooling
 
-The package `github.com/Bitspark/horos/core/go/declarations` implements the
-[revision-2 declaration model](../../../docs/spec/declarations.md) in Horos
-0.9.0. It consumes Ontos 0.16.0
-module values and supplies no source parser, native generator or runtime binding.
+The package `github.com/Bitspark/horos/core/go/declarations` supplies the
+[revision-3 declaration model](../../../docs/spec/declarations.md). It consumes
+Ontos 0.16.0 module values and provides no source parser, native generator or
+runtime binding. Hosted qualification and publication of the current source are
+tracked separately by release receipts.
+
+## Resolution and identity
 
 Use `Resolve(root, dependencies)` to check a root and the supplied transitive
 dependency values. Resolution verifies canonical maps/lists, module pins and
-names, declaration targets, parameter slots, argument arity, descriptor positions,
-recursion closure, acyclic application graphs and symbolic Type/Data bounds. It resolves unused imports and
-declarations too. Unreferenced pool values are bounded and fingerprinted but are
-not included in the resulting closure. There is no implicit IO or registry.
+names, interfaces, every reference and parameter, argument kinds and arity,
+descriptor positions, recursion closure, acyclic declaration dependencies and
+Data obligations. It checks unused imports, declarations and arguments too.
+Unreferenced pool values are bounded and fingerprinted but are not included in
+the resulting closure. There is no implicit IO or registry.
 
 `Pin(value)` computes SHA-256 over codec-v1 bytes after bounded input admission;
 it does not validate module meaning. `ResolveWithLimits` and `PinWithLimits`
 accept explicit `Limits`. Every failed resolution returns a nil program.
 
-The checked `Program` exposes immutable modules, declarations and expressions.
-IDs retain the module digest and declaration name; parameter IDs add the ordered
-slot index. Descriptor operands expose exact tuple paths, so tooling can project
-type positions without searching or interpreting data inside `exact` literals.
-Application arguments retain their caller's bound targets and parameters.
-Slice accessors return independent storage; Ontos values are immutable.
+A checked `Program` exposes immutable modules, declarations and expressions.
+Declaration IDs retain the module digest and declaration name; parameter IDs add
+the ordered slot index. Named references preserve definition scope, and
+application arguments preserve caller scope. Slice accessors return independent
+storage. Ontos values are immutable.
 
-`Declaration.Parameters()` returns immutable `TypeParameter{Name, Bound}` slots;
-`TypeBound` admits any well-formed type and `DataBound` requires data. Bodies are
-checked symbolically under those bounds; applications preserve caller binding
-and check each target slot before substitution. Bounds are checked on all open
-declarations, not deferred until a concrete invocation.
+## Kinds, interfaces and expression facts
 
-`program.Specialize(declarationID, arguments)` takes closed type expressions,
-checks bounds and produces a closed type expression. It preserves the original
-open program. `program.DataDescriptor` additionally proves that the result is
-data-only and returns the existing ground descriptor for WF/Conforms. A mixed
-result fails with `BoundViolation`; no live value validator is added. Both
-operations return nil on every failure, including exhaustion.
+`Claim` has `TypeClaim` and `DataClaim`. Data is a refined kind of proper types
+established data-only; erasing that refinement gives the proper shape kind Type.
+It is not the ground value descriptor `any` or a runtime wrapper.
+
+Construct immutable interfaces with `ProperInterface(claim)` and
+`ConstructorInterface(inputs, resultClaim)`, each returning `(Interface, error)`.
+Constructor inputs are nonempty; all results are proper. `Interface` exposes
+`IsConstructor()`, `Inputs()`, `Result()`, `Kind()` and `Equal(other)`. Its erased
+`Kind` exposes `IsConstructor()`, `Inputs()` and `Equal(other)`. Shape kinds have
+no independently supplied Data annotation. Constructor inputs can themselves be
+constructor interfaces, but partial application and constructor-valued results
+are not admitted.
+
+`Declaration.Parameters()` returns `TypeParameter{Name, Interface}` slots.
+`Result()` returns the explicit result claim, `Interface()` its declared
+admission/result interface, and `Kind()` its erased kind. The body is always a
+proper type. A Type claim does not discard stronger inferred Data evidence.
+
+The expression-form tag is `ExpressionKind`, distinct from a shape kind:
+
+| Expression tag | Accessors and meaning |
+| --- | --- |
+| `Descriptor` | `Constructor()` and schema-designated `Operands()` |
+| `Parameter` | `Parameter()` yields the stable binder identity |
+| `Reference` | `Target()` yields the resolved declaration identity |
+| `Application` | `Callee()` and ordered `Arguments()` retain checked expressions |
+
+`Target()` applies to Reference only. Application does not hide a declaration
+ID in place of its callee. `Value()` retains canonical source and `Path()` gives
+the exact tuple-index path within the body. `Interface()` and `KindShape()`
+expose the checked interface and erased shape. Descriptor operands also expose
+exact paths; tooling must not search inside `exact` literals for apparent syntax.
+
+`DataSummary()` exposes an immutable symbolic summary for a proper expression
+or declaration body. Its `Kind()` is `SummaryTrue`, `SummaryFalse`, `SummaryNeed`,
+`SummaryAnd` or `SummaryProbe`. `Parameter()` identifies a Need binder;
+`Children()` returns conjunction children; `Probe()` returns the checked
+Reference or Application origin, preserving its callee and argument structure.
+A probe's arguments are interpreted in their retained binding environment.
+These summaries are checked semantic facts, not new canonical source operands.
+
+`DataStatus()` reports `DataProven`, `DataFailed` or `DataConditional` under the
+available interfaces. Failed means the compositional Data criterion failed, not
+that a non-data inhabitant was found. Conditional retains unresolved Need/Probe
+evidence that may become provable with actual arguments. Resource exhaustion is
+an error, not a Data status. Constructor expressions have no proper-type Data
+summary: their `DataSummary()` is nil and `DataStatus()` is empty.
+
+`program.Satisfies(declarationID, expectedInterface)` returns `(bool, error)`.
+It checks original admission before evaluating the known declaration's result
+under fresh rigid expected inputs. This can establish Page's `Data -> Data`
+interface or Ignore's `Type -> Data` interface without another declaration.
+Abstract constructor parameters use only their declared guarantees. A completed
+false result is distinct from exhaustion or an invalid request.
+
+## Typed specialization
+
+Build invocation arguments through the checked program:
+
+- `program.Proper(value)` returns a checked closed proper-type `Argument`.
+- `program.Constructor(declarationID)` returns a checked named-constructor
+  `Argument` from that program.
+
+Both return `(Argument, error)`. Argument internals are sealed. Zero-value
+Argument handles and handles from another Program are rejected, including a different Program
+resolving the same canonical bytes. A matching declaration ID alone does not
+establish checked ownership. There is no implicit cross-Program import.
+
+`program.Specialize(declarationID, []Argument)` validates all original input
+contracts and produces a closed proper type expression. Use nil for the argument
+list of a zero-parameter declaration. `program.DataDescriptor` has the same
+argument API and additionally establishes Data, returning the existing ground
+descriptor for WF/Conforms. A mixed result fails with `BoundViolation`; there is
+no live-value validator. Both operations return nil on every failure, including
+exhaustion, and preserve the original open program.
+
+All arguments are checked even when unused. Actual constructors retain their
+identity and defining environment when passed through parameters. Proving Data
+for a known application never repairs an invalid open declaration. Data
+preservation also does not establish recursion guardedness: application
+arguments remain independently recursion-closed, and closed output is checked
+again after expansion.
+
+## Diagnostics
 
 Use `errors.As` to inspect `*declarations.Error`. `Code` and `Subject` supply
-machine-readable results; do not parse `Message`. The former ambiguous
-`resolution` code is removed without an alias.
+machine-readable outcomes; do not parse `Message`.
 
 | Code | Subject | Meaning |
 | --- | --- | --- |
 | `missing-dependency` | `context` | A required pin is absent from the supplied pool; checking is incomplete |
-| `import-mismatch` | `context` | A pinned module is available but its name contradicts the import's expected name |
-| `unknown-import` | `source` or `context` | An expression names an alias absent from its defining module |
-| `unknown-declaration` | `source` or `context` | An expression names a declaration absent from the verified target module |
-| `invalid` | `source` or `context` | Malformed root/declaration input, or malformed dependency input, respectively |
-| `bound-violation` | `source`, `context` or `request` | A generic argument, constructor operand or requested data result cannot be established as Data |
-| `cycle` | `source` or `context` | A forbidden import or declaration cycle |
+| `import-mismatch` | `context` | A pinned module's name contradicts its import |
+| `unknown-import` | `source` or `context` | An expression names an absent import alias |
+| `unknown-declaration` | `source`, `context` or `request` | A reference or requested operation names a declaration outside the verified closure |
+| `invalid` | `source`, `context` or `request` | Malformed source/context or an invalid invocation |
+| `bound-violation` | `source`, `context` or `request` | An interface or Data obligation is not established |
+| `cycle` | `source` or `context` | A forbidden import or declaration-reference cycle |
 | `invalid-options` | `configuration` | Caller-supplied checking limits are invalid |
 | `exhausted` | `request` | Valid resource limits prevented completion; source/context is not rejected |
 
-`Specialize` also reports `invalid` or `unknown-declaration` about `request` for
-a missing checked program, wrong argument count, invalid/non-ground argument, or
-requested declaration outside that program. Those are invocation errors, not
-conclusions about checked source.
-Every failed operation retains its existing empty-output guarantee.
+An expression failure retains its defining `Module`, `Declaration` and `Path`.
+An application callee has path component `1`; argument i has suffix `2, i+1`.
+`CalleeParameter` identifies a parameter callee where applicable, and `Expected`
+retains the required interface. A failure in dependency source has subject
+`context` and identifies its defining module in `Dependency`. Unknown named
+references expose `Target`. No location is invented if admission failed before
+one could be established.
 
-A located expression failure retains its defining `Module`, `Declaration` and
-the tuple-index `Path` within that declaration body. A failure in imported source
-has subject `context` and also identifies that defining module in `Dependency`;
-the same declaration checked as the root has subject `source`. Unknown declaration
-errors expose the resolved `Target` identity.
+When `Declaration` is empty and `ImportAlias` is present, an import failure
+identifies the importing `Module`, required `Dependency` and `ExpectedName`.
+Name mismatches also record `ActualName`. Nested failures retain the innermost
+failing import. An unrelated supplied value while a pin is missing is still
+`missing-dependency`; it is not evidence of a contradicted pin. Rejected context
+does not establish that root source is invalid under every other context.
 
-When `Declaration` is empty and `ImportAlias` is present, a located import failure
-identifies the importing `Module`, required `Dependency` digest and `ExpectedName`;
-a name mismatch additionally records `ActualName`. Nested import failures retain
-the innermost failing import. No location is invented if input admission failed
-before one was known.
-
-The dependency pool is unlabelled. Supplying an unrelated value while omitting a
-required pin is still `missing-dependency`; it does not prove a contradicted pin
-assertion. A rejected supplied context does not establish that the root source is
-invalid under every valid context. A missing dependency or resource exhaustion
-must not become a completed negative semantic verdict.
+## Limits and qualification
 
 Default limits are depth 256, 100,000 node visits/work steps, 16 MiB of canonical
-encoded bytes and 256 supplied modules including the root. Depth is configurable
-within 1..512; other limits must be positive. Input admission counts the entire
-supplied pool, including literal values, before encoding. Expression/graph checking and symbolic bound checking each have their own
-node-work budget. Symbolic declaration summaries are cached and substituted in
-caller scope; unused parameters do not taint a data result. Specialization bounds argument admission
-plus expansion work, then independently admits the complete expanded result
-before descriptor checking. Existing Horos diagnostic limits remain in force.
-Output occurrences count even when immutable subtrees share storage.
+bytes and 256 supplied modules including the root. Depth lies in 1..512; other
+limits must be positive. Admission counts the full input pool, including
+literals, before encoding. Semantic work includes interface comparison, typed
+environments, symbolic evaluation and cache growth, aggregated across the
+operation rather than reset per declaration or query. Evaluation caches are
+operation-local and keyed by exact bindings and interfaces.
 
-The package reuses Horos's descriptor checker for literal forms and guarded
-recursion. Only validated declaration expressions in descriptor positions are
-replaced with `any` for that grammar check; binding, arity and independent
-argument closure have already been checked. Merely replacing arbitrary tuples
-with `any` is not the algorithm. Descriptor operands are rebuilt together so a
-wide record or tuple does not cause one complete tuple copy per field.
+Specialization bounds argument admission and expansion, then independently
+admits the complete expanded output before descriptor checking. Repeated output
+occurrences count even when immutable subtrees share storage. Existing Horos
+checker limits remain in force. A small shared source graph may prove Data
+cheaply while its expanded descriptor exceeds the output budget.
 
-Run the maintained remote Go gate (`scripts/check.sh go` on a GitHub runner).
-It includes data/mixed pagination, bound forwarding, phantom parameters, imported
-Function/Cell examples, nested binding, every parameterized descriptor
-position, specialization conformance, literal boundaries, invalid structures,
-cycles, limits, defensive accessors and concurrent specialization under the
-race detector. The existing cross-language ground conformance gate is retained.
+The package reuses the ground checker for literal forms and guarded recursion.
+Only checked proper expressions in designated descriptor positions can be
+replaced by `any` in an internal grammar skeleton. Shape, binding, arity,
+interfaces and independent argument closure must be established first. This is
+not a rule that substitutes arbitrary tuples or constructor kinds with `any`.
+
+The maintained hosted Go gate (`scripts/check.sh go`) must qualify higher-order
+interfaces, independent eager-expansion/Data agreement, cache-order permutations,
+invalid open bodies and unused arguments, imported identity, literal opacity,
+cycles, recursion boundaries, sealed handles, diagnostics, limits and concurrent
+immutable access. Retain the complete ground cross-language conformance gate.
+The presence of tests or this contract is not a passing hosted receipt.
