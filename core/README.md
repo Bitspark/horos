@@ -5,8 +5,8 @@ rules. Each replays the original [conformance corpus](../vectors/conformance.jso
 The source-only Python implementation supplies an additional oracle replay.
 
 The public package surfaces are listed in [distribution](../docs/distribution.md).
-Go additionally implements the ground declaration model and the optional static
-[horos/wire profile](go/wire/README.md). These declaration APIs are not currently
+Go additionally implements the unified [declaration model](go/declarations/README.md)
+with explicit Type/Data bounds, static Wire expressions and specialization. These declaration APIs are not currently
 implemented in Rust, TypeScript or Python; the cross-language descriptor corpus
 continues to qualify the unchanged ground checker.
 The CLI accepts `wf <descriptor-hex>` or `conforms <descriptor-hex> <value-hex>`;

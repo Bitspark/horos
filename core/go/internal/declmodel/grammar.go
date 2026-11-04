@@ -19,7 +19,7 @@ type Grammar struct {
 // never participate in these rules.
 type DomainRule struct {
 	RequiresData bool
-	Capability bool
+	Capability   bool
 }
 
 func Failure(code Code, message string) error                           { return failure(code, message) }

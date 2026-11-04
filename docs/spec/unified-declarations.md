@@ -1,6 +1,6 @@
 # Unified declarations, revision 2
 
-**Owner decision, 4 November 2026. Implementation in progress.** This supersedes
+**Owner decision, 4 November 2026. Implemented for the 0.9.0 candidate; hosted qualification and publication are tracked by release receipts.** This supersedes
 the separate ground declaration revision 1 and optional Horos/Wire declaration
 profile. One Horos language owns modules, expressions, parameters and applications.
 There are no old-format readers, profile aliases or template-lifting paths.

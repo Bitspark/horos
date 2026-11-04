@@ -39,7 +39,7 @@ const (
 )
 
 type TypeParameter struct {
-	Name string
+	Name  string
 	Bound Bound
 }
 
@@ -193,9 +193,9 @@ type Declaration struct {
 	expression *Expression
 }
 
-func (d *Declaration) ID() DeclarationID       { return d.id }
+func (d *Declaration) ID() DeclarationID           { return d.id }
 func (d *Declaration) Parameters() []TypeParameter { return slices.Clone(d.parameters) }
-func (d *Declaration) Expression() *Expression { return copyExpression(d.expression) }
+func (d *Declaration) Expression() *Expression     { return copyExpression(d.expression) }
 
 type Module struct {
 	pin          Digest

@@ -5,14 +5,14 @@ package declmodel
 // actual parameter use, not library names or syntax hidden in literal values.
 type dataCondition struct {
 	impossible bool
-	requires map[ParameterID]bool
+	requires   map[ParameterID]bool
 }
 
 func (c dataCondition) proven() bool { return !c.impossible && len(c.requires) == 0 }
 
 type boundChecker struct {
-	program *Program
-	work *budget
+	program   *Program
+	work      *budget
 	summaries map[DeclarationID]dataCondition
 }
 
