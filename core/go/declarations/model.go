@@ -1,6 +1,5 @@
-// Package declarations implements the unchanged ground declaration revision 1.
-// Binding mechanics are shared privately with optional profiles; this entry
-// point always uses the ground grammar and never admits an optional envelope.
+// Package declarations implements unified Horos declaration revision 2 with
+// explicit Type/Data bounds. Retired declaration profiles are not accepted.
 package declarations
 
 import (
@@ -8,11 +7,13 @@ import (
 	core "github.com/bitspark/ontos/core/go"
 )
 
-// These public facts retain one implementation and their established field
-// layout. Program remains a profile-specific handle with no configurable grammar.
+// Public facts share the private implementation. Program exposes only the
+// unified grammar, never a configurable or compatibility profile.
 type Digest = model.Digest
 type DeclarationID = model.DeclarationID
 type ParameterID = model.ParameterID
+type Bound = model.Bound
+type TypeParameter = model.TypeParameter
 type Code = model.Code
 type Subject = model.Subject
 type Error = model.Error
@@ -26,6 +27,9 @@ type Module = model.Module
 
 const (
 	Invalid              = model.Invalid
+	BoundViolation       = model.BoundViolation
+	TypeBound            = model.TypeBound
+	DataBound            = model.DataBound
 	MissingDependency    = model.MissingDependency
 	ImportMismatch       = model.ImportMismatch
 	UnknownImport        = model.UnknownImport
@@ -95,4 +99,21 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 		inner = p.inner
 	}
 	return inner.Specialize(id, arguments)
+}
+
+// DataDescriptor specializes a declaration and requires a data-only result.
+// It returns the existing ground descriptor, without a wrapper or conversion.
+func (p *Program) DataDescriptor(id DeclarationID, arguments []core.Value) (core.Value, error) {
+	value, err := p.Specialize(id, arguments)
+	if err != nil {
+		return nil, err
+	}
+	isData, err := descriptorData(value)
+	if err != nil {
+		return nil, err
+	}
+	if !isData {
+		return nil, &Error{Code: BoundViolation, Subject: SubjectRequest, Target: id, Message: "specialization is not a data descriptor"}
+	}
+	return value, nil
 }

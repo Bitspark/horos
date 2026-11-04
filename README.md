@@ -27,39 +27,35 @@ and [distribution](docs/distribution.md).
 ## Install
 
 ```sh
-npm install @bitspark/horos@0.8.0
-cargo add bitspark-horos@0.8.0
-go get github.com/Bitspark/horos/core/go@v0.8.0
+npm install @bitspark/horos@0.9.0
+cargo add bitspark-horos@0.9.0
+go get github.com/Bitspark/horos/core/go@v0.9.0
 ```
 
 The Rust package's library name is `horos`. All three packages use public ontos
 0.16.0, retaining a single ontos value type in each dependency graph. Consumers
 must upgrade their Ontos dependencies together; no old-version adapter or copied
-value implementation is provided. See the [0.8.0 release](docs/releases/v0.8.0.md).
+value implementation is provided. See the [0.9.0 release](docs/releases/v0.9.0.md).
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
 ## Scope
 
-horos owns the data-only descriptor model and value checking. Language syntax, AST
-transformations and source generation belong to bittype. Function, Stream, Cell
-and other behavioral contracts belong to ordinary libraries; they are not horos
-constructors. The [canonical declaration model](docs/spec/declarations.md)
-specifies modules, immutable imports, indexed type parameters and applications,
-using pagination. Its [Go tooling package](core/go/declarations/README.md)
-implements resolution and specialization in 0.8.0. Rust and TypeScript remain ground-descriptor
-implementations. Bittype owns AST projections and future native transformations.
+Horos owns ground data descriptors and conformance, plus one
+[canonical declaration language](docs/spec/declarations.md) for modules, immutable
+imports, Type/Data parameters and applications. Its [Go tooling](core/go/declarations/README.md)
+checks bounds and specializes data or capability types. `Page<T>` can be authored
+once; `DataPage<D: Data> = Page<D>` adds an explicit restriction. Ground `any` and
+value checking remain data-only. The [0.9.0 migration](docs/releases/v0.9.0.md)
+removes both old declaration profiles without aliases.
 
-The [data/hydration boundary](docs/spec/hydrated-types.md) keeps the existing
-Ontos and Horos cores data-only. Optional `ontos/wire` and
-[horos/wire](docs/spec/wire-types.md) extensions separately own
-mixed values and their type/declaration semantics. They replace the earlier
-Bittype-owned contract model proposal; Bittype supplies tooling for the canonical
-definitions. Existing ground APIs and declaration revision 1 are unchanged.
-Hydration remains in Wire/runtime, and Function, Cell and Stream remain ordinary
-library declarations with library-owned behavior. The [optional Go package](core/go/wire/README.md)
-implements static resolution, specialization and closed ground embedding in 0.8.0; it
-does not implement live value checking or hydration.
+Rust and TypeScript retain their ground descriptor implementations. Bittype owns
+AST/CST projections, semantic facts and future native transformations. Function,
+Stream and Cell remain ordinary libraries with library-owned behavior, as shown
+by the [Wire type examples](docs/spec/wire-types.md). There are no generators,
+runtime bindings or live capability validators in this change. The
+[data/hydration boundary](docs/spec/hydrated-types.md) preserves Ontos's value
+models and the existing Wire/runtime responsibilities.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. The boolean API preserves its existing bounded behavior,

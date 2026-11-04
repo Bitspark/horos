@@ -30,10 +30,24 @@ type ParameterID struct {
 	Index       int
 }
 
+// Bound is a constraint on type arguments, not a runtime value type.
+type Bound string
+
+const (
+	TypeBound Bound = "type"
+	DataBound Bound = "data"
+)
+
+type TypeParameter struct {
+	Name  string
+	Bound Bound
+}
+
 type Code string
 
 const (
 	Invalid            Code = "invalid"
+	BoundViolation     Code = "bound-violation"
 	MissingDependency  Code = "missing-dependency"
 	ImportMismatch     Code = "import-mismatch"
 	UnknownImport      Code = "unknown-import"
@@ -134,6 +148,7 @@ func (o Operand) Expression() *Expression { return copyExpression(o.expression) 
 // Expression is immutable. Values are immutable Ontos values; slice accessors
 // return independent storage. Application arguments keep their caller bindings.
 type Expression struct {
+	path        []int
 	kind        Kind
 	value       core.Value
 	constructor string
@@ -173,14 +188,14 @@ func (i Import) Pin() Digest   { return i.pin }
 
 type Declaration struct {
 	id         DeclarationID
-	parameters []string
+	parameters []TypeParameter
 	body       core.Value
 	expression *Expression
 }
 
-func (d *Declaration) ID() DeclarationID       { return d.id }
-func (d *Declaration) Parameters() []string    { return slices.Clone(d.parameters) }
-func (d *Declaration) Expression() *Expression { return copyExpression(d.expression) }
+func (d *Declaration) ID() DeclarationID           { return d.id }
+func (d *Declaration) Parameters() []TypeParameter { return slices.Clone(d.parameters) }
+func (d *Declaration) Expression() *Expression     { return copyExpression(d.expression) }
 
 type Module struct {
 	pin          Digest

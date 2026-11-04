@@ -1,47 +1,16 @@
-# Data cores, optional Wire extensions and hydration
+# One type language, distinct value domains
 
-**Owner direction, 3 November 2026; alignment updated 4 November.**
-The existing Ontos and Horos cores remain data-only. Optional `ontos/wire` and
-`horos/wire` extensions own mixed values and their type/declaration
-semantics. Bittype supplies tooling for those canonical definitions; hydration
-remains in the existing Wire/runtime layers.
+**Owner directions, 3-4 November 2026; unified declaration decision supersedes
+the two-profile design.** Ontos ground values and Horos ground checks remain
+data-only. Horos now has one declaration language for data and capability types,
+with explicit Type/Data generic bounds. There is no separate Horos/Wire language.
+Ontos/wire remains an optional *value* model, not a second declaration grammar.
 
-This replaces the 2 November proposal for a Bittype-owned
-`bittype/contract/*` model. The earlier proposal for a Wire constructor inside
-ground Horos declaration revision 2 also remains superseded. Neither proposal
-was implemented, and neither becomes a compatibility format. The optional
-[horos/wire profile](wire-types.md) has its own envelope, revision and
-interpretation. No existing Horos constructor, generic domain or ground judgment
-changes. The [static Go API](../../core/go/wire/README.md) implements the optional
-declaration profile and closed ground embedding; live runtime integration remains separate.
-
-## What Horos describes
-
-The [form contract](horos.md) describes sets of finite, ground Ontos values.
-The [declaration model](declarations.md) adds modules, imports, generic parameters
-and applications around those data types. Specialization produces a ground
-descriptor for the existing checker. A generic parameter is a slot for a data
-type; it is not permission to substitute a live capability.
-
-```text
-GroundValue = ByteAtom | Tuple(GroundValue*)
-```
-
-Ontos values are immutable and context-free. A live endpoint depends on a
-runtime, authority and lifetime, so it is not a ground Ontos value. A name or encoded
-reference can be ordinary data; interpreting it as a capability requires a
-separate binding context. Horos may check the data representation, but does not
-resolve that name, establish authority or recognize a live endpoint.
-
-`any`, complements, open records, collections, exact literals and recursive
-descriptors retain their existing ground interpretation. In particular,
-`any()` does not start accepting Wires. Unknown constructors remain invalid.
-
-Declaration revision 1 retains its existing scope in Horos 0.8.0. The release
-includes both Go declaration packages, while Rust and TypeScript retain their
-ground-only implementations. Source identity, binder identity, application
-resolution and explicit specialization remain as specified in
-[declarations](declarations.md).
+A live capability depends on runtime authority and lifetime. Its description can
+be stored as ordinary Ontos data without storing or validating an endpoint.
+`any`, complement and all existing ground descriptors keep their meanings.
+The unified `H("wire", E)` expression is not a ground descriptor passed to
+WF/Conforms. `Program.DataDescriptor` explicitly establishes that boundary.
 
 ## Structure and optional value profiles
 
@@ -85,60 +54,31 @@ mixed-value checker or changes ground descriptor checking.
 | --- | --- |
 | Deixis | Generic structure over opaque contents |
 | Ontos core | Ground data values, structural identity and encoding |
-| Optional ontos/wire | Go/TypeScript mixed value profile, native tuple structure and exact ground correspondence |
-| Horos core and data declarations | Data descriptors, declaration binding, specialization and ground conformance |
-| Optional horos/wire | Static Go mixed type/declaration profile and explicit closed ground embedding |
-| Bittype | AST/CST and semantic projections, provider composition, transformations and native type generation |
-| Bitwire / bitruntime | Existing sending-capability contracts and hydration realization |
+| Optional ontos/wire | Mixed value structure and exact ground embedding/recovery |
+| Horos | Ground descriptors/conformance; unified declarations, bounds, resolution and specialization |
+| Bittype | AST/CST and semantic projections, provider composition and future transformations |
+| Bitwire / bitruntime | Sending capabilities and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |
 
-The [horos/wire profile](wire-types.md) owns the canonical Wire expression,
-module format and illustrative Function, Cell and Stream library compositions.
-It is an optional semantic profile, not a widening of the ground profile.
-Its static definitions must not depend on Bittype, Bitwire or a live runtime.
-Bittype's [tooling projection](https://github.com/Bitspark/bittype/blob/main/docs/hydrated-types.md)
-delegates those semantics rather than maintaining a second canonical algebra.
-
-A description of a Wire can itself be stored as an Ontos value. That describes
-the syntax's storage, not its meaning: being encoded as Ontos does not make
-every type-description language a Horos descriptor. Horos can describe the
-encoded syntax as data without interpreting the capability that it denotes.
-Structural admission, runtime recognition, current operational validity and
-remote protocol compliance are separate judgments; none follows merely from a
-well-formed type description or from recognizing a Wire leaf.
-
-A ground `Page<Person>` remains a Horos data application. To support both data
-and capabilities, author `Page<T>` directly in horos/wire and apply that same
-declaration to `Data(PersonDescriptor)`, `Wire(Message)` or a library-owned Cell.
-The parameter already has the intended optional-profile domain; no copied
-template or derived module is needed. See the [direct pagination example](wire-types.md#4-direct-authoring-and-ground-embedding).
-A closed ground specialization can separately be embedded as `Data(G)`. That
-operation creates no declaration and never widens an existing ground slot.
-The owner removed template lifting on 4 November 2026; there is no compatibility
-API or Bittype transformer for it.
+The [declaration model](declarations.md) authors `Page<T>` once, with a Type-bound
+slot. `DataPage<D: Data> = Page<D>` restricts arguments through an ordinary alias.
+Data arguments need no wrapper. Closed data specialization returns the existing
+ground descriptor; mixed specialization stays a static type expression. The
+[Wire examples](wire-types.md) show library-owned composition. No lifting,
+embedding API or second declaration identity remains.
 
 Library-owned native representations, dynamic adapters, binding contexts,
 resource ownership and static-versus-dynamic limits remain in Bittype's
 [type representation](https://github.com/Bitspark/bittype/blob/main/docs/type-representations.md)
 and [runtime value](https://github.com/Bitspark/bittype/blob/main/docs/runtime-values.md)
-designs. Moving canonical semantics to optional Horos/Ontos profiles does not
-remove those ideas or implement them.
+designs. This work implements no generators or runtime bindings.
 
-## Scope and forbidden changes
+## Forbidden changes
 
-Function, Stream and Cell remain ordinary library declarations above this
-boundary. Their protocols do not become Horos constructors, Wire operations or
-hydration cases. There is no structural fingerprint or name-based dispatch that
-selects their behavior in a general generator, registry or runtime.
-
-Do not add Wire to the ground Horos vocabulary, accept capabilities in ordinary
-Ontos containers, widen ground checks, infer a semantic profile from Wire
-occurrences, or introduce an implicit revision conversion. Do not select a
-library behavior from a name or structural fingerprint. A static analysis
-result does not prove endpoint recognition or protocol compliance. Loading a
-description performs no sends, capability binding, exporting or resource allocation.
-
-The optional Go profiles and Bittype frontends are implemented. Native mappings,
-runtime bindings and the illustrative library protocols remain separate work. The
-[cross-repository preservation map](https://github.com/Bitspark/bittype/blob/main/docs/wire-extension-preservation.md)
-records the retained concepts and explicitly superseded ownership choices.
+Do not add Function, Stream or Cell kinds, name switches, built-in registrations
+or structural fingerprints to general tooling, Wire, runtime or hydration.
+Do not admit capabilities in ground Ontos values or widen Horos ground any.
+Do not infer a language from Wire occurrences, accept retired envelopes, wrap
+data schemas in a second profile or silently transform old modules. Preserve
+literal values and the distinction between static validity, runtime recognition,
+current authority and protocol compliance. Loading declarations has no effects.

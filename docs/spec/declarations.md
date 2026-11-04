@@ -1,17 +1,18 @@
-# Canonical declarations, revision 1
+# Canonical declarations, revision 2
 
-**2 November 2026; distribution updated 4 November. Status: implemented in the
-Go declarations tooling package, included in Horos 0.8.0.** The owner authorized the declaration
-model and bittype AST after reviewing this format. The existing ground descriptor
-APIs remain separate. Rust and TypeScript declaration tooling, readable source
-syntax, native generators and runtime bindings are outside this increment.
+**Owner decision, 4 November 2026. Implemented by the Go declarations package
+for Horos 0.9.0.** One declaration language contains data and capability type
+expressions. Explicit Type/Data bounds constrain generic arguments without a
+second language or duplicated declarations. This replaces both previous profiles
+without aliases or old-format readers. Ground descriptor APIs retain their
+existing data-only meanings. Rust and TypeScript declaration tooling, readable
+source syntax, native generators and runtime bindings remain outside this work.
 
-The owner selected horos for the canonical data type model and bittype for
-syntax, AST/CST infrastructure and native type generation. This declaration
-layer adds names, modules, generic parameters and applications to the existing
-[descriptor vocabulary](horos.md). It does not redefine records, collections,
-scalars, value equality or conformance. The first generation milestone is data
-types only, for TypeScript, Go, Rust and C++.
+Horos owns canonical types and their semantics; Bittype owns AST/CST projections,
+semantic facts, transformations and source generation. The declaration layer
+adds names, modules, generic parameters and applications to the existing
+[descriptor vocabulary](horos.md), plus the static [Wire type](wire-types.md).
+It does not redefine Ontos data identity or ground conformance.
 
 ## 1. Representation and notation
 
@@ -49,17 +50,17 @@ whitespace and notation are not hashed.
 
 | Form | Exact arguments after its `horos/decl/` tag |
 | --- | --- |
-| `module` | `I(1), T(moduleName), imports, declarations` |
+| `module` | `I(2), T(moduleName), imports, declarations` |
 | `import` | `T(expectedModuleName), Atom(32-byte SHA-256 digest)` |
-| `type` | `L(T(parameterName), ...), body` |
+| `type` | `L(D("parameter", T(parameterName), A(bound)), ...), body` |
+| `parameter` | `T(parameterName), A("type")` or `T(parameterName), A("data")` |
 | `param` | `I(zeroBasedParameterIndex)` |
 | `apply` | `target, L(argument, ...)` |
 | `local` | `T(declarationName)` |
 | `imported` | `T(importAlias), T(declarationName)` |
 
 `imports` is an `M` from local aliases to `import` values. `declarations` is an
-`M` from declaration names to `type` values. All declarations are exported in
-this first revision. Empty maps and parameter/argument lists are explicit;
+`M` from declaration names to `type` values. All declarations are exported. Empty maps and parameter/argument lists are explicit;
 omitted arguments and defaults do not exist. Unknown tags, extra arguments and
 unknown module revisions are errors. `local` and `imported` are targets, not
 standalone type expressions.
@@ -71,8 +72,8 @@ must have distinct names. Import aliases and declaration names occupy separate
 namespaces, selected explicitly by the target form. Record field names retain
 horos's existing text semantics; they are not restricted to these identifiers.
 
-The module revision fixes this declaration grammar and the v1 descriptor
-vocabulary retained by horos 0.8.0, using ontos 0.16.0 embeddings and codec v1.
+The module revision fixes this declaration grammar and the unified expression
+vocabulary in this specification, using ontos 0.16.0 embeddings and codec v1.
 A package version does not silently extend a document's admitted grammar.
 
 ## 3. Type expressions reuse descriptor positions
@@ -80,7 +81,8 @@ A package version does not silently extend a document's admitted grammar.
 A body or argument is a type expression `E`:
 
 ```text
-E = a horos v1 descriptor, with each child-descriptor position admitting E
+E = a horos descriptor, with each child-type position admitting E
+  | H("wire", E)
   | D("param", I(index))
   | D("apply", target, L(E, ...))
 
@@ -114,8 +116,34 @@ parameter scope. A module-level bare parameter is invalid.
 
 `apply` supplies every argument position exactly once, in declaration order.
 A reference to a nongeneric declaration is the same operation with `L()`.
-There is no inference, partial application, implicit `any`, constraint/default
-language or alternate shorthand in the canonical value grammar.
+There is no type inference, partial application, implicit `any`, default argument
+or alternate shorthand in the canonical value grammar.
+
+### Type and Data bounds
+
+Every canonical parameter declares its bound. `type` admits any well-formed
+type expression; `data` requires a statically established data-only type. Type
+and Data are parameter bounds, not value descriptors or wrappers. Readable
+`Page<T>` means a Type-bound slot; the canonical input always spells it out.
+
+Tuple, compound, list-of, closed record and union admit either domain. They are
+data when all their value-bearing operands are data. Wire is never data, even
+when its message type is data. Scalar, atom, exact and refinement forms are data.
+Other existing forms require data operands: seq, set-of, map-of, open records,
+intersection, complement and guarded recursion. These restrictions preserve
+existing laws without inventing capability key equality, mixed complements or
+recursive capability semantics. `any` still means any data value.
+
+Resolve all declarations, including open generics, under their declared bounds.
+`Forward<D: Data> = DataPage<D>` succeeds; `Forward<T> = DataPage<T>` fails before
+specialization. A Type slot cannot satisfy Data merely because a future caller
+might supply data. A Data-only constructor likewise rejects a Type slot.
+
+Data classification follows resolved declaration bodies and actual parameter
+use. `Ignore<T> = scalar(utf8-text)` remains data even at `Ignore<Wire<Text>>`;
+`Wire<D: Data> = H("wire", D)` never returns data. All arguments still undergo
+binding and bound checks, including unused arguments. The check is a bounded
+syntax-directed proof, not arbitrary subtype, emptiness or equivalence solving.
 
 ## 4. Modules and immutable imports
 
@@ -147,25 +175,28 @@ First define the reusable pagination module. `Pagination` below names this exact
 module value for the subsequent equation; it is not an extra canonical field.
 
 ```text
-Pagination = D("module", I(1), T("example.pagination"), M{}, M{
-  "Page": D("type", L(T("T")),
+Pagination = D("module", I(2), T("example.pagination"), M{}, M{
+  "Page": D("type", L(D("parameter", T("T"), A("type"))),
     H("record", A("closed"),
       H("field", T("items"), A("req"),
         H("list-of", D("param", I(0)))),
       H("field", T("next"), A("opt"),
-        H("scalar", A("utf8-text")))))
+        H("scalar", A("utf8-text"))))),
+  "DataPage": D("type", L(D("parameter", T("D"), A("data"))),
+    D("apply", D("local", T("Page")), L(D("param", I(0)))))
 })
 ```
 
-`Page` has one type parameter. Its required `items` field is an ontos list of
-that type. Its optional `next` field contains text when present; explicit null
+`Page` has one Type-bound parameter. Its required `items` field is a list of
+that type. `DataPage` is an ordinary constrained alias of that same declaration;
+it adds no value wrapper or copied record. Its optional `next` field contains text when present; explicit null
 is not admitted. No pagination behavior, fetch operation or cursor protocol is
-implied by this data declaration.
+implied by this type declaration.
 
 The consumer imports that exact module and applies `Page` to its own `Person`:
 
 ```text
-People = D("module", I(1), T("example.people"), M{
+People = D("module", I(2), T("example.people"), M{
   "pagination": D("import", T("example.pagination"), Pin(Pagination))
 }, M{
   "Person": D("type", L(),
@@ -187,17 +218,22 @@ In familiar notation, these exact values declare:
 
 ```text
 example.pagination: Page<T> = { items: List<T>, next?: Text }
+                    DataPage<D: Data> = Page<D>
 example.people:     Person = { name: Text }
                     PeoplePage = pagination.Page<Person>
 ```
 
 This last display is explanatory shorthand, not a second canonical format.
+`Page<Person>` and `DataPage<Person>` specialize to the same ground descriptor.
+`DataPage<Page<Person>>` also succeeds. If an ordinary imported `Cell<Person>`
+contains a Wire, `Page<Cell<Person>>` is valid but `DataPage<Cell<Person>>` and
+`DataPage<list-of(Cell<Person>)>` fail. No checker recognizes the name Cell.
 
 ## 6. Application and specialization
 
 Resolution preserves the original module, declaration and parameter bindings.
 For an application, first resolve the target in the author's module and resolve
-each argument in the caller's scope. Only then substitute those bound argument
+each argument in the caller's scope. Check each argument against the callee's declared bound. Only then substitute those bound argument
 expressions for the callee's indexed parameters. Moving raw names into the
 callee's module and resolving them there is forbidden.
 
@@ -222,9 +258,11 @@ H("record", A("closed"),
     H("scalar", A("utf8-text"))))
 ```
 
-This is an existing ground horos descriptor. Future declaration tooling must
-check its well-formedness before passing it to the existing `WF`/`Conforms` or
-diagnostic APIs. Those APIs do not accept an open template as if it were a
+This is an existing ground Horos descriptor. `Program.DataDescriptor`
+specializes, proves the result data-only and checks its ground well-formedness
+before returning it for the existing `WF`/`Conforms` or diagnostic APIs.
+`Program.Specialize` also accepts and returns closed mixed type expressions;
+those are not inputs to the ground checker. Those APIs do not accept an open template as if it were a
 descriptor. The proposal adds no separate value validator or runtime codec.
 
 The checked declaration graph keeps `PeoplePage`, its application of the
@@ -232,14 +270,14 @@ imported `Page`, and the argument's `Person` origin even when a consumer also
 requests this expanded view. Aliases introduce no value wrapper, but their
 declaration identity is not discarded.
 
-## 7. Recursion and the first revision's limits
+## 7. Recursion and limits
 
 Existing guarded `rec`/`ref` descriptors retain their meaning and guard rules.
 They are not reused to encode generic slots or external declaration references.
 Guarded well-formedness does not assert that a descriptor has an inhabitant;
 this layer adds no competing productivity or nonempty-type rule.
 
-The declaration-application graph must be acyclic in this first revision;
+The declaration-application graph must be acyclic in this revision;
 direct alias cycles and recursive generic applications are rejected. Recursive
 data can still be expressed using existing `rec`/`ref` within a declaration.
 Regular recursion across named declarations is deferred rather than given
@@ -301,7 +339,7 @@ running the final descriptor well-formedness check.
 | Duplicate map key or parameter name; wrong tag/arity/revision | Reject structure |
 | Parameter used as a record mode or field name | Reject; that operand is literal, not a type position |
 | Parameter-shaped tuple inside `exact` | Preserve literal data, without interpreting a slot |
-| Cyclic imports or cyclic declaration applications | Reject in revision 1 |
+| Cyclic imports or cyclic declaration applications | Reject in revision 2 |
 | A recursion `ref` captured from outside an application argument | Reject the open recursion boundary |
 | `next` absent / present text / present null | Valid / valid / invalid for the example |
 
@@ -325,40 +363,42 @@ the canonical format or any declaration/descriptor rule.
 
 ## 10. Ownership and delivery boundary
 
-Horos owns this data semantic layer, its encoding, resolution/substitution rules
+Horos owns this type semantic layer, its encoding, resolution/substitution rules
 and declaration checking/specialization APIs. Bittype owns readable syntax,
 AST/CST projections, located frontend diagnostics, AST transformations and
 native source generation. Its frontend must implement/delegate the horos rules,
 not define another data type algebra. Horos must not depend on bittype.
 
-Function, Stream, Cell and future behavioral contracts remain library-owned.
-These data-only declarations do not model a live function or stream as an ontos
-data value or supply their bindings. Their eventual declarations compose through
-explicit library identity in the optional [horos/wire profile](wire-types.md),
-with separate library-owned runtime realizations. Generic data parameters remain
-data-only. Author a generic that must accept capabilities directly in horos/wire;
-its same parameter can accept data embeddings and capability types. There is no
-template-copying or cross-profile declaration transformation. Bittype projects
-each authored profile without defining another canonical type model.
+Function, Stream, Cell and future behavioral contracts remain ordinary pinned
+library declarations. Their static shapes compose with primitive Wire and
+structural constructors; their behavior stays with libraries. See the
+[Wire and library examples](wire-types.md). There is no separate Horos/Wire
+language, data wrapper, closed-embedding API or template-copying transformation.
+Ontos's value-level ground embedding and recovery remain separate and unchanged.
 
 Forbidden in general generators, engine, Wire, runtime and hydration:
 
 - Contract-specific kinds, name switches, built-in imports or registrations.
 - Recognizing behavioral ownership from structural fingerprints or equal shapes.
-- Replacing the canonical input with extraction from a native language.
+- Replacing canonical input with extraction from a native language.
 - Hiding adapter, request/reply, stream or Cell implementations in type generation.
+- Widening ground `any`, accepting live endpoints as ground data, silently
+  converting old declaration revisions or inventing a fallback profile.
 
 The Go [declarations API](../../core/go/declarations/README.md) supplies checked
-modules, immutable resolved expressions, binding identities and concrete
-specialization. Bittype consumes it as an AST-only frontend. This increment adds
-no native generator, text parser, formatter, behavioral binding or package release.
+modules, immutable resolved expressions, binding identities, symbolic bound
+checking and concrete specialization. Bittype projects it as one AST-only
+frontend. No native generator, text parser, formatter or runtime binding is added.
 Reverse native-to-Horos migration remains later work.
 
-The [data/hydration boundary](hydrated-types.md) records the 3 November owner
-direction: existing Ontos and Horos cores stay data-only, while optional
-`ontos/wire` and `horos/wire` extensions own proposed mixed values and types.
-This supersedes Bittype's ownership of the proposed contract model without
-changing this ground revision. The earlier idea of a Wire constructor in ground
-Horos revision 2 remains superseded; the optional profile has a separate envelope
-and interpretation. Neither old proposal is accepted as a compatibility format.
-Hydration remains above the value/type models in the Wire/runtime layers.
+## 11. Clean migration
+
+The [4 November decision](unified-declarations.md) supersedes both previous
+declaration profiles. Rewrite revision-1 data parameters as explicit Data slots
+and old mixed parameters as Type slots. Convert their structural type forms to
+H forms, remove schema-level Data wrappers and use the revision-2 D envelope.
+Recompute pins from dependency leaves outward. Do not rewrite opaque literals.
+Old envelopes, bounds, parameter lists and retired constructor tags are errors;
+there is no dual reader, compatibility alias or exported `core/go/wire` package.
+Historical release records stay immutable. The ground descriptor vocabulary and
+Ontos/Bitwire/Bitruntime/Bitnode value and transport contracts are unchanged.

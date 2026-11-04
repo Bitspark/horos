@@ -39,12 +39,12 @@ func entry(name string, v value) [2]value { return [2]value{text(name), v} }
 func definition(body value, parameters ...string) value {
 	var names []value
 	for _, name := range parameters {
-		names = append(names, text(name))
+		names = append(names, d("parameter", text(name), a("data")))
 	}
 	return d("type", list(names...), body)
 }
 func module(name string, imports value, entries ...[2]value) value {
-	return d("module", integer(1), text(name), imports, mapping(entries...))
+	return d("module", integer(2), text(name), imports, mapping(entries...))
 }
 func param(i int64) value { return d("param", integer(i)) }
 func local(name string, args ...value) value {
@@ -110,7 +110,7 @@ func TestPagination(t *testing.T) {
 	}
 	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
 	open, ok := p.Declaration(pageID)
-	if !ok || len(open.Parameters()) != 1 || open.Parameters()[0] != "T" {
+	if !ok || len(open.Parameters()) != 1 || open.Parameters()[0] != (decl.TypeParameter{Name: "T", Bound: decl.DataBound}) {
 		t.Fatal("open generic declaration was lost")
 	}
 	slot := open.Expression().Operands()[0].Expression().Operands()[0].Expression()
@@ -317,11 +317,11 @@ func TestModulePinsAndImports(t *testing.T) {
 		t.Fatal("transitive closure lost a module")
 	}
 	for _, invalid := range []value{
-		d("module", integer(2), text("m"), mapping(), mapping()),
-		d("module", integer(1), text("bad..name"), mapping(), mapping()),
-		d("module", integer(1), text(strings.Repeat(".", 1<<16)), mapping(), mapping()),
-		d("module", integer(1), text("m"), list(), mapping()),
-		d("module", integer(1), text("m"), mapping(), mapping(), h("any")),
+		d("module", integer(1), text("m"), mapping(), mapping()),
+		d("module", integer(2), text("bad..name"), mapping(), mapping()),
+		d("module", integer(2), text(strings.Repeat(".", 1<<16)), mapping(), mapping()),
+		d("module", integer(2), text("m"), list(), mapping()),
+		d("module", integer(2), text("m"), mapping(), mapping(), h("any")),
 		module("m", mapping(entry("p", d("import", text("p"), a("short"))))),
 	} {
 		_, err := decl.Resolve(invalid, nil)
@@ -330,7 +330,7 @@ func TestModulePinsAndImports(t *testing.T) {
 	duplicate := core.NewTuple(a("map"),
 		core.NewTuple(text("X"), definition(h("any"))),
 		core.NewTuple(text("X"), definition(h("any"))))
-	_, err = decl.Resolve(d("module", integer(1), text("m"), mapping(), duplicate), nil)
+	_, err = decl.Resolve(d("module", integer(2), text("m"), mapping(), duplicate), nil)
 	expectCode(t, err, decl.Invalid)
 }
 
@@ -375,14 +375,14 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
 	open, _ := p.Declaration(pageID)
 	names := open.Parameters()
-	names[0] = "Changed"
+	names[0] = decl.TypeParameter{Name: "Changed", Bound: decl.TypeBound}
 	operands := open.Expression().Operands()
 	path := operands[0].Path()
 	path[0] = 900
 	operands[0] = decl.Operand{}
 	modules := p.Modules()
 	modules[0] = nil
-	if open.Parameters()[0] != "T" || open.Expression().Operands()[0].Path()[0] != 2 || p.Modules()[0] == nil {
+	if open.Parameters()[0] != (decl.TypeParameter{Name: "T", Bound: decl.DataBound}) || open.Expression().Operands()[0].Path()[0] != 2 || p.Modules()[0] == nil {
 		t.Fatal("accessor leaked mutable storage")
 	}
 	var workers sync.WaitGroup
