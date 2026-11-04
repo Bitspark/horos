@@ -346,8 +346,8 @@ raw source, resolve ambiguity by registration order, or fall back silently.
 ## 6. Tooling, runtime and qualification
 
 The canonical type and declaration model lives here. Bittype supplies language-owned
-AST/check/resolve/analyze stages and explicit transformers over its existing
-generic AST/CST and semantic infrastructure. Its provider must preserve the
+AST/check/resolve/analyze stages over its existing generic AST/CST and semantic
+infrastructure; native type transformers remain future work. Its provider must preserve the
 profile identity, ground boundaries, binders, references, origins and diagnostic
 distinctions. No generic kernel node, registry default or language-name switch
 learns Wire, Function, Stream or Cell. Concrete registration IDs and Go marker
@@ -367,17 +367,17 @@ Keep these judgments separate:
 | --- | --- |
 | Canonical syntax | The tags, arities, literals and profile revision are admitted by this grammar. |
 | Type/declaration semantics | Horos owns binding, resolution, specialization and the intended type interpretation; existing ground `WF`/`Conforms` still check only their ground domain. |
-| Mixed structural admission | The proposed ontos/wire profile admits the value's tagged payload and finite positional structure. This does not authenticate an arbitrary payload as a usable endpoint. |
+| Mixed structural admission | The optional ontos/wire profile admits the value's tagged payload and finite positional structure. This does not authenticate an arbitrary payload as a usable endpoint. |
 | Capability recognition | Runtime composition recognizes a particular sending face; a generic type or value package does not consult a global runtime to do so. |
 | Operational validity | Current authority, scope, endpoint lifetime and transport state permit a particular operation. Recognition alone does not establish this. |
 | Protocol compliance | The receiver and sender follow a library's message, reply, state and cancellation laws. Neither a Wire leaf nor its declared E proves that behavior. |
 
-The current [Bitwire live contract](https://github.com/Bitspark/bitwire/blob/e2d2d641744a49f1d8098b6ea5f2724454d72b96/docs/wire/hydrated-native.md)
-and [Bitruntime implementation](https://github.com/Bitspark/bitruntime/blob/64dbe709f2f002781a5010b08a6650c7eeb129df/hydrated/README.md)
-already own atoms/tuples/Wires, export references, proxies and scope/endpoint
-lifetimes. They do not currently use this proposed profile or Horos to hydrate
-messages. Mapping their existing carrier to the Deixis-based profile is separate
-future qualification, not a requirement to rewrite every native container now.
+[Bitwire 0.7.0](https://github.com/Bitspark/bitwire/blob/v0.7.0/docs/wire/hydrated-native.md)
+and [Bitruntime 0.8.0](https://github.com/Bitspark/bitruntime/blob/v0.8.0/hydrated/README.md)
+use Ontos 0.16.0's shared native mixed structure. They retain export references,
+proxies and scope/endpoint lifetimes, and do not interpret Horos types to hydrate
+messages. The native carrier alignment and its runtime qualification are separate
+from this static type model; removing template lifting changes neither.
 
 Finite inputs still require explicit resource bounds. Mixed structural
 recognition, static loading/resolution, embedding and specialization must
