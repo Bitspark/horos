@@ -15,12 +15,20 @@ are no private runtime dependencies, hidden registry routes or compatibility
 exports for the pre-public proof/witness APIs. Code-generation tools do not form
 part of the runtime dependency graph.
 
-The release workflow has `rehearse`, `provenance`, `publish` and `verify` modes. Rehearsal runs
+The release workflow has `rehearse`, `provenance`, `diagnose`, `publish` and `verify` modes. Rehearsal runs
 without publishing. Publication uses the accepted source revision and package
 artifacts, compares existing registry versions before reuse and verifies fresh
 consumers. A release receipt records source, tags, artifact hashes and checks.
-Registry credentials are confined to the publishing job; public consumer checks
-run without them. Previously released versions are never overwritten.
+Registry authorization is confined to publication and its nonpublishing
+authentication diagnostic; public consumer checks run without it. Previously
+released versions are never overwritten.
+
+`diagnose` uses the accepted rehearsal and the same trusted workflow/environment
+identity. It compares pinned native npm clients with uploads and scripts disabled,
+reporting only fixed OIDC stages, numeric statuses and presence booleans. It does
+not change publisher settings, candidate archives or tags. A diagnostic pass is
+not a publication or installed-consumer result; see the
+[0.7.0 diagnostic contract](releases/v0.7.0.md#diagnosing-trusted-publication).
 
 For the first npm publication, `provenance` signs the accepted archive on the
 public repository's GitHub-hosted runner without uploading to npm. It requires

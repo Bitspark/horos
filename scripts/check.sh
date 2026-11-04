@@ -43,7 +43,7 @@ case "${1:-all}" in
   public)
     python3 scripts/verify-public.py
     python3 -m unittest discover scripts -p 'test_*.py' -v
-    node --test scripts/test-provenance.cjs
+    node --test scripts/test-provenance.cjs scripts/test-diagnose-npm-oidc.cjs
     git diff --check
     ;;
   all)
