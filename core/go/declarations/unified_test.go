@@ -234,7 +234,7 @@ func TestSymbolicBoundPropagationHasItsOwnWorkLimit(t *testing.T) {
 	var members []value
 	for i := 0; i < 128; i++ {
 		names = append(names, fmt.Sprintf("T%d", i))
-		members = append(members, param(i))
+		members = append(members, param(int64(i)))
 	}
 	body := h("tuple", members...)
 	for i := 0; i < 64; i++ {
