@@ -1,113 +1,150 @@
-# Unified declarations, revision 2
+# Unified declarations and kinds, revision 3
 
-**Owner decision, 4 November 2026. Implemented for the 0.9.0 candidate; hosted qualification and publication are tracked by release receipts.** This supersedes
-the separate ground declaration revision 1 and optional Horos/Wire declaration
-profile. One Horos language owns modules, expressions, parameters and applications.
-There are no old-format readers, profile aliases or template-lifting paths.
-Ground data descriptors and their conformance APIs retain their existing meaning.
+**Owner direction, 4 November 2026.** The owner first selected one declaration
+language for data and capability types, then requested a proper kind system.
+The accepted [kind-system consultation](https://github.com/Bitspark/bittype/issues/55)
+and [Horos implementation work](https://github.com/Bitspark/horos/issues/29)
+extend that one language. Revision 3 replaces revision 2 cleanly. Hosted
+qualification and publication remain separate release evidence.
 
-## Canonical format
+The normative [declaration specification](declarations.md) defines the exact
+format and judgments. This page records the selected direction and migration.
+There is no separate Horos/Wire profile, compatibility reader or template-lifting
+path. Ground data descriptors and their conformance APIs retain their meanings.
+
+## One language and explicit constructor interfaces
 
 Documents remain finite ground Ontos values encoded with ontos-codec-v1.
-Use A(s) for a UTF-8 atom, T(s) for embedded text, I(n) for an embedded integer,
-L(...) for the canonical list and M{...} for a canonical map with text keys.
-H(c,...) is Tuple(A("horos/" + c),...). D(c,...) is
-Tuple(A("horos/decl/" + c),...). Imports retain expected names and exact SHA-256
-pins of canonical module bytes, with the complete reachable import closure checked, including unused declared
-imports. Unrelated pool values are bounded and hashed but not interpreted as modules.
+Imports retain expected names and exact SHA-256 pins. Resolve the complete
+reachable import closure, including unused imports. Unrelated pool values are
+bounded and hashed but not interpreted as modules.
+
+Using the A/T/I/L/M/H/D notation from the declaration specification:
 
 ```text
-D("module", I(2), T(name), imports, declarations)
+Claim = A("type") | A("data")
+Interface = D("proper", Claim)
+          | D("constructor", L(Interface, ...), Claim)
+
+D("module", I(3), T(name), imports, declarations)
 D("import", T(expectedName), Atom(32-byte pin))
-D("type", L(D("parameter", T(name), A(bound)), ...), body)
-bound = "type" | "data"
+D("type", L(D("parameter", T(name), Interface), ...), Claim, body)
 D("param", I(zeroBasedSlot))
-D("apply", target, L(argument, ...))
-target = D("local", T(name)) | D("imported", T(alias), T(name))
+D("local", T(name))
+D("imported", T(alias), T(name))
+D("apply", calleeExpression, L(argument, ...))
 ```
 
-Bounds are explicit in canonical documents. Type accepts any admitted type;
-Data requires a statically established data-only type. Readable Page<T> notation
-abbreviates a Type-bound parameter; readable syntax is not an implemented parser.
-Names, map uniqueness, argument order, lexical scope and literal opacity retain
-the declaration rules. Unknown bounds/revisions and old wire tags are errors.
-There are no defaults, inference, value parameters or higher-kinded slots.
+Constructor input lists and application argument lists are nonempty. All
+applications and declaration bodies produce proper types. Unapplied named
+constructors may be arguments; zero-parameter declarations are direct references.
+Inputs may themselves have constructor interfaces, with finite explicit kinds.
+No partial application, constructor-valued body, bare constructor alias, source
+type lambda, kind variable or kind-polymorphic scheme is admitted.
 
-## One expression language
+Data is the refined kind of proper types established data-only. Erasing Data to
+Type gives the shape kind; retaining it in an interface states argument admission
+or a result guarantee. Shape, admission and established result evidence serve
+different purposes. Type is not ground `any`. A type description is Ontos data
+even when the type describes capabilities.
 
-Existing horos descriptors admit parameters/applications at their type positions.
-H("wire", E) describes a sending capability accepting E. Tuple, compound, list-of,
-closed record and union can contain any admitted types. A structural aggregate
-is data when its value-bearing children are data. Wire is never data, regardless
-of the message type. Scalar, atom, exact and refinement forms remain data.
-
-Other existing constructors retain data-only operands in this revision: seq,
-set-of, map-of, open records, intersections, complement and guarded recursion.
-This preserves their existing laws without inventing mixed key equality, mixed
-complements or recursive capability semantics. Any remains the data universe;
-it is not the universe of admissible type arguments. Exact literals, labels and
-other non-type operands are opaque to substitution and domain classification.
-
-Data(G) is removed from declaration syntax: G occurs directly. This does not
-remove Ontos's value-level embedding/recovery operations. Type descriptions are
-data even when they describe capabilities. No live endpoint enters a document.
-
-## Pagination and bounds
+## One Page, with preserved result precision
 
 ```text
-Page<T> = record closed { items: list-of(T), next?: scalar(utf8-text) }
+Page<T> = { items: list<T>; next?: text; }
 DataPage<D: Data> = Page<D>
-Person = record closed { name: scalar(utf8-text) }
+Person = { name: text; }
+Wrapped<F: Type -> Type, T> = { value: F<T>; }
+DataWrapped<F: Data -> Data, D: Data> = { value: F<D>; }
+Compose<F: Type -> Type, G: Type -> Type, T> = F<G<T>>
+Ignore<T> = text
+Send<T> = wire<T>
 ```
 
-There is one Page identity and binder. DataPage is an ordinary constrained alias,
-not a copied record or a value wrapper. Page<Person>, DataPage<Person> and
-DataPage<Page<Person>> are data. Page<Cell<Person>> is valid when the imported
-Cell definition contains capabilities; DataPage<Cell<Person>> and
-DataPage<list-of(Cell<Person>)> fail. No checker recognizes the name Cell.
+There is one Page identity and binder. DataPage is an ordinary restricted alias.
+Page accepts Type inputs and its body establishes Data output for Data inputs.
+Ignore establishes Data output for every admitted Type input. Send never has a
+Data result. These are checked facts about ordinary declarations, not a catalogue
+of recognized library names.
 
-Check generic bodies under their declared bounds. Forward<D: Data> = DataPage<D>
-is valid; Forward<T> = DataPage<T> is invalid before specialization. Resolve
-application arguments in the caller's scope, check the callee's bounds, then
-substitute. Follow declarations and their actual parameter use: an ignored
-parameter does not make a data result contain capabilities. Classification is a
-bounded, syntax-directed proof, not arbitrary subtype or inhabitation solving.
+| Application | Required result |
+| --- | --- |
+| `Wrapped<Page,Person>` | Data |
+| `Wrapped<Ignore,wire<Person>>` | Data |
+| `Wrapped<Send,Person>` | Valid Type, non-Data |
+| `Compose<Page,Page,Person>` | Data |
+| `DataWrapped<Page,Person>` | Data |
+| `DataWrapped<Send,Person>` | Reject the constructor argument |
+| `DataWrapped<Ignore,wire<Person>>` | Reject the proper argument |
+| `Wrapped<DataPage,Person>` | Reject DataPage's narrower admission |
 
-Data arguments alone do not imply a data result: Wire<Person> is a capability.
-Page<D> is data because of Page's body. Generic source remains intact when a
-caller separately requests specialization. A closed data specialization yields
-the existing ground descriptor and can use WF/Conforms. Mixed specializations
-are static type expressions; this revision adds no mixed value validator.
+Compare constructor inputs contravariantly and results covariantly. A known
+declaration can establish a stronger result interface by checking its original
+admission and evaluating its summary under fresh rigid expected inputs. An
+abstract constructor parameter uses only its declared guarantee. Therefore
+`DataPage<F<D>>` is invalid under `F: Type -> Type`, even when D is Data; it is
+valid under `F: Data -> Data`. A proposed caller cannot repair an invalid body.
 
-## Ownership and tooling
+Data proofs follow actual parameter use. Retain unresolved constructor probes
+with their checked expressions, bindings and identities. A conditional proof is
+neither permanent failure nor exhaustion. Validate every argument before summary
+simplification, including ignored arguments and messages in Wire types.
 
-Horos owns revision 2 checking, resolution, symbolic bounds and specialization.
-Bittype has one Horos AST/check/resolution/analysis/provider family. Parameter
-AST nodes retain explicit bounds; provider-owned semantic facts expose them.
-The agnostic engine and semantic carrier do not interpret Type, Data or Wire.
+## Ground and library boundaries
+
+Tuple, compound, list-of, closed record and union admit proper data or capability
+types and are Data when their value-bearing children are Data. Wire is never
+Data. Other ground constructors retain their Data-only operands. Exact literals,
+labels and other non-type operands remain opaque to declaration traversal.
+
+Data is a compositional proof criterion, not an emptiness or arbitrary semantic
+subtyping solver. Ground `any`, complement and guarded recursion retain their
+existing meanings. A Data-preserving constructor supplies no recursion guard;
+arguments remain independently recursion-closed and final output is rechecked.
+
 Function, Stream, Cell and unfamiliar contracts remain ordinary pinned library
-declarations. No generators, runtime bindings, protocol code or builtin contract
-catalogue are part of this work. Ontos, Bitwire, Bitruntime and Bitnode are unchanged.
+declarations. Their behavior, runtime adapters and authority are library/runtime
+responsibilities. Horos adds no live-value validator or codec. Ontos, Bitwire,
+Bitruntime and Bitnode remain unchanged.
 
-## Migration and acceptance
+## Tooling and checking obligations
 
-1. Ground revision-1 parameters become explicit Data parameters; former mixed
-   parameters become Type parameters. Rewrite maintained documents once and
-   recompute dependency pins. Never silently widen existing restricted slots.
-2. Convert former mixed structural expressions to unified horos expressions,
-   remove Data wrappers and use the one declaration envelope. Preserve literal
-   payloads, even when their bytes resemble retired syntax.
-3. Consolidate pagination on Page<Type> and use DataPage where a restriction is
-   intended. Delete the separate Horos/Wire public API and Bittype frontend,
-   profiles, architecture allowances and superseded active documentation.
-4. Qualify nested/imported pagination, generic forwarding, phantom parameters,
-   symbolic Data-only operands, source ownership, bounds diagnostics, old-input
-   rejection, bounded work and exact ground specialization. Preserve all ground
-   cross-language conformance and native Bittype gates.
-5. Publish the next lockstep breaking Horos release after the independently
-   owned 0.8.0 delivery. Upgrade Bittype to the verified public dependency, without
-   local replacements, fallback decoders or compatibility exports. Historical
-   release/research evidence remains immutable.
+Horos owns decoding, kinds/interfaces, reference resolution, Data summaries and
+typed specialization. Bittype projects authoritative checked facts and owns
+readable syntax and separately qualified native mappings. Its agnostic engine
+and semantic carrier interpret none of the Type/Data/Wire vocabulary.
 
-Hosted gates must identify the exact committed source. Independent review and
-public installed-consumer verification are required before delivery is claimed.
+Every semantic named reference contributes a dependency edge, including an
+unapplied constructor in an ignored argument. Cycles reject before body checking.
+Constructor handles used for specialization are sealed to the same checked
+Program; equal canonical bytes in another Program do not confer ownership.
+
+Keep aggregate semantic work bounded, including interfaces, comparisons,
+environments, summaries and caches. Keep raw admission and expanded-output
+budgets separate. Count repeated output occurrences. Failed operations expose no
+usable partial model. Exhaustion is incomplete checking, not invalid source or
+proof of Data.
+
+Qualification must independently establish substitution preservation, Data-proof
+preservation and agreement between bounded symbolic analysis and eager expansion.
+Retain independent negative cases, concurrency/mutation protection, diagnostic
+subjects, the complete ground conformance gate and Bittype's native pagination
+qualification. None is implied by a source commit alone.
+
+## Clean migration
+
+1. Replace revision-2 Type/Data atom bounds with `proper` interfaces. Add the
+   explicit Type result claim unless a stronger claim is authored and checked.
+2. Change the module revision to 3. Replace zero-argument applications with
+   direct local/imported references. Keep generic applications fully saturated.
+3. Recompute canonical dependency pins from leaves outward. Preserve literal
+   payloads, names, ordering, source identities and native representation origins.
+4. Remove superseded bound-only APIs and revision-2 readers without aliases.
+   Re-pin consumers to the verified public replacement dependency.
+5. Preserve immutable historical releases and research evidence. Complete hosted
+   checks and installed-consumer verification before claiming delivery.
+
+Intersections/conditional contracts for abstract constructors remain deferred
+until an accepted case needs arbitrary-Type admission and conditional Data
+preservation together. Partial application, constructor-valued results, lambdas
+and kind polymorphism require their own concrete cases and qualification.

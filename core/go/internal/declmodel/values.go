@@ -16,6 +16,16 @@ type budget struct {
 	bytes  int
 }
 
+// Generated interface/environment keys share the operation's byte allowance.
+// Reserve before allocation; map/value records also consume node-work steps.
+func (b *budget) reserveBytes(size int) error {
+	if size < 0 || size > b.limits.MaxBytes-b.bytes {
+		return failure(Exhausted, "generated semantic-byte limit reached")
+	}
+	b.bytes += size
+	return nil
+}
+
 func (b *budget) step(depth int) error {
 	if depth > b.limits.MaxDepth || b.nodes >= b.limits.MaxNodes {
 		return failure(Exhausted, "depth or node-work limit reached")

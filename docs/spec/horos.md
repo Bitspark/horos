@@ -132,13 +132,13 @@ generation, cross-field relations and behavioral contracts are separate work.
 Library names such as Function, Stream and Cell are not built-in descriptor kinds.
 
 The [declaration model](declarations.md) is a separate layer for named modules,
-Type/Data generic slots and applications. Go's declarations package implements
-revision 2 in Horos 0.9.0. It preserves the existing descriptor constructors and
-adds static Wire expressions; the ground checker accepts neither modules, open
+interfaces, higher-kinded generic slots and applications. Go's declarations
+package defines revision 3 with explicit Data proofs. It preserves the existing
+descriptor constructors and adds static Wire expressions; the ground checker accepts neither modules, open
 templates nor capability types. `Program.DataDescriptor` establishes the ground
 boundary before handing a specialized result to these APIs.
 
 The [data/hydration boundary](hydrated-types.md) separates one type language
 from distinct data and capability value domains. Bittype supplies projections
-and future generators; Wire/runtime owns hydration. Function, Stream and Cell
+and separately qualified generators; Wire/runtime owns hydration. Function, Stream and Cell
 remain ordinary library declarations, never ground descriptor constructors.

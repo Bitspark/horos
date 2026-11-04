@@ -116,6 +116,9 @@ func Resolve(root core.Value, dependencies []core.Value, limits Limits, grammar 
 	for _, m := range p.order {
 		for _, declaration := range m.declarations {
 			expression, skeleton, err := reader.read(declaration.body, declaration, nil, 0)
+			if err == nil && expression.interface_.IsConstructor() {
+				err = failure(KindMismatch, "declaration body must be a proper type")
+			}
 			if err == nil {
 				err = p.grammar.WF(skeleton)
 			}
@@ -128,7 +131,7 @@ func Resolve(root core.Value, dependencies []core.Value, limits Limits, grammar 
 	if err := reader.acyclic(); err != nil {
 		return nil, err
 	}
-	if err := p.checkBounds(); err != nil {
+	if err := p.checkBounds(reader.budget); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -161,11 +164,11 @@ func sourceFailure(err error, root Digest) error {
 func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) {
 	args, ok := grammar.form(value, "module", 4)
 	if !ok {
-		return nil, failure(Invalid, "expected revision-2 module form")
+		return nil, failure(Invalid, "expected revision-3 module form")
 	}
 	revision, ok := index(args[0])
 	name, nameErr := data.ReadText(args[1])
-	if !ok || revision != 2 || nameErr != nil || !moduleName(name) {
+	if !ok || revision != 3 || nameErr != nil || !moduleName(name) {
 		return nil, failure(Invalid, "invalid module revision or name")
 	}
 	imports, err := data.ReadMap(args[2])
@@ -194,7 +197,7 @@ func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) 
 	}
 	for _, entry := range declarations {
 		name, err := data.ReadText(entry[0])
-		args, ok := grammar.form(entry[1], "type", 2)
+		args, ok := grammar.form(entry[1], "type", 3)
 		if err != nil || !identifier(name) || !ok {
 			return nil, failure(Invalid, "invalid declaration name or form")
 		}
@@ -202,27 +205,27 @@ func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) 
 		if err != nil {
 			return nil, failure(Invalid, "parameters must be a canonical list")
 		}
-		declaration := &Declaration{id: DeclarationID{Module: pin, Name: name}, body: args[1]}
+		claim, err := readClaim(args[1])
+		if err != nil { return nil, err }
+		declaration := &Declaration{id: DeclarationID{Module: pin, Name: name}, result: claim, body: args[2]}
 		names := make(map[string]bool)
 		for _, param := range params {
 			parts, ok := grammar.form(param, "parameter", 2)
 			if !ok {
-				return nil, failure(Invalid, "expected parameter name and explicit Type/Data bound")
+				return nil, failure(Invalid, "expected parameter name and explicit interface")
 			}
 			name, err := data.ReadText(parts[0])
 			if err != nil || !identifier(name) || names[name] {
 				return nil, failure(Invalid, "invalid or duplicate parameter name")
 			}
-			boundAtom, ok := parts[1].(core.Atom)
-			if !ok {
-				return nil, failure(Invalid, "parameter bound must be an atom")
-			}
-			bound := Bound(string(boundAtom.Bytes()))
-			if bound != TypeBound && bound != DataBound {
-				return nil, failure(Invalid, "unknown parameter bound")
-			}
+			iface, err := readInterface(parts[1], grammar)
+			if err != nil { return nil, err }
 			names[name] = true
-			declaration.parameters = append(declaration.parameters, TypeParameter{Name: name, Bound: bound})
+			declaration.parameters = append(declaration.parameters, TypeParameter{Name: name, Interface: iface})
+		}
+		declaration.interface_ = Interface{result: claim}
+		for _, parameter := range declaration.parameters {
+			declaration.interface_.inputs = append(declaration.interface_.inputs, parameter.Interface)
 		}
 		m.declarations = append(m.declarations, declaration)
 	}
@@ -288,23 +291,40 @@ func (r *expressionReader) readIn(value core.Value, owner *Declaration, path []i
 		if !ok || slot >= len(owner.parameters) {
 			return nil, nil, failure(Invalid, "unbound or out-of-range type parameter")
 		}
-		return &Expression{kind: Parameter, value: value, parameter: ParameterID{Declaration: owner.id, Index: slot}}, r.program.grammar.Any(), nil
+		iface := owner.parameters[slot].Interface
+		var skeleton core.Value
+		if !iface.IsConstructor() { skeleton = r.program.grammar.Any() }
+		return &Expression{kind: Parameter, value: value, parameter: ParameterID{Declaration: owner.id, Index: slot}, interface_: iface}, skeleton, nil
+	}
+	_, local := r.program.grammar.form(value, "local", 1)
+	_, imported := r.program.grammar.form(value, "imported", 2)
+	if local || imported {
+		target, err := r.target(value, owner.id)
+		if err != nil { return nil, nil, err }
+		iface := r.program.declarations[target].interface_
+		r.edges[owner.id] = append(r.edges[owner.id], target)
+		var skeleton core.Value
+		if !iface.IsConstructor() { skeleton = r.program.grammar.Any() }
+		return &Expression{kind: Reference, value: value, target: target, interface_: iface}, skeleton, nil
 	}
 	if args, ok := r.program.grammar.form(value, "apply", 2); ok {
-		target, err := r.target(args[0], owner.id)
+		calleePath := append(slices.Clone(path), 1)
+		callee, _, err := r.read(args[0], owner, calleePath, depth+1)
 		if err != nil {
 			return nil, nil, err
 		}
-		arguments, err := data.ReadList(args[1])
-		if err != nil || len(arguments) != len(r.program.declarations[target].parameters) {
-			return nil, nil, failure(Invalid, "application argument list or arity mismatch")
+		if !callee.interface_.IsConstructor() {
+			return nil, nil, locate(applicationFailure(KindMismatch, callee, Interface{}, "application callee must be a constructor"), owner.id, calleePath)
 		}
-		result := &Expression{kind: Application, value: value, target: target}
-		r.edges[owner.id] = append(r.edges[owner.id], target)
+		arguments, err := data.ReadList(args[1])
+		if err != nil || len(arguments) == 0 || len(arguments) != len(callee.interface_.inputs) {
+			return nil, nil, applicationFailure(Invalid, callee, callee.interface_, "application argument list or arity mismatch")
+		}
+		result := &Expression{kind: Application, value: value, callee: callee, interface_: Interface{result: callee.interface_.result}}
 		for i, argument := range arguments {
 			childPath := append(slices.Clone(path), 2, i+1)
 			child, skeleton, err := r.read(argument, owner, childPath, depth+1)
-			if err == nil {
+			if err == nil && !child.interface_.IsConstructor() {
 				// Each argument is independently closed under recursion binders.
 				err = r.program.grammar.WF(skeleton)
 			}
@@ -323,13 +343,16 @@ func (r *expressionReader) readIn(value core.Value, owner *Declaration, path []i
 	if err != nil {
 		return nil, nil, err
 	}
-	result := &Expression{kind: Descriptor, value: value, constructor: constructor}
+	result := &Expression{kind: Descriptor, value: value, constructor: constructor, interface_: Interface{result: TypeClaim}}
 	var children []core.Value
 	for _, position := range positions {
 		childPath := append(slices.Clone(path), position...)
 		child, concrete, err := r.read(at(value, position), owner, childPath, depth+1)
 		if err != nil {
 			return nil, nil, err
+		}
+		if child.interface_.IsConstructor() {
+			return nil, nil, locate(failure(KindMismatch, "descriptor operand must be a proper type"), owner.id, childPath)
 		}
 		result.operands = append(result.operands, Operand{path: position, expression: child})
 		children = append(children, concrete)
@@ -345,7 +368,7 @@ func (r *expressionReader) acyclic() error {
 			return locate(err, id, nil)
 		}
 		if state[id] == 1 {
-			return locate(failure(Cycle, "cyclic declaration applications"), id, nil)
+			return locate(failure(Cycle, "cyclic declaration references"), id, nil)
 		}
 		if state[id] == 2 {
 			return nil
@@ -357,6 +380,7 @@ func (r *expressionReader) acyclic() error {
 			}
 		}
 		state[id] = 2
+		r.program.declarationOrder = append(r.program.declarationOrder, r.program.declarations[id])
 		return nil
 	}
 	for _, module := range r.program.order {

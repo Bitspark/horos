@@ -2,7 +2,6 @@ package declarations_test
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"testing"
 
@@ -14,9 +13,9 @@ import (
 func typeDefinition(body value, parameters ...string) value {
 	var slots []value
 	for _, name := range parameters {
-		slots = append(slots, d("parameter", text(name), a("type")))
+		slots = append(slots, d("parameter", text(name), d("proper", a("type"))))
 	}
-	return d("type", list(slots...), body)
+	return d("type", list(slots...), a("type"), body)
 }
 
 func unifiedPages() value {
@@ -30,19 +29,19 @@ func TestUnifiedPaginationAndDataSpecialization(t *testing.T) {
 	p := resolve(t, pages)
 	capability := h("wire", person())
 	for _, argument := range []value{person(), capability, page(person())} {
-		got, err := p.Specialize(id(p, "Page"), []value{argument})
+		got, err := p.Specialize(id(p, "Page"), properArgs(t, p, argument))
 		if err != nil || !core.Equal(got, page(argument)) {
 			t.Fatal("one Page must accept each Type argument", err)
 		}
 	}
 	for _, argument := range []value{person(), page(person())} {
-		got, err := p.DataDescriptor(id(p, "DataPage"), []value{argument})
+		got, err := p.DataDescriptor(id(p, "DataPage"), properArgs(t, p, argument))
 		if err != nil || !core.Equal(got, page(argument)) || !hor.WF(got) {
 			t.Fatal("data specialization changed the ground descriptor", err)
 		}
 	}
 	for _, argument := range []value{capability, h("list-of", capability), page(capability)} {
-		got, err := p.Specialize(id(p, "DataPage"), []value{argument})
+		got, err := p.Specialize(id(p, "DataPage"), properArgs(t, p, argument))
 		if got != nil {
 			t.Fatal("failed bound returned a specialization")
 		}
@@ -51,17 +50,17 @@ func TestUnifiedPaginationAndDataSpecialization(t *testing.T) {
 			t.Fatal("specialization bound lost its target")
 		}
 	}
-	got, err := p.DataDescriptor(id(p, "Page"), []value{capability})
+	got, err := p.DataDescriptor(id(p, "Page"), properArgs(t, p, capability))
 	if got != nil {
 		t.Fatal("capability page became a ground descriptor")
 	}
 	expectCode(t, err, decl.BoundViolation)
 	open, _ := p.Declaration(id(p, "Page"))
-	if !core.Equal(open.Expression().Value(), page(param(0))) || open.Parameters()[0].Bound != decl.TypeBound {
+	if !core.Equal(open.Expression().Value(), page(param(0))) || !parameterIs(open.Parameters()[0], "T", decl.TypeClaim) {
 		t.Fatal("specialization erased the original generic or its bound")
 	}
 	alias, _ := p.Declaration(id(p, "DataPage"))
-	if target, ok := alias.Expression().Target(); !ok || target != id(p, "Page") || alias.Parameters()[0].Bound != decl.DataBound {
+	if target, ok := alias.Expression().Callee().Target(); !ok || target != id(p, "Page") || !parameterIs(alias.Parameters()[0], "D", decl.DataClaim) {
 		t.Fatal("DataPage must remain a constrained application of the same Page")
 	}
 }
@@ -112,15 +111,15 @@ func TestDataProofUsesActualParameterUseAndCallerScope(t *testing.T) {
 		t.Fatal("unused capability argument incorrectly contaminated data result", err)
 	}
 	capability := h("wire", person())
-	got, err = p.Specialize(id(p, "Nested"), []value{capability})
+	got, err = p.Specialize(id(p, "Nested"), properArgs(t, p, capability))
 	if err != nil || !core.Equal(got, page(page(capability))) {
 		t.Fatal("nested mixed application lost caller slot", err)
 	}
-	got, err = p.Specialize(id(p, "Swapped"), []value{person(), capability})
+	got, err = p.Specialize(id(p, "Swapped"), properArgs(t, p, person(), capability))
 	if err != nil || !core.Equal(got, h("tuple", person(), capability)) {
 		t.Fatal("same-spelled caller/callee parameters were captured", err)
 	}
-	got, err = p.DataDescriptor(id(p, "WireAlias"), []value{person()})
+	got, err = p.DataDescriptor(id(p, "WireAlias"), properArgs(t, p, person()))
 	if got != nil || err == nil {
 		t.Fatal("data argument incorrectly implied a data result")
 	}
@@ -156,6 +155,7 @@ func TestUnifiedGrammarRetiresOldProfilesAndPreservesLiterals(t *testing.T) {
 	oldWire := core.NewTuple(a("horos/wire/module"), integer(1), text("old"), mapping(), mapping())
 	for _, root := range []value{
 		d("module", integer(1), text("old"), mapping(), mapping()), oldWire,
+		d("module", integer(2), text("old"), mapping(), mapping()),
 		module("bad", mapping(), entry("T", d("type", list(text("T")), param(0)))),
 		module("bad", mapping(), entry("T", d("type", list(d("parameter", text("T"), a("unknown"))), param(0)))),
 		module("bad", mapping(), entry("T", typeDefinition(core.NewTuple(a("horos/wire/wire"), person())))),
@@ -195,8 +195,8 @@ func TestBoundFailuresInDependenciesAndClosedArguments(t *testing.T) {
 	}
 	p := resolve(t, pages)
 	for _, argument := range []value{param(0), h("ref", a("outside")), h("wire", h("ref", a("outside")))} {
-		got, err := p.Specialize(id(p, "Page"), []value{argument})
-		if got != nil || err == nil {
+		_, err := p.Proper(argument)
+		if err == nil {
 			t.Fatal("open argument crossed a specialization boundary")
 		}
 		var detail *decl.Error
@@ -229,35 +229,33 @@ func TestClosedBoundFailuresRetainNestedOperandLocations(t *testing.T) {
 	}
 }
 
-func TestSymbolicBoundPropagationHasItsOwnWorkLimit(t *testing.T) {
-	var names []string
-	var members []value
-	for i := 0; i < 128; i++ {
-		names = append(names, fmt.Sprintf("T%d", i))
-		members = append(members, param(int64(i)))
-	}
-	body := h("tuple", members...)
-	for i := 0; i < 64; i++ {
-		body = h("list-of", body)
-	}
-	root := module("wide", mapping(), entry("Wide", typeDefinition(body, names...)))
+func TestInterfaceQueriesBoundAggregateSemanticWork(t *testing.T) {
+	root := module("limits", mapping(), entry("Identity", typeDefinition(param(0), "T")))
 	limits := decl.DefaultLimits()
-	limits.MaxNodes = 4096
-	if _, err := decl.PinWithLimits(root, limits); err != nil {
-		t.Fatal("fixture must fit raw source admission before symbolic work", err)
-	}
+	limits.MaxNodes = 256
 	program, err := decl.ResolveWithLimits(root, nil, limits)
+	if err != nil || program == nil {
+		t.Fatal("small source must fit before the bounded interface query", err)
+	}
+	proper := publicProper(t, decl.TypeClaim)
+	inputs := make([]decl.Interface, 512)
+	for i := range inputs {
+		inputs[i] = proper
+	}
+	large := publicConstructor(t, decl.TypeClaim, inputs...)
+	proved, err := program.Satisfies(id(program, "Identity"), large)
+	if proved {
+		t.Fatal("exhausted interface query published positive evidence")
+	}
 	diagnostic(t, err, decl.Exhausted, decl.SubjectRequest)
-	if program != nil {
-		t.Fatal("incomplete bound proof exposed a partial program")
+	proved, err = program.Satisfies(id(program, "Identity"), publicConstructor(t, decl.TypeClaim, proper))
+	if err != nil || !proved {
+		t.Fatal("exhausted query poisoned the next bounded query", err)
 	}
-	// The same structure with known Data slots needs no Type-condition sets.
-	dataRoot := module("wide", mapping(), entry("Wide", definition(body, names...)))
-	if program, err := decl.ResolveWithLimits(dataRoot, nil, limits); err != nil || program == nil {
-		t.Fatal("syntax/graph admission exhausted before the targeted proof phase", err)
+	literalItems := make([]value, 512)
+	for i := range literalItems {
+		literalItems[i] = a("literal")
 	}
-	limits.MaxNodes = 16384
-	if program, err := decl.ResolveWithLimits(root, nil, limits); err != nil || program == nil {
-		t.Fatal("sufficient proof budget did not complete", err)
-	}
+	_, err = program.Proper(h("exact", core.NewTuple(literalItems...)))
+	diagnostic(t, err, decl.Exhausted, decl.SubjectRequest)
 }
