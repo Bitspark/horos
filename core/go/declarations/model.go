@@ -7,8 +7,8 @@ import (
 	core "github.com/bitspark/ontos/core/go"
 )
 
-// These public facts retain one implementation and their established field
-// layout. Program remains a profile-specific handle with no configurable grammar.
+// Public facts share the private implementation. Program exposes only the
+// unified grammar, never a configurable or compatibility profile.
 type Digest = model.Digest
 type DeclarationID = model.DeclarationID
 type ParameterID = model.ParameterID
