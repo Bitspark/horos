@@ -26,7 +26,7 @@ func descriptorAny() core.Value {
 	return core.NewTuple(core.NewAtom([]byte("horos/any")))
 }
 
-// Only the existing descriptor type positions are lifted. Literal constraints,
+// Only existing descriptor type positions admit parameters/applications. Literal constraints,
 // record uniqueness and recursion guards are still checked by Horos DiagnoseWF.
 // Checked parameters/applications are replaced with any only in that final
 // descriptor-grammar pass, after scope, arity and argument closure were checked.

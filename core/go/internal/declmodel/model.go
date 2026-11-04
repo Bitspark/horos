@@ -134,7 +134,6 @@ func (o Operand) Expression() *Expression { return copyExpression(o.expression) 
 // Expression is immutable. Values are immutable Ontos values; slice accessors
 // return independent storage. Application arguments keep their caller bindings.
 type Expression struct {
-	context     *Program
 	kind        Kind
 	value       core.Value
 	constructor string

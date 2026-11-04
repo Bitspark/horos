@@ -1,7 +1,7 @@
 # Canonical declarations, revision 1
 
 **2 November 2026; distribution updated 4 November. Status: implemented in the
-Go declarations tooling package, included in Horos 0.7.0.** The owner authorized the declaration
+Go declarations tooling package, included in Horos 0.8.0.** The owner authorized the declaration
 model and bittype AST after reviewing this format. The existing ground descriptor
 APIs remain separate. Rust and TypeScript declaration tooling, readable source
 syntax, native generators and runtime bindings are outside this increment.
@@ -72,7 +72,7 @@ namespaces, selected explicitly by the target form. Record field names retain
 horos's existing text semantics; they are not restricted to these identifiers.
 
 The module revision fixes this declaration grammar and the v1 descriptor
-vocabulary retained by horos 0.7.0, using ontos 0.16.0 embeddings and codec v1.
+vocabulary retained by horos 0.8.0, using ontos 0.16.0 embeddings and codec v1.
 A package version does not silently extend a document's admitted grammar.
 
 ## 3. Type expressions reuse descriptor positions
@@ -283,7 +283,7 @@ establish authority, library ownership or lawful behavioral substitution.
 
 ## 9. Checking and acceptance examples
 
-The declaration checker checks the lifted descriptor grammar and bindings before
+The declaration checker checks the parameterized descriptor grammar and bindings before
 running the final descriptor well-formedness check.
 
 | Input | Required outcome |
@@ -336,9 +336,10 @@ These data-only declarations do not model a live function or stream as an ontos
 data value or supply their bindings. Their eventual declarations compose through
 explicit library identity in the optional [horos/wire profile](wire-types.md),
 with separate library-owned runtime realizations. Generic data parameters remain
-data-only; using a template over capabilities requires that profile's explicit
-partial lifting interpretation and a separately identified derived declaration.
-Bittype implements the tooling transformation, not another canonical type model.
+data-only. Author a generic that must accept capabilities directly in horos/wire;
+its same parameter can accept data embeddings and capability types. There is no
+template-copying or cross-profile declaration transformation. Bittype projects
+each authored profile without defining another canonical type model.
 
 Forbidden in general generators, engine, Wire, runtime and hydration:
 

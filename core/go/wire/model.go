@@ -34,7 +34,6 @@ const (
 	InvalidOptions            = model.InvalidOptions
 	Cycle                     = model.Cycle
 	Exhausted                 = model.Exhausted
-	UnsupportedLift      Code = "unsupported-lift"
 	SubjectSource             = model.SubjectSource
 	SubjectContext            = model.SubjectContext
 	SubjectConfiguration      = model.SubjectConfiguration

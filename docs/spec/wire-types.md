@@ -5,7 +5,7 @@
 `ontos/wire` value profile. Its canonical meaning belongs to Horos; Bittype
 supplies syntax/AST projections, analysis integration and transformations.
 The [Go package](../../core/go/wire/README.md) implements resolution, generic
-specialization and explicit partial lifting with provenance. Mixed application-value
+specialization and closed ground embedding. Mixed application-value
 checking and runtime capability recognition are not implemented. Existing ground
 descriptors and declaration revision 1 are unchanged.
 
@@ -150,7 +150,7 @@ Other ground constructs, including sets, maps, open records, complements,
 intersections and guarded recursion, remain available inside Data(G). The first
 mixed profile adds no general top/complement, live map keys or set elements,
 open-record extras or recursive named applications. Unsupported forms fail
-explicitly instead of acquiring an invented lifted interpretation.
+explicitly instead of acquiring an invented mixed interpretation.
 
 ## 3. Modules, bindings and specialization
 
@@ -183,9 +183,9 @@ scope before substitution. Substitution visits declared upper type positions
 only; it never scans literal labels, field names or Data(G) contents. There are
 no implicit arguments, defaults, inference, partial applications or higher-kinded
 slots. These are the existing binding principles applied to the separate domain.
-The current Go Resolve/Specialize entry points remain ground-declaration APIs.
-A future extension may share internal algorithms while enforcing its own
-envelope and domain; it must not make those existing entry points accept W forms.
+The ground Go Resolve/Specialize entry points remain data-declaration APIs.
+The optional Go package shares private binder machinery while enforcing its own
+envelope and domain; the ground entry points do not accept W forms.
 
 Open generics and applications remain in the checked model and native output.
 Specialization is a separate operation; its extended result retains Data
@@ -198,109 +198,35 @@ Declaration identity remains an exact module pin and declaration name. An
 extended reference additionally qualifies that identity with its semantic profile;
 this does not change the implemented ground Go `DeclarationID` structure.
 A binder belongs to that declaration and slot index under its selected profile.
-Derived declarations and binders have distinct identities from their sources:
-preserve the exact original binder as provenance and record the ordered mapping
-to the derived binder, rather than reusing a source identifier in the new domain.
 Applications retain resolved targets and caller-bound arguments; aliases keep
 their own declaration identities. Pins describe canonical document bytes, not
 semantic equivalence, authority or behavioral compatibility. There is no union
 sorting, alias expansion, binder renaming or shape-based coalescing before
-pinning. Origins, native target-language naming preferences and derivation
-manifests remain tooling metadata, not extra arguments in this closed canonical
+pinning. Origins and native target-language naming preferences
+remain tooling metadata, not extra arguments in this closed canonical
 grammar. Canonical local/imported target names and module/declaration names are
 identity-bearing document data and therefore participate in the module pin.
 
-## 4. Explicit embedding and partial template lifting
+## 4. Direct authoring and ground embedding
 
-Horos owns the following proposed semantic mapping; Bittype implements its
-future explicit AST transformation. The build selects the operation and roots.
-An engine route does not decide to change the value domain, and a failed lift
-does not retry as embedding or as a weaker type.
+Author declarations in the profile that owns their intended parameter domain.
+Ground declarations accept ground data types. An optional declaration can accept
+both `Data(G)` and capability-bearing expressions. It needs no translated copy,
+derived module or second binder identity. Template lifting was removed by the
+owner's 4 November 2026 direction, including its public API and Bittype
+transformer; no compatibility path remains.
 
-**Closed embedding** resolves and specializes a ground expression to a closed,
-well-formed descriptor G, then produces Data(G). Preserve the original module,
-declaration, applications and arguments as provenance. This does not widen any
-source generic slot.
+**Closed embedding** resolves and specializes a ground declaration to a closed,
+well-formed descriptor G, then produces `Data(G)`. The Go `wire.Embed` operation
+checks the complete ground import context under the supplied limits and creates
+no optional declaration. It does not widen a source generic slot. Its result is
+a closed optional expression, not a live value, a native type or a runtime adapter.
 
-**Template lifting** derives a separately identified wire-profile declaration
-while preserving its generic parameters. Let L(E) operate in the resolved source
-lexical environment. Apply these rules in order:
-
-| Source expression | Lift and obligation |
-| --- | --- |
-| Parameter at slot i | `W("param", I(i))` bound to the corresponding derived declaration; retain source binder provenance. |
-| Resolved application of D to A | Apply the derived exact target L(D) to L(A), preserving argument order, arity, caller scope and source application. |
-| Tuple | `W("tuple", L(E)...)`, preserving order and empty tuples. |
-| Labelled compound | `W("compound", A(label), L(E)...)`; retain the literal label. |
-| Typed list | `W("list-of", L(element))`. |
-| Closed record | Closed W record with the same literal field names, required/optional membership and lifted field types. |
-| Union with at least two alternatives | W union of lifted alternatives in the same order. |
-| Singleton union | L(the alternative), retaining union provenance. |
-| Empty union | `Data(H("union"))`, the empty ground type. |
-| Any other independently specializable, closed, well-formed subtree G | Data(G), retaining source references without inspecting literal contents. |
-| Anything else | Located unsupported-lift failure; no erased constraint, top substitution or usable partial result. |
-
-The structural rules apply even when their children happen to be closed. This
-preserves template structure before binding instead of opportunistically
-collapsing it into Data. Closed means no free generic or recursion variable,
-with all applications resolved and successfully specialized under Horos rules;
-absence of a `param` token is insufficient.
-
-Thus any/scalar/refinement/exact ground forms remain Data, and a closed
-complement, set, map, open record or guarded recursive descriptor may embed.
-`not(T)`, `set-of(T)` and `rec(...T...)` have no template lift in this first
-profile. Their closed specializations may instead be explicitly embedded.
-
-Validate the full original import closure before pruning generated output.
-The derived closure follows applications retained by the ordered rules and
-stops at each Data boundary. Translate a declaration once by resolved source
-identity and lifting configuration, group results by source module, and pin
-derived dependency modules before their importers. Preserve source pins,
-selected roots, lifting profile/version, output naming choices and origins in
-the derivation record. Reject missing imports, cycles and output naming conflicts
-before publishing usable output. Source dependencies absorbed into Data still
-remain validated provenance dependencies.
-
-For a concrete boundary case, let `Other<T> = not(T)` and
-`Root = not(Other<Person>)`. Root's closed whole body embeds as Data without
-requiring the unsupported lift of Other. Selecting Other itself fails. An
-`Alias = Other<Person>` retains its top-level application under the earlier
-application rule and therefore also requires that unsupported lift. The caller
-may explicitly select closed embedding for Alias. Traversal order and a failed
-attempt must not change these outcomes.
-
-For every admitted source template D and closed ground descriptor arguments A,
-the future implementation must establish this preservation law:
+For pagination over data and capabilities, the following is the authored input.
+It uses the canonical value notation from section 2, not a text parser grammar:
 
 ```text
-instances(specialize(L(D), Data(A)...))
-    = { embed(v) | v |=ground specialize(D, A...) }
-```
-
-This is a denotational obligation preserving the ground layout, not equality
-of ASTs, module pins or Deixis/Ontos codec bytes. It introduces no live-handle
-equality. Qualification must respect the ground checker's existing bounded
-diagnostic behavior instead of treating resource exhaustion as a type mismatch.
-Lexical substitution coherence is a second qualification obligation: where both
-partial routes are admitted, lifting an expression after bound substitution must
-denote the same instances as substituting the corresponding lifted actuals into
-its lift. Compare bindings in their original caller scopes, including nested
-applications and shadowed names; do not require identical output ASTs or pins.
-Neither obligation is an already-proven theorem or a change to the source APIs.
-
-Pagination remains one authored template:
-
-```text
-Ground Page<T>  = record closed { items: list-of(T), next?: scalar(utf8-text) }
-Derived Page<T> = record closed { items: list-of(T), next?: Data(scalar(utf8-text)) }
-```
-
-The [ground pagination module](declarations.md#5-complete-pagination-example)
-is the authored input. For the selected output name `example.pagination.wire`,
-the exact proposed generated module is:
-
-```text
-DerivedPagination = W("module", I(1), T("example.pagination.wire"), M{}, M{
+Pagination = W("module", I(1), T("example.pagination"), M{}, M{
   "Page": W("type", L(T("T")),
     W("record", A("closed"),
       W("field", T("items"), A("req"),
@@ -309,26 +235,31 @@ DerivedPagination = W("module", I(1), T("example.pagination.wire"), M{}, M{
         Data(H("scalar", A("utf8-text"))))))
 })
 
-WirePages = W("module", I(1), T("example.wirepages"), M{
-  "pagination": W("import", T("example.pagination.wire"), Pin(DerivedPagination))
+Pages = W("module", I(1), T("example.pages"), M{
+  "pagination": W("import", T("example.pagination"), Pin(Pagination))
 }, M{
+  "TextPage": W("type", L(),
+    W("apply", W("imported", T("pagination"), T("Page")), L(
+      Data(H("scalar", A("utf8-text")))))),
   "WirePage": W("type", L(),
     W("apply", W("imported", T("pagination"), T("Page")), L(
       Wire(Data(H("scalar", A("utf8-text")))))))
 })
 ```
 
-This consumer applies the generated Page to sending faces for ground text
-messages. Specialization yields a closed mixed record whose items list contains
-Wire leaves; it does not make the ground Page accept those leaves. The derived
-equation illustrates generated output, not a second declaration to maintain.
+Both applications refer to the same Page declaration and binder. Specialization
+substitutes the argument in `items` and leaves the literal `next` field and its
+closed Data boundary intact. One application contains data text; the other
+contains sending faces for text messages. A library-owned `Cell<Data(Person)>`
+can be supplied through ordinary imports and applications in the same way.
+No expanded record is authored per application.
 
-Ground `Page<Person>` stays a data application. The derived Page may accept a
-Wire or a library-owned Cell type. No user authors another Page or an expanded
-record per application, and no `LiftedPage` spelling is required. The derived
-module/declaration identity remains distinct from the source. A library may
-explicitly qualify a shared native representation for both identities; equal
-shapes alone never authorize that association.
+The checked model retains the original open generic and applications. Future
+native type generation can preserve them without specializing first. Generic
+specialization remains useful for closed descriptors and does not establish
+runtime authority, live message conformance or protocol behavior. A wire-free
+optional specialization still belongs to this profile; it does not implicitly
+become a ground descriptor.
 
 ## 5. Library-owned Function, Cell and Stream
 
@@ -414,7 +345,7 @@ raw source, resolve ambiguity by registration order, or fall back silently.
 
 ## 6. Tooling, runtime and qualification
 
-The canonical model and lifting rules live here. Bittype supplies language-owned
+The canonical type and declaration model lives here. Bittype supplies language-owned
 AST/check/resolve/analyze stages and explicit transformers over its existing
 generic AST/CST and semantic infrastructure. Its provider must preserve the
 profile identity, ground boundaries, binders, references, origins and diagnostic
@@ -449,12 +380,12 @@ messages. Mapping their existing carrier to the Deixis-based profile is separate
 future qualification, not a requirement to rewrite every native container now.
 
 Finite inputs still require explicit resource bounds. Mixed structural
-recognition, static loading/resolution, template lifting and specialization must
+recognition, static loading/resolution, embedding and specialization must
 each have node, depth and byte budgets; module resolution also bounds its supplied
 bundle, and expansion charges repeated parameters/literals in the actual output
 tree. These are request limits, not weakened type meanings or new canonical
 descriptor operands. Return a located exhausted-request diagnostic, distinct from
-invalid syntax, unresolved context, unsupported lifting or a completed semantic
+invalid syntax, unresolved context or a completed semantic
 mismatch. Do not expose a usable partial model or silently choose a weaker
 translation. Preserve the existing ground APIs' bounded behavior. Transport
 message and lifetime limits remain the runtime's separate responsibility.
@@ -465,9 +396,10 @@ Before implementation is claimed, independently authored cases must cover:
   literal boundaries, caller scope, imports and no usable partial results.
 - Data(any), Data(complement), exact reference-like literals, empty atom versus
   empty tuple and wire-free extended types without implicit ground reinterpretation.
-- The ordered lifting rules, full source closure versus pruned derived closure,
-  unsupported open forms, reproducible identities, ground preservation and
-  lexical substitution coherence.
+- Direct optional pagination with data and capability arguments, unchanged
+  source declarations, exact imported identities and lexical substitution.
+- Closed ground embedding with full import admission and unchanged ground
+  membership; open ground arguments and capabilities cannot cross Data.
 - Optional-field absence versus present null; nested applications and transitive
   dependencies; parameters in each supported descriptor position; literal labels,
   scalar selectors and exact values resembling declaration syntax.
@@ -483,7 +415,7 @@ Before implementation is claimed, independently authored cases must cover:
 
 The static Go implementation is qualified by the tests described in its
 [package guide](../../core/go/wire/README.md). No readable parser, public builder,
-runtime adapter or new release is added. Forbidden remain: widening ground APIs;
+runtime adapter is provided. Forbidden remain: widening ground APIs;
 retaining the superseded Bittype namespace as a compatibility decoder; automatic
 profile selection by Wire occurrence; named-contract kinds, switches, imports,
 registrations or fingerprints in general machinery; and replacing hydration

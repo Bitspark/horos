@@ -222,7 +222,7 @@ func TestLiteralBoundaryAndDescriptorPositions(t *testing.T) {
 			p := resolve(t, module("positions", mapping(), entry("Generic", definition(test.body, "T"))))
 			got, err := p.Specialize(id(p, "Generic"), []value{person()})
 			if err != nil || !core.Equal(got, test.want) {
-				t.Fatalf("wrong lifted position: %v", err)
+				t.Fatalf("wrong parameterized position: %v", err)
 			}
 		})
 	}

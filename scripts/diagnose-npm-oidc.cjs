@@ -9,7 +9,7 @@ const exchange = 'https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/packag
 
 function argumentsFor(directory) {
   if (typeof directory !== 'string' || !directory) throw new Error('candidate-directory-required');
-  return ['publish', resolve(directory, 'bitspark-horos-0.7.0.tgz'),
+  return ['publish', resolve(directory, 'bitspark-horos-0.8.0.tgz'),
     '--dry-run=true', '--ignore-scripts=true', '--access=public', '--provenance=true',
     `--registry=${registry}`, '--loglevel=silly', '--logs-max=0', '--color=false',
     '--update-notifier=false'];

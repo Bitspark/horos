@@ -110,6 +110,10 @@ func TestPaginationGenericBindingAndSpecialization(t *testing.T) {
 	if !core.Equal(decl.Expression().Value(), page(param(0))) {
 		t.Fatal("specialization erased generic source")
 	}
+	got, err = p.Specialize(decl.ID(), []value{textType()})
+	if err != nil || !core.Equal(got, page(textType())) {
+		t.Fatal("the same authored Page must accept ground data arguments", err)
+	}
 }
 
 func TestOrdinaryLibraryCompositionAndLiteralOpacity(t *testing.T) {

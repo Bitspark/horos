@@ -27,15 +27,15 @@ and [distribution](docs/distribution.md).
 ## Install
 
 ```sh
-npm install @bitspark/horos@0.7.0
-cargo add bitspark-horos@0.7.0
-go get github.com/Bitspark/horos/core/go@v0.7.0
+npm install @bitspark/horos@0.8.0
+cargo add bitspark-horos@0.8.0
+go get github.com/Bitspark/horos/core/go@v0.8.0
 ```
 
 The Rust package's library name is `horos`. All three packages use public ontos
 0.16.0, retaining a single ontos value type in each dependency graph. Consumers
 must upgrade their Ontos dependencies together; no old-version adapter or copied
-value implementation is provided. See the [0.7.0 release](docs/releases/v0.7.0.md).
+value implementation is provided. See the [0.8.0 release](docs/releases/v0.8.0.md).
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
@@ -47,7 +47,7 @@ and other behavioral contracts belong to ordinary libraries; they are not horos
 constructors. The [canonical declaration model](docs/spec/declarations.md)
 specifies modules, immutable imports, indexed type parameters and applications,
 using pagination. Its [Go tooling package](core/go/declarations/README.md)
-implements resolution and specialization in 0.7.0. Rust and TypeScript remain ground-descriptor
+implements resolution and specialization in 0.8.0. Rust and TypeScript remain ground-descriptor
 implementations. Bittype owns AST projections and future native transformations.
 
 The [data/hydration boundary](docs/spec/hydrated-types.md) keeps the existing
@@ -58,7 +58,7 @@ Bittype-owned contract model proposal; Bittype supplies tooling for the canonica
 definitions. Existing ground APIs and declaration revision 1 are unchanged.
 Hydration remains in Wire/runtime, and Function, Cell and Stream remain ordinary
 library declarations with library-owned behavior. The [optional Go package](core/go/wire/README.md)
-implements static resolution, specialization and lifting in 0.7.0; it
+implements static resolution, specialization and closed ground embedding in 0.8.0; it
 does not implement live value checking or hydration.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an

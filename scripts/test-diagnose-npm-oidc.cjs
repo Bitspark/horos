@@ -53,7 +53,7 @@ test('native invocation always forces dry-run and disables scripts, disk logs an
     const result = diagnose(version, '/candidate', env, (command, args, options) => {
       calls.push({ command, args, options });
       return args[0] === '--version' ? { status: 0, stdout: `${version}\n` } :
-        { status: 0, stdout: '+ @bitspark/horos@0.7.0', stderr: `${success}\n${notice}` };
+        { status: 0, stdout: '+ @bitspark/horos@0.8.0', stderr: `${success}\n${notice}` };
     });
     assert.equal(result.stage, 'dry-run-authenticated');
     assert.equal(calls.length, 2);

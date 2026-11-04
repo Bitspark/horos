@@ -24,11 +24,11 @@ The existing Ontos and Horos cores remain data-only. Follow the
 [data/hydration boundary](docs/spec/hydrated-types.md) and optional
 [horos/wire profile](docs/spec/wire-types.md), selected by the owner on
 3 November 2026 to replace the Bittype-owned contract model proposal. Horos owns
-that profile's canonical type/declaration and lifting semantics; Bittype
+that profile's canonical type/declaration semantics; Bittype
 owns its tooling projections and transformations. Do not widen revision 1's
 generic arguments or ground judgments, infer a profile from Wire occurrences,
-or revive a superseded syntax as an alias. The optional static Go profile and lifting are implemented in `core/go/wire`;
-see its [API scope](core/go/wire/README.md). Horos 0.7.0 aligns every supported
+or revive a superseded syntax as an alias. The optional static Go profile and closed ground embedding are implemented in `core/go/wire`;
+see its [API scope](core/go/wire/README.md). Horos 0.8.0 aligns every supported
 consumer with Ontos 0.16.0 and includes both Go declaration profiles. Ground
 semantics and historical release artifacts are unchanged. Live value checking and runtime integration remain
 outside that package.

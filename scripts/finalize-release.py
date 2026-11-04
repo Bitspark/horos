@@ -24,7 +24,7 @@ def preserve_existing(directory, accepted, repo):
     proof = directory / "published-verification.json"
     verify_published(proof, accepted)
     with tempfile.TemporaryDirectory() as temp:
-        subprocess.run(["gh", "release", "download", "v0.7.0", "--repo", repo, "--dir", temp], check=True)
+        subprocess.run(["gh", "release", "download", "v0.8.0", "--repo", repo, "--dir", temp], check=True)
         for asset in immutable:
             assert digest(Path(temp) / asset.name) == digest(asset), "immutable release asset differs"
         original = Path(temp) / proof.name
@@ -33,8 +33,8 @@ def preserve_existing(directory, accepted, repo):
         else:
             # A previous create can succeed before its final asset upload fails.
             # Add only the missing receipt, never replace an existing asset.
-            subprocess.run(["gh", "release", "upload", "v0.7.0", str(proof), "--repo", repo], check=True)
-            subprocess.run(["gh", "release", "download", "v0.7.0", "--repo", repo,
+            subprocess.run(["gh", "release", "upload", "v0.8.0", str(proof), "--repo", repo], check=True)
+            subprocess.run(["gh", "release", "download", "v0.8.0", "--repo", repo,
                             "--pattern", proof.name, "--dir", temp], check=True)
             assert digest(original) == digest(proof), "uploaded verification receipt differs"
             verify_published(original, accepted)
@@ -47,15 +47,15 @@ def main(directory):
     repo = os.environ["GITHUB_REPOSITORY"]
     assets = [directory / p["file"] for p in accepted["packages"]]
     assets += [directory / "candidate.json", directory / "published-verification.json"]
-    existing = subprocess.run(["gh", "api", f"repos/{repo}/releases/tags/v0.7.0"], text=True, capture_output=True)
+    existing = subprocess.run(["gh", "api", f"repos/{repo}/releases/tags/v0.8.0"], text=True, capture_output=True)
     if existing.returncode == 0:
         release = json.loads(existing.stdout)
-        assert release["tag_name"] == "v0.7.0" and not release["draft"]
+        assert release["tag_name"] == "v0.8.0" and not release["draft"]
         preserve_existing(directory, accepted, repo)
     else:
         assert "404" in existing.stderr, existing.stderr
-        subprocess.run(["gh", "release", "create", "v0.7.0", "--repo", repo, "--verify-tag", "--title", "horos 0.7.0",
-                        "--notes-file", str(ROOT / "docs/releases/v0.7.0.md"), *map(str, assets)], check=True)
+        subprocess.run(["gh", "release", "create", "v0.8.0", "--repo", repo, "--verify-tag", "--title", "horos 0.8.0",
+                        "--notes-file", str(ROOT / "docs/releases/v0.8.0.md"), *map(str, assets)], check=True)
 
 
 if __name__ == "__main__":

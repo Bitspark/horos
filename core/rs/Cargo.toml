@@ -1,6 +1,6 @@
 [package]
 name = "bitspark-horos"
-version = "0.7.0"
+version = "0.8.0"
 description = "Types and schemas over ontos values: descriptor well-formedness, conformance and diagnostics."
 edition.workspace = true
 license.workspace = true

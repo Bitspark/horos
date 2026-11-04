@@ -23,14 +23,14 @@ class ReceiptTest(unittest.TestCase):
             (root / "vectors/conformance.json").write_bytes(b"oracle")
             entries = []
             for registry, name, suffix in [("npm", "@bitspark/horos", "tgz"), ("crates.io", "bitspark-horos", "crate")]:
-                file = f"bitspark-horos-0.7.0.{suffix}"
+                file = f"bitspark-horos-0.8.0.{suffix}"
                 content = suffix.encode()
                 (root / file).write_bytes(content)
-                entries.append({"registry": registry, "name": name, "version": "0.7.0", "file": file,
+                entries.append({"registry": registry, "name": name, "version": "0.8.0", "file": file,
                                 "sha256": hashlib.sha256(content).hexdigest(), "size": len(content),
                                 "integrity": "sha512-" + base64.b64encode(hashlib.sha512(content).digest()).decode()})
-            original = {"schema": 1, "version": "0.7.0", "mode": "rehearse", "source": "source", "tree": "tree",
-                        "tags": ["v0.7.0", "core/go/v0.7.0"], "oracle_sha256": package.digest(root / "vectors/conformance.json"), "packages": entries}
+            original = {"schema": 1, "version": "0.8.0", "mode": "rehearse", "source": "source", "tree": "tree",
+                        "tags": ["v0.8.0", "core/go/v0.8.0"], "oracle_sha256": package.digest(root / "vectors/conformance.json"), "packages": entries}
 
             def check(data):
                 (root / "candidate.json").write_text(json.dumps(data))
@@ -53,9 +53,9 @@ class ReceiptTest(unittest.TestCase):
 
 class FinalizationTest(unittest.TestCase):
     def test_incomplete_release_recovery(self):
-        accepted = {"source": "source", "version": "0.7.0", "oracle_sha256": "oracle",
+        accepted = {"source": "source", "version": "0.8.0", "oracle_sha256": "oracle",
                     "packages": [{"file": "npm.tgz"}, {"file": "cargo.crate"}]}
-        verified = {"source": "source", "version": "0.7.0", "oracle_sha256": "oracle", "mode": "published",
+        verified = {"source": "source", "version": "0.8.0", "oracle_sha256": "oracle", "mode": "published",
                     "anonymous_consumers": ["npm", "crates.io", "Go proxy"], "go_origin": {"Hash": "source"},
                     "ci": "https://github.com/Bitspark/horos/actions/runs/1", "run_id": "2"}
         for scenario in ("complete", "missing", "source", "version", "oracle_sha256", "mode", "consumers", "artifact"):
