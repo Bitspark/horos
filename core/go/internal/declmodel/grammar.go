@@ -11,6 +11,15 @@ type Grammar struct {
 	Any               func() core.Value
 	Positions         func(string, []core.Value) ([][]int, error)
 	WF                func(core.Value) error
+	Rule              func(string, []core.Value) DomainRule
+	Data              func(core.Value) (bool, error)
+}
+
+// DomainRule belongs to the Horos expression grammar. Behavioral library names
+// never participate in these rules.
+type DomainRule struct {
+	RequiresData bool
+	Capability bool
 }
 
 func Failure(code Code, message string) error                           { return failure(code, message) }

@@ -19,12 +19,21 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 			Declaration: id.Name, Message: "specialization argument arity mismatch"}
 	}
 	work := &budget{limits: p.limits}
-	for _, argument := range arguments {
+	for i, argument := range arguments {
 		if err := work.value(argument, 0); err != nil {
 			return nil, argumentFailure(err, id)
 		}
 		if err := p.grammar.WF(argument); err != nil {
 			return nil, argumentFailure(err, id)
+		}
+		if declaration.parameters[i].Bound == DataBound {
+			isData, err := p.grammar.Data(argument)
+			if err != nil {
+				return nil, argumentFailure(err, id)
+			}
+			if !isData {
+				return nil, argumentFailure(failure(BoundViolation, "specialization argument does not satisfy Data"), id)
+			}
 		}
 	}
 	return p.expand(declaration.expression, arguments, work, id)

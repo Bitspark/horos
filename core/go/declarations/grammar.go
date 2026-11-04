@@ -7,10 +7,10 @@ import (
 )
 
 func grammar() model.Grammar {
-	return model.Grammar{DeclarationPrefix: "horos/decl/", DescriptorPrefix: "horos/", Any: descriptorAny, Positions: descriptorPositions, WF: descriptorWF}
+	return model.Grammar{DeclarationPrefix: "horos/decl/", DescriptorPrefix: "horos/", Any: descriptorAny, Positions: descriptorPositions, WF: descriptorWF, Rule: descriptorRule, Data: descriptorData}
 }
 
-func descriptorWF(value core.Value) error {
+func groundWF(value core.Value) error {
 	result := horos.DiagnoseWF(value)
 	switch result.Verdict {
 	case horos.VerdictConforms:
@@ -20,6 +20,85 @@ func descriptorWF(value core.Value) error {
 	default:
 		return model.Failure(Invalid, "malformed or unguarded Horos descriptor")
 	}
+}
+
+func descriptorWF(value core.Value) error {
+	_, err := descriptorData(value)
+	return err
+}
+
+// The ground skeleton checks only descriptor syntax/guards. Data obligations
+// are checked separately, including symbolically in open generic declarations.
+func descriptorData(value core.Value) (bool, error) {
+	var visit func(core.Value) (core.Value, bool, error)
+	visit = func(value core.Value) (core.Value, bool, error) {
+		constructor, args, ok := model.Head(value, "horos/")
+		if !ok {
+			return nil, false, model.Failure(Invalid, "expected a closed Horos type expression")
+		}
+		positions, err := descriptorPositions(constructor, args)
+		if err != nil {
+			return nil, false, err
+		}
+		rule := descriptorRule(constructor, args)
+		isData := !rule.Capability
+		items := value.(core.Tuple).Items()
+		for _, path := range positions {
+			child := value
+			for _, index := range path {
+				child = child.(core.Tuple).At(index)
+			}
+			skeleton, childData, err := visit(child)
+			if err != nil {
+				return nil, false, err
+			}
+			if rule.RequiresData && !childData {
+				return nil, false, model.Failure(BoundViolation, "constructor operand requires Data")
+			}
+			if rule.Capability {
+				// A message schema is closed under its own recursion binders.
+				if err := groundWF(skeleton); err != nil {
+					return nil, false, err
+				}
+			}
+			isData = isData && childData
+			if len(path) == 1 {
+				items[path[0]] = skeleton
+			} else {
+				field := items[path[0]].(core.Tuple).Items()
+				field[path[1]] = skeleton
+				items[path[0]] = core.NewTuple(field...)
+			}
+		}
+		if rule.Capability {
+			return descriptorAny(), false, nil
+		}
+		return core.NewTuple(items...), isData, nil
+	}
+	skeleton, isData, err := visit(value)
+	if err != nil {
+		return false, err
+	}
+	if err := groundWF(skeleton); err != nil {
+		return false, err
+	}
+	return isData, nil
+}
+
+func descriptorRule(constructor string, args []core.Value) model.DomainRule {
+	switch constructor {
+	case "wire":
+		return model.DomainRule{Capability: true}
+	case "tuple", "compound", "list-of", "union":
+		return model.DomainRule{}
+	case "record":
+		if len(args) > 0 {
+			if mode, ok := args[0].(core.Atom); ok && string(mode.Bytes()) == "closed" {
+				return model.DomainRule{}
+			}
+		}
+	}
+	return model.DomainRule{RequiresData: true}
 }
 
 func descriptorAny() core.Value {
@@ -37,7 +116,7 @@ func descriptorPositions(constructor string, args []core.Value) ([][]int, error)
 		for i := range args {
 			positions = append(positions, []int{i + 1})
 		}
-	case "seq", "list-of", "set-of", "not":
+	case "wire", "seq", "list-of", "set-of", "not":
 		if len(args) != 1 {
 			return nil, model.Failure(Invalid, "wrong descriptor arity")
 		}

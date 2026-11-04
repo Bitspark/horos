@@ -128,6 +128,9 @@ func Resolve(root core.Value, dependencies []core.Value, limits Limits, grammar 
 	if err := reader.acyclic(); err != nil {
 		return nil, err
 	}
+	if err := p.checkBounds(); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
@@ -158,11 +161,11 @@ func sourceFailure(err error, root Digest) error {
 func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) {
 	args, ok := grammar.form(value, "module", 4)
 	if !ok {
-		return nil, failure(Invalid, "expected revision-1 module form")
+		return nil, failure(Invalid, "expected revision-2 module form")
 	}
 	revision, ok := index(args[0])
 	name, nameErr := data.ReadText(args[1])
-	if !ok || revision != 1 || nameErr != nil || !moduleName(name) {
+	if !ok || revision != 2 || nameErr != nil || !moduleName(name) {
 		return nil, failure(Invalid, "invalid module revision or name")
 	}
 	imports, err := data.ReadMap(args[2])
@@ -202,12 +205,24 @@ func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) 
 		declaration := &Declaration{id: DeclarationID{Module: pin, Name: name}, body: args[1]}
 		names := make(map[string]bool)
 		for _, param := range params {
-			name, err := data.ReadText(param)
+			parts, ok := grammar.form(param, "parameter", 2)
+			if !ok {
+				return nil, failure(Invalid, "expected parameter name and explicit Type/Data bound")
+			}
+			name, err := data.ReadText(parts[0])
 			if err != nil || !identifier(name) || names[name] {
 				return nil, failure(Invalid, "invalid or duplicate parameter name")
 			}
+			boundAtom, ok := parts[1].(core.Atom)
+			if !ok {
+				return nil, failure(Invalid, "parameter bound must be an atom")
+			}
+			bound := Bound(string(boundAtom.Bytes()))
+			if bound != TypeBound && bound != DataBound {
+				return nil, failure(Invalid, "unknown parameter bound")
+			}
 			names[name] = true
-			declaration.parameters = append(declaration.parameters, name)
+			declaration.parameters = append(declaration.parameters, TypeParameter{Name: name, Bound: bound})
 		}
 		m.declarations = append(m.declarations, declaration)
 	}
@@ -260,6 +275,7 @@ func (r *expressionReader) read(value core.Value, owner *Declaration, path []int
 	if err != nil {
 		return nil, nil, locate(err, owner.id, path)
 	}
+	expression.path = slices.Clone(path)
 	return expression, skeleton, nil
 }
 
