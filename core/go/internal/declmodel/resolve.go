@@ -131,7 +131,7 @@ func Resolve(root core.Value, dependencies []core.Value, limits Limits, grammar 
 	if err := reader.acyclic(); err != nil {
 		return nil, err
 	}
-	if err := p.checkBounds(); err != nil {
+	if err := p.checkBounds(reader.budget); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -314,11 +314,11 @@ func (r *expressionReader) readIn(value core.Value, owner *Declaration, path []i
 			return nil, nil, err
 		}
 		if !callee.interface_.IsConstructor() {
-			return nil, nil, locate(failure(KindMismatch, "application callee must be a constructor"), owner.id, calleePath)
+			return nil, nil, locate(applicationFailure(KindMismatch, callee, Interface{}, "application callee must be a constructor"), owner.id, calleePath)
 		}
 		arguments, err := data.ReadList(args[1])
 		if err != nil || len(arguments) == 0 || len(arguments) != len(callee.interface_.inputs) {
-			return nil, nil, failure(Invalid, "application argument list or arity mismatch")
+			return nil, nil, applicationFailure(Invalid, callee, callee.interface_, "application argument list or arity mismatch")
 		}
 		result := &Expression{kind: Application, value: value, callee: callee, interface_: Interface{result: callee.interface_.result}}
 		for i, argument := range arguments {

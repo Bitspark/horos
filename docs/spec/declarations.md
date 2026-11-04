@@ -323,9 +323,11 @@ Guarded well-formedness does not assert that a descriptor has an inhabitant.
 Default limits are depth 256, 100,000 nodes/work steps, 16 MiB of canonical bytes
 and 256 supplied modules including the root. Configured depth lies in 1..512;
 other limits must be positive. Raw admission counts the complete supplied pool,
-including literals, before encoding. Semantic work includes interface traversal,
-comparison, environments, summary evaluation and cache growth. Work is aggregated
-across the operation rather than reset for each declaration or query.
+including literals, before encoding. One semantic-work budget covers expression
+reading, dependency checking, interface traversal, comparison, environments,
+summary evaluation and cache growth. It is not reset per phase, declaration or
+query. Generated interface and environment keys consume the semantic operation's
+byte allowance before allocation.
 
 Evaluation caches are local to an operation and retain exact expression,
 constructor, interface and binding identities. A declaration's immutable symbolic

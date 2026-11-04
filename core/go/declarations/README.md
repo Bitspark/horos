@@ -123,6 +123,7 @@ machine-readable outcomes; do not parse `Message`.
 | `unknown-import` | `source` or `context` | An expression names an absent import alias |
 | `unknown-declaration` | `source`, `context` or `request` | A reference or requested operation names a declaration outside the verified closure |
 | `invalid` | `source`, `context` or `request` | Malformed source/context or an invalid invocation |
+| `kind-mismatch` | `source`, `context` or `request` | A constructor/proper shape does not fit its expression position or argument slot |
 | `bound-violation` | `source`, `context` or `request` | An interface or Data obligation is not established |
 | `cycle` | `source` or `context` | A forbidden import or declaration-reference cycle |
 | `invalid-options` | `configuration` | Caller-supplied checking limits are invalid |
@@ -148,10 +149,12 @@ does not establish that root source is invalid under every other context.
 Default limits are depth 256, 100,000 node visits/work steps, 16 MiB of canonical
 bytes and 256 supplied modules including the root. Depth lies in 1..512; other
 limits must be positive. Admission counts the full input pool, including
-literals, before encoding. Semantic work includes interface comparison, typed
-environments, symbolic evaluation and cache growth, aggregated across the
-operation rather than reset per declaration or query. Evaluation caches are
-operation-local and keyed by exact bindings and interfaces.
+literals, before encoding. One semantic-work budget covers expression reading,
+dependency checking, interface comparison, typed environments, symbolic
+evaluation and cache growth. It is not reset per phase, declaration or query.
+Generated interface and environment keys consume that operation's byte allowance
+before allocation. Evaluation caches are operation-local and keyed by exact
+bindings and interfaces.
 
 Specialization bounds argument admission and expansion, then independently
 admits the complete expanded output before descriptor checking. Repeated output
@@ -161,9 +164,11 @@ cheaply while its expanded descriptor exceeds the output budget.
 
 The package reuses the ground checker for literal forms and guarded recursion.
 Only checked proper expressions in designated descriptor positions can be
-replaced by `any` in an internal grammar skeleton. Shape, binding, arity,
-interfaces and independent argument closure must be established first. This is
-not a rule that substitutes arbitrary tuples or constructor kinds with `any`.
+replaced by `any` in an internal grammar skeleton. Shape, binding, arity and
+independent argument closure are established for this syntax/guard pass;
+interface obligations are checked separately before publishing a Program.
+This is not a rule that substitutes arbitrary tuples or constructor kinds with
+`any`.
 
 The maintained hosted Go gate (`scripts/check.sh go`) must qualify higher-order
 interfaces, independent eager-expansion/Data agreement, cache-order permutations,

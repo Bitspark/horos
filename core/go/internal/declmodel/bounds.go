@@ -1,7 +1,7 @@
 package declmodel
 
-func (p *Program) checkBounds() error {
-	c := newProofChecker(p, &budget{limits: p.limits})
+func (p *Program) checkBounds(work *budget) error {
+	c := newProofChecker(p, work)
 	for _, declaration := range p.declarationOrder {
 		if err := validateInterface(declaration.interface_, c.work, 0); err != nil {
 			return sourceFailure(locate(err, declaration.id, nil), p.root)
@@ -107,6 +107,7 @@ func encodeInterface(iface Interface, work *budget, depth int) (string, error) {
 	var visit func(Interface, int) error
 	visit = func(i Interface, depth int) error {
 		if err := work.step(depth); err != nil { return err }
+		if err := work.reserveBytes(3); err != nil { return err }
 		output = append(output, '(')
 		for _, child := range i.inputs { if err := visit(child, depth+1); err != nil { return err } }
 		if i.result == DataClaim { output = append(output, 'd') } else { output = append(output, 't') }

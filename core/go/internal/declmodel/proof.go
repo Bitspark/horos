@@ -81,6 +81,9 @@ func (c *proofChecker) invocation(d *Declaration, values []*semanticValue, depth
 	var keyBytes []byte
 	for _, value := range values {
 		if err := c.work.step(depth); err != nil { return nil, err }
+		digits := 1
+		for n := value.id; n >= 10; n /= 10 { digits++ }
+		if err := c.work.reserveBytes(digits+1); err != nil { return nil, err }
 		keyBytes = strconv.AppendUint(keyBytes, value.id, 10)
 		keyBytes = append(keyBytes, '/')
 	}
