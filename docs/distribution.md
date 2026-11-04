@@ -1,17 +1,29 @@
 # Distribution
 
+## Current Go declaration delivery
+
+The general-kind change publishes only `core/go/v0.10.0` for the public Go
+module. Its declaration grammar is revision 4. npm and Cargo installations stay
+on their existing 0.9.0 releases; this change does not publish those packages or
+create a root v0.10.0 tag. See the [Go release notes](releases/v0.10.0.md).
+
+For this Go-only path, land the source on main and publish the immutable nested
+module tag. Bittype then selects that public Go version. No archive-building,
+rehearsal, checksum, validation or provenance workflow is a prerequisite under
+the owner's 4 November rule. The broader hosted workflow described below is not
+invoked by this delivery. Existing tags and registry versions are never replaced.
+
 Version 0.6.0 starts the public history. Earlier versions belong to the preserved
 private history and are not tags in this repository.
 
 | Surface | Distribution | Dependency |
 | --- | --- | --- |
-| TypeScript | npmjs `@bitspark/horos@0.10.0` | ontos core, codec and data 0.16.0 |
-| Rust | crates.io `bitspark-horos@0.10.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
+| TypeScript | npmjs `@bitspark/horos@0.9.0` | ontos core, codec and data 0.16.0 |
+| Rust | crates.io `bitspark-horos@0.9.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
 | Go | `github.com/Bitspark/horos/core/go@v0.10.0` | github.com/bitspark/ontos v0.16.0 |
 | Python | Source-only validation lane | ontos v0.16.0 Python source |
 
-The root `v0.10.0` and nested `core/go/v0.10.0` tags identify the same commit. There
-are no private runtime dependencies, hidden registry routes or compatibility
+There are no private runtime dependencies, hidden registry routes or compatibility
 exports for the pre-public proof/witness APIs. Code-generation tools do not form
 part of the runtime dependency graph.
 
@@ -75,9 +87,9 @@ the tagged source. Never replace tags or archives or rewrite GitHub identity
 variables. Later publications use the trusted publisher in the hosted workflow;
 the first-publication bootstrap is unnecessary.
 
-The 0.10.0 Go module includes the unified revision-3 `declarations` package.
-Finite constructor kinds, Type/Data interfaces and checked result guarantees
-express higher-order generic contracts in one language. Revision 2 is no longer
+The 0.10.0 Go module includes the unified revision-4 `declarations` package.
+Ordinary structural kinds, constructor contracts and checked symbolic bodies
+express generic contracts in one language. Earlier revisions are no longer
 accepted; imports must be repinned after canonical module migration. The removed
 `wire` package and template-lifting facility remain absent.
 No corresponding Rust or TypeScript declaration APIs are claimed. All consumers

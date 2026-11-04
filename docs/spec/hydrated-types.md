@@ -1,17 +1,18 @@
 # One type language, distinct value domains
 
-**Owner directions, 3-4 November 2026; unified declaration decision supersedes
-the two-profile design.** Ontos ground values and Horos ground checks remain
-data-only. Horos now has one declaration language for data and capability types,
-with explicit constructor interfaces, higher-kinded parameters and Data proofs.
-There is no separate Horos/Wire language.
+**Revision-4 direction, 4 November 2026; implementation in progress.** Ontos
+ground values and Horos ground checks remain data-only. Horos has one declaration
+language for data and capability types. General structural kinds classify those
+type descriptions and constructors; Data is an ordinary recursive union in the
+explicitly imported `horos.kinds` module. There is no separate Horos/Wire language.
 Ontos/wire remains an optional *value* model, not a second declaration grammar.
 
 A live capability depends on runtime authority and lifetime. Its description can
 be stored as ordinary Ontos data without storing or validating an endpoint.
 `any`, complement and all existing ground descriptors keep their meanings.
 The unified `H("wire", E)` expression is not a ground descriptor passed to
-WF/Conforms. `Program.DataDescriptor` explicitly establishes that boundary.
+WF/Conforms. The revision-4 `Program.GroundDescriptor` operation establishes that
+boundary through ordinary kind membership and unchanged ground WF rules.
 
 ## Structure and optional value profiles
 
@@ -56,18 +57,20 @@ mixed-value checker or changes ground descriptor checking.
 | Deixis | Generic structure over opaque contents |
 | Ontos core | Ground data values, structural identity and encoding |
 | Optional ontos/wire | Mixed value structure and exact ground embedding/recovery |
-| Horos | Ground descriptors/conformance; unified declarations, kinds/interfaces, Data proofs, resolution and specialization |
+| Horos | Ground descriptors/conformance; unified declarations, structural kinds, constructor contracts, resolution and materialization |
 | Bittype | AST/CST and semantic projections, provider composition and separately qualified transformations |
 | Bitwire / bitruntime | Sending capabilities and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |
 
-The [declaration model](declarations.md) authors `Page<T>` once, with a Type
-interface. It accepts arbitrary proper types and can establish `Data -> Data`
-when used as a constructor. `DataPage<D: Data> = Page<D>` restricts arguments
-through an ordinary alias. Data names the refined kind of types established
-data-only; a Data argument alone does not guarantee a constructor's result.
-Data arguments need no wrapper. Closed data specialization returns the existing
-ground descriptor; mixed specialization stays a static type expression. The
+The [declaration model](declarations.md) authors `Page<T>` once. It accepts
+arbitrary proper types and its retained body can establish `Data => Data`, or
+structural guarantees involving other ordinary kinds such as Scalar and Rows.
+`DataPage<D: Data> = Page<D>` restricts arguments through an ordinary alias.
+Merely accepting a Data argument does not guarantee a constructor's result;
+an abstract constructor supplies only its declared promises. Data arguments need
+no wrapper. `Descriptor` materializes a closed proper type expression, which may
+contain capabilities. `GroundDescriptor` returns the existing ground descriptor
+only after the additional ground-kind membership and formation obligations. The
 [Wire examples](wire-types.md) show library-owned composition. No lifting,
 embedding API or second declaration identity remains.
 
@@ -75,7 +78,9 @@ Library-owned native representations, dynamic adapters, binding contexts,
 resource ownership and static-versus-dynamic limits remain in Bittype's
 [type representation](https://github.com/Bitspark/bittype/blob/main/docs/type-representations.md)
 and [runtime value](https://github.com/Bitspark/bittype/blob/main/docs/runtime-values.md)
-designs. This work implements no generators or runtime bindings.
+designs. General kinds add no runtime bindings or live-value checker. Native
+types-only mappings retain their explicit supported profiles; a structural kind
+guarantee does not by itself supply a native encoding or enforcement strategy.
 
 ## Forbidden changes
 

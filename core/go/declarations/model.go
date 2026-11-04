@@ -1,5 +1,5 @@
-// Package declarations implements Horos declaration revision 3 with explicit
-// higher-order interfaces. Retired revisions and profiles are not accepted.
+// Package declarations implements Horos declaration revision 4 with general
+// kinds. Retired revisions and profiles are not accepted.
 package declarations
 
 import (
@@ -12,31 +12,37 @@ import (
 type Digest = model.Digest
 type DeclarationID = model.DeclarationID
 type ParameterID = model.ParameterID
-type Claim = model.Claim
-type Interface = model.Interface
 type TypeParameter = model.TypeParameter
+type KindParameter = model.KindParameter
+type Assumption = model.Assumption
+type Membership = model.Membership
 type Code = model.Code
 type Subject = model.Subject
 type Error = model.Error
 type Limits = model.Limits
+type Sort = model.Sort
 type Kind = model.Kind
+type KindForm = model.KindForm
+type KindOperand = model.KindOperand
+type Selector = model.Selector
+type Sequence = model.Sequence
+type SequenceForm = model.SequenceForm
 type ExpressionKind = model.ExpressionKind
-type SummaryKind = model.SummaryKind
-type DataStatus = model.DataStatus
-type DataSummary = model.DataSummary
-type Argument = model.Argument
 type Operand = model.Operand
 type Expression = model.Expression
-type Import = model.Import
+type DeclarationForm = model.DeclarationForm
 type Declaration = model.Declaration
+type Import = model.Import
 type Module = model.Module
+type KindHandle = model.KindHandle
+type TypeValue = model.TypeValue
+type Verdict = model.Verdict
 
 const (
 	Invalid              = model.Invalid
 	BoundViolation       = model.BoundViolation
 	KindMismatch         = model.KindMismatch
-	TypeClaim            = model.TypeClaim
-	DataClaim            = model.DataClaim
+	UnprovedObligation   = model.UnprovedObligation
 	MissingDependency    = model.MissingDependency
 	ImportMismatch       = model.ImportMismatch
 	UnknownImport        = model.UnknownImport
@@ -52,23 +58,32 @@ const (
 	Parameter            = model.Parameter
 	Reference            = model.Reference
 	Application          = model.Application
-	SummaryTrue          = model.SummaryTrue
-	SummaryFalse         = model.SummaryFalse
-	SummaryNeed          = model.SummaryNeed
-	SummaryAnd           = model.SummaryAnd
-	SummaryProbe         = model.SummaryProbe
-	DataProven           = model.DataProven
-	DataFailed           = model.DataFailed
-	DataConditional      = model.DataConditional
+	TypeDefinition       = model.TypeDefinition
+	KindDefinition       = model.KindDefinition
+	KindTop              = model.KindTop
+	KindBottom           = model.KindBottom
+	KindParameterReference = model.KindParameterReference
+	KindReference        = model.KindReference
+	KindApplication      = model.KindApplication
+	KindUnion            = model.KindUnion
+	KindIntersection     = model.KindIntersection
+	KindNode             = model.KindNode
+	KindRecursive        = model.KindRecursive
+	KindVariable         = model.KindVariable
+	KindArrow            = model.KindArrow
+	SequenceEpsilon      = model.SequenceEpsilon
+	SequenceItem         = model.SequenceItem
+	SequenceConcat       = model.SequenceConcat
+	SequenceAlternative  = model.SequenceAlternative
+	SequenceStar         = model.SequenceStar
+	Proven               = model.Proven
+	Refuted              = model.Refuted
+	Unproved             = model.Unproved
 )
 
 type Program struct{ inner *model.Program }
 
-func DefaultLimits() Limits                          { return model.DefaultLimits() }
-func ProperInterface(claim Claim) (Interface, error) { return model.ProperInterface(claim) }
-func ConstructorInterface(inputs []Interface, result Claim) (Interface, error) {
-	return model.ConstructorInterface(inputs, result)
-}
+func DefaultLimits() Limits { return model.DefaultLimits() }
 func Pin(value core.Value) (Digest, error) { return model.Pin(value) }
 func PinWithLimits(value core.Value, limits Limits) (Digest, error) {
 	return model.PinWithLimits(value, limits)
@@ -113,48 +128,59 @@ func (p *Program) Declaration(id DeclarationID) (*Declaration, bool) {
 	}
 	return p.inner.Declaration(id)
 }
-func (p *Program) Proper(value core.Value) (Argument, error) {
+func (p *Program) CompileKind(module Digest, expression core.Value) (KindHandle, error) {
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
+	}
+	return inner.CompileKind(module, expression)
+}
+func (p *Program) Value(id DeclarationID) (TypeValue, error) {
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
+	}
+	return inner.Value(id)
+}
+func (p *Program) Proper(value core.Value) (TypeValue, error) {
 	var inner *model.Program
 	if p != nil {
 		inner = p.inner
 	}
 	return inner.Proper(value)
 }
-func (p *Program) Constructor(id DeclarationID) (Argument, error) {
+func (p *Program) Apply(callee TypeValue, arguments []TypeValue) (TypeValue, error) {
 	var inner *model.Program
 	if p != nil {
 		inner = p.inner
 	}
-	return inner.Constructor(id)
+	return inner.Apply(callee, arguments)
 }
-func (p *Program) Satisfies(id DeclarationID, expected Interface) (bool, error) {
+func (p *Program) Satisfies(value TypeValue, kind KindHandle) (Verdict, error) {
 	var inner *model.Program
 	if p != nil {
 		inner = p.inner
 	}
-	return inner.Satisfies(id, expected)
+	return inner.Satisfies(value, kind)
 }
-func (p *Program) Specialize(id DeclarationID, arguments []Argument) (core.Value, error) {
+func (p *Program) Includes(actual KindHandle, expected KindHandle) (Verdict, error) {
 	var inner *model.Program
 	if p != nil {
 		inner = p.inner
 	}
-	return inner.Specialize(id, arguments)
+	return inner.Includes(actual, expected)
 }
-
-// DataDescriptor specializes a declaration and requires a data-only result.
-// It returns the existing ground descriptor, without a wrapper or conversion.
-func (p *Program) DataDescriptor(id DeclarationID, arguments []Argument) (core.Value, error) {
-	value, err := p.Specialize(id, arguments)
-	if err != nil {
-		return nil, err
+func (p *Program) Descriptor(value TypeValue) (core.Value, error) {
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
 	}
-	isData, err := descriptorData(value)
-	if err != nil {
-		return nil, err
+	return inner.Descriptor(value)
+}
+func (p *Program) GroundDescriptor(value TypeValue) (core.Value, error) {
+	var inner *model.Program
+	if p != nil {
+		inner = p.inner
 	}
-	if !isData {
-		return nil, &Error{Code: BoundViolation, Subject: SubjectRequest, Target: id, Message: "specialization is not a data descriptor"}
-	}
-	return value, nil
+	return inner.GroundDescriptor(value)
 }

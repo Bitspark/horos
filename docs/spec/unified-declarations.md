@@ -1,150 +1,149 @@
-# Unified declarations and kinds, revision 3
+# Unified declarations and general kinds, revision 4
 
-**Owner direction, 4 November 2026.** The owner first selected one declaration
-language for data and capability types, then requested a proper kind system.
-The accepted [kind-system consultation](https://github.com/Bitspark/bittype/issues/55)
-and [Horos implementation work](https://github.com/Bitspark/horos/issues/29)
-extend that one language. Revision 3 replaces revision 2 cleanly. Hosted
-qualification and publication remain separate release evidence.
+**Implemented in Go source, 4 November 2026.** Horos has
+one declaration language for data and capability types. The
+[general-kind consultation](https://github.com/Bitspark/bittype/issues/59)
+replaces the closed Type/Data interface model with arbitrary structural kinds
+and finite constructor contracts. The normative
+[declaration specification](declarations.md) fixes the canonical representation;
+the [kind specification](kinds.md) defines the judgments.
 
-The normative [declaration specification](declarations.md) defines the exact
-format and judgments. This page records the selected direction and migration.
-There is no separate Horos/Wire profile, compatibility reader or template-lifting
-path. Ground data descriptors and their conformance APIs retain their meanings.
+Ground descriptors and conformance keep their existing meanings. Revision 4
+changes the declaration language cleanly, with no second Wire profile, retired
+reader, template-lifting path or compatibility API.
 
-## One language and explicit constructor interfaces
+## Ordinary definitions, one language
 
-Documents remain finite ground Ontos values encoded with ontos-codec-v1.
-Imports retain expected names and exact SHA-256 pins. Resolve the complete
-reachable import closure, including unused imports. Unrelated pool values are
-bounded and hashed but not interpreted as modules.
+A kind selects type descriptions or type constructors. It is distinct from a
+type, which describes values. Sorts distinguish proper values from constructors
+with finite ordered inputs and a result; results can themselves be constructors.
+Union and intersection are available at every sort. Kind names are arbitrary.
 
-Using the A/T/I/L/M/H/D notation from the declaration specification:
+The ordinary `horos.kinds` module defines Type as proper top and Data as a
+positive recursive union of data-shaped primitives whose children satisfy the
+same ordinary category. User modules import this module explicitly before using
+its names. The resolver's internal use of the bundled prelude for primitive
+formation does not create implicit source bindings.
+
+The following are explanatory kind equations:
 
 ```text
-Claim = A("type") | A("data")
-Interface = D("proper", Claim)
-          | D("constructor", L(Interface, ...), Claim)
-
-D("module", I(3), T(name), imports, declarations)
-D("import", T(expectedName), Atom(32-byte pin))
-D("type", L(D("parameter", T(name), Interface), ...), Claim, body)
-D("param", I(zeroBasedSlot))
-D("local", T(name))
-D("imported", T(alias), T(name))
-D("apply", calleeExpression, L(argument, ...))
+Flat = Scalar | List<Scalar>
+Rows = Record<Flat>
+Tree = nu X. Scalar | List<X> | Record<X>
 ```
 
-Constructor input lists and application argument lists are nonempty. All
-applications and declaration bodies produce proper types. Unapplied named
-constructors may be arguments; zero-parameter declarations are direct references.
-Inputs may themselves have constructor interfaces, with finite explicit kinds.
-No partial application, constructor-valued body, bare constructor alias, source
-type lambda, kind variable or kind-polymorphic scheme is admitted.
+List and Record are ordinary kind definitions here, not new type constructors.
+Node patterns inspect a primitive form, its selected metadata and its entire
+finite sequence of type children. Positive recursion uses guarded simultaneous
+greatest fixed points. Only scalar selector and record mode are available as
+metadata predicates. Exact payloads stay opaque; ground rec/ref are observed as
+lexical backedges; open records include an implicit any child.
 
-Data is the refined kind of proper types established data-only. Erasing Data to
-Type gives the shape kind; retaining it in an interface states argument admission
-or a result guarantee. Shape, admission and established result evidence serve
-different purposes. Type is not ground `any`. A type description is Ontos data
-even when the type describes capabilities.
+Data is one instance of this model. Neither the generic kind engine nor a
+membership query branches on the spelling Type, Data, Scalar or Rows. Primitive
+operand admission refers to particular ordinary prelude definitions by identity.
+Ground `any` remains one data type, not the kind Type.
 
-## One Page, with preserved result precision
+## One Page, several structural guarantees
+
+The same Page declaration retains its original body:
 
 ```text
 Page<T> = { items: list<T>; next?: text; }
 DataPage<D: Data> = Page<D>
-Person = { name: text; }
-Wrapped<F: Type -> Type, T> = { value: F<T>; }
-DataWrapped<F: Data -> Data, D: Data> = { value: F<D>; }
-Compose<F: Type -> Type, G: Type -> Type, T> = F<G<T>>
-Ignore<T> = text
-Send<T> = wire<T>
 ```
 
-There is one Page identity and binder. DataPage is an ordinary restricted alias.
-Page accepts Type inputs and its body establishes Data output for Data inputs.
-Ignore establishes Data output for every admitted Type input. Send never has a
-Data result. These are checked facts about ordinary declarations, not a catalogue
-of recognized library names.
+Page admits arbitrary proper types. A query can establish `Data => Data`, or
+`Scalar => Rows`, from that body under the requested input assumptions. For each
+particular suitable K it can also establish
+`K => Record<List<K> | Text>`. This does not introduce a universally quantified
+constructor scheme. `Flat => Rows` does not follow: an input list produces a
+nested list in the items field.
 
-| Application | Required result |
-| --- | --- |
-| `Wrapped<Page,Person>` | Data |
-| `Wrapped<Ignore,wire<Person>>` | Data |
-| `Wrapped<Send,Person>` | Valid Type, non-Data |
-| `Compose<Page,Page,Person>` | Data |
-| `DataWrapped<Page,Person>` | Data |
-| `DataWrapped<Send,Person>` | Reject the constructor argument |
-| `DataWrapped<Ignore,wire<Person>>` | Reject the proper argument |
-| `Wrapped<DataPage,Person>` | Reject DataPage's narrower admission |
+Known constructors retain their bodies and binding environments. Abstract
+constructors expose their declared promises. Under `F: Flat => Rows` and
+`A: Flat`, `F<A>` establishes Rows; a wrapper record containing it has
+`Record<Rows>` structure. A promise of `Flat => Flat` does not establish Rows.
+Intersections retain joint promises, while unions retain alternatives. Every
+possible callee alternative must admit each relevant argument case. Repeated
+rigid inputs remain correlated across those cases.
 
-Compare constructor inputs contravariantly and results covariantly. A known
-declaration can establish a stronger result interface by checking its original
-admission and evaluating its summary under fresh rigid expected inputs. An
-abstract constructor parameter uses only its declared guarantee. Therefore
-`DataPage<F<D>>` is invalid under `F: Type -> Type`, even when D is Data; it is
-valid under `F: Data -> Data`. A proposed caller cannot repair an invalid body.
+Constructor-valued aliases and results are admitted with explicit result
+contracts:
 
-Data proofs follow actual parameter use. Retain unresolved constructor probes
-with their checked expressions, bindings and identities. A conditional proof is
-neither permanent failure nor exhaustion. Validate every argument before summary
-simplification, including ignored arguments and messages in Wire types.
+```text
+Alias : Type => Type = Page
+Pick<F: Type => Type> : Type => Type = F
+Pick<Page><text>
+```
 
-## Ground and library boundaries
+A zero-parameter alias can denote a constructor. A declaration's parameter-list
+arity is not its result sort. Each application supplies one complete nonempty
+argument list; partial application and source lambdas remain outside revision 4.
+The omitted result annotation defaults to proper top, so constructor aliases
+must state their constructor result contract.
 
-Tuple, compound, list-of, closed record and union admit proper data or capability
-types and are Data when their value-bearing children are Data. Wire is never
-Data. Other ground constructors retain their Data-only operands. Exact literals,
-labels and other non-type operands remain opaque to declaration traversal.
+## What the judgments establish
 
-Data is a compositional proof criterion, not an emptiness or arbitrary semantic
-subtyping solver. Ground `any`, complement and guarded recursion retain their
-existing meanings. A Data-preserving constructor supplies no recursion guard;
-arguments remain independently recursion-closed and final output is rechecked.
+Closed proper membership is exact within the admitted positive recursive
+fragment. It observes a checked type graph and solves positive Boolean
+obligations at a greatest fixed point. Seeing a pair before is not sufficient
+evidence of membership or valid guarding.
 
-Function, Stream, Cell and unfamiliar contracts remain ordinary pinned library
-declarations. Their behavior, runtime adapters and authority are library/runtime
-responsibilities. Horos adds no live-value validator or codec. Ontos, Bitwire,
-Bitruntime and Bitnode remain unchanged.
+Proper-kind inclusion uses positive recursive hedge automata, horizontal
+finite-word automata and finite cuts at live states. It is not a general parity
+engine. Inclusion over the free observation universe is sufficient for Horos
+inclusion, but failure can involve an observation no admitted Horos descriptor
+realizes. Such a result does not establish a concrete Horos counterexample.
 
-## Tooling and checking obligations
+Constructor reasoning is sound and incomplete. It preserves bodies, assumptions,
+identities and binding environments rather than promising a principal regular
+kind for every symbolic value. A narrower query cannot repair an invalid open
+body, and unused arguments still have to satisfy their contracts.
 
-Horos owns decoding, kinds/interfaces, reference resolution, Data summaries and
-typed specialization. Bittype projects authoritative checked facts and owns
-readable syntax and separately qualified native mappings. Its agnostic engine
-and semantic carrier interpret none of the Type/Data/Wire vocabulary.
+Proven establishes a guarantee. Refuted requires closed nonmembership or an
+admitted counterexample. Unproved means the available assumptions or supported
+rules do not establish the claim. Invalid requests and exhausted budgets are
+errors. A required Unproved obligation prevents publication of a checked
+Program; missing facts assert nothing.
 
-Every semantic named reference contributes a dependency edge, including an
-unapplied constructor in an ignored argument. Cycles reject before body checking.
-Constructor handles used for specialization are sealed to the same checked
-Program; equal canonical bytes in another Program do not confer ownership.
+## Ground, tooling and library boundaries
 
-Keep aggregate semantic work bounded, including interfaces, comparisons,
-environments, summaries and caches. Keep raw admission and expanded-output
-budgets separate. Count repeated output occurrences. Failed operations expose no
-usable partial model. Exhaustion is incomplete checking, not invalid source or
-proof of Data.
+The Go declarations layer owns resolution, kinds, contracts, checked type values
+and materialization. Its general kind-model engine is separate from the fixed
+Horos primitive formation rules and ground checker. The module envelope remains
+revision, name, imports and declarations with revision 4; it gains no signature
+digest or separate schema artifact.
 
-Qualification must independently establish substitution preservation, Data-proof
-preservation and agreement between bounded symbolic analysis and eager expansion.
-Retain independent negative cases, concurrency/mutation protection, diagnostic
-subjects, the complete ground conformance gate and Bittype's native pagination
-qualification. None is implied by a source commit alone.
+`Descriptor` materializes a closed proper type, which may still contain Wire.
+`GroundDescriptor` additionally establishes membership in the bundled ordinary
+ground kind and applies unchanged ground WF rules. Kind inclusion does not
+rewrite a descriptor, add a recursion guard or grant a runtime capability.
 
-## Clean migration
+Bittype owns readable syntax, AST/CST projections, provider facts and native
+mappings. Its generic graph does not interpret kind names. Kind declarations
+are compile-time definitions rather than native type exports. Canonical validity
+does not establish native support: the types-only profile retains its explicit
+representation limits and returns Unsupported for residual constructor inputs,
+results or aliases. No hidden specialization or closure pruning is implied.
 
-1. Replace revision-2 Type/Data atom bounds with `proper` interfaces. Add the
-   explicit Type result claim unless a stronger claim is authored and checked.
-2. Change the module revision to 3. Replace zero-argument applications with
-   direct local/imported references. Keep generic applications fully saturated.
-3. Recompute canonical dependency pins from leaves outward. Preserve literal
-   payloads, names, ordering, source identities and native representation origins.
-4. Remove superseded bound-only APIs and revision-2 readers without aliases.
-   Re-pin consumers to the verified public replacement dependency.
-5. Preserve immutable historical releases and research evidence. Complete hosted
-   checks and installed-consumer verification before claiming delivery.
+Function, Stream and Cell remain ordinary library declarations. Runtime
+behavior, native adapters, authority and protocol laws stay with the owning
+libraries. Horos adds no live-value checker or codec. Ontos, Bitwire and
+Bitruntime retain their value-domain boundaries.
 
-Intersections/conditional contracts for abstract constructors remain deferred
-until an accepted case needs arbitrary-Type admission and conditional Data
-preservation together. Partial application, constructor-valued results, lambdas
-and kind polymorphism require their own concrete cases and qualification.
+## Clean replacement
+
+Current canonical documents use revision 4. Parameters and declaration results
+carry ordinary kind expressions; declarations can define kinds as well as types.
+Source references preserve their definition and caller scopes. Literal payloads
+remain opaque, and named definition cycles remain forbidden outside explicit
+kind recursion.
+
+The revision-3 Claim/Interface/DataSummary model, dedicated Data evaluator,
+Specialize/DataDescriptor API and decoder are removed. Immutable historical
+releases and research remain historical evidence, not alternate executable
+formats. Type lambdas, partial application, universally quantified constructor
+schemes, growing recursive kind instantiations and arbitrary relational subtree
+predicates remain separate extensions requiring concrete use cases.
