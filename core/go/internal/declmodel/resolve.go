@@ -260,7 +260,6 @@ func (r *expressionReader) read(value core.Value, owner *Declaration, path []int
 	if err != nil {
 		return nil, nil, locate(err, owner.id, path)
 	}
-	expression.context = r.program
 	return expression, skeleton, nil
 }
 

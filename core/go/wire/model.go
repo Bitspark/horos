@@ -26,22 +26,21 @@ type Declaration = model.Declaration
 type Module = model.Module
 
 const (
-	Invalid                   = model.Invalid
-	MissingDependency         = model.MissingDependency
-	ImportMismatch            = model.ImportMismatch
-	UnknownImport             = model.UnknownImport
-	UnknownDeclaration        = model.UnknownDeclaration
-	InvalidOptions            = model.InvalidOptions
-	Cycle                     = model.Cycle
-	Exhausted                 = model.Exhausted
-	UnsupportedLift      Code = "unsupported-lift"
-	SubjectSource             = model.SubjectSource
-	SubjectContext            = model.SubjectContext
-	SubjectConfiguration      = model.SubjectConfiguration
-	SubjectRequest            = model.SubjectRequest
-	Descriptor                = model.Descriptor
-	Parameter                 = model.Parameter
-	Application               = model.Application
+	Invalid              = model.Invalid
+	MissingDependency    = model.MissingDependency
+	ImportMismatch       = model.ImportMismatch
+	UnknownImport        = model.UnknownImport
+	UnknownDeclaration   = model.UnknownDeclaration
+	InvalidOptions       = model.InvalidOptions
+	Cycle                = model.Cycle
+	Exhausted            = model.Exhausted
+	SubjectSource        = model.SubjectSource
+	SubjectContext       = model.SubjectContext
+	SubjectConfiguration = model.SubjectConfiguration
+	SubjectRequest       = model.SubjectRequest
+	Descriptor           = model.Descriptor
+	Parameter            = model.Parameter
+	Application          = model.Application
 )
 
 // Reference qualifies document identity separately from semantic compatibility.

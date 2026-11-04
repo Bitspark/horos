@@ -30,24 +30,6 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 	return p.expand(declaration.expression, arguments, work, id)
 }
 
-// Close expands a caller-selected subtree only if it is independently closed.
-func (p *Program) Close(expression *Expression) (core.Value, error) {
-	if p == nil || !p.limits.valid() || expression == nil || expression.context != p {
-		return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected an expression from this checked program"}
-	}
-	return p.expand(expression, nil, &budget{limits: p.limits}, DeclarationID{})
-}
-
-// CloseWithWork is private cross-profile composition. The immutable expression
-// retains its owning checked program; actual expansion steps are charged to the
-// whole transformation request instead of resetting for every closed subtree.
-func CloseWithWork(expression *Expression, work *Work) (core.Value, error) {
-	if expression == nil || expression.context == nil || work == nil || !work.budget.limits.valid() {
-		return nil, &Error{Code: Invalid, Subject: SubjectRequest, Message: "expected an owned expression and work budget"}
-	}
-	return expression.context.expand(expression, nil, &work.budget, DeclarationID{})
-}
-
 func (p *Program) expand(expression *Expression, arguments []core.Value, work *budget, id DeclarationID) (core.Value, error) {
 	var expand func(*Expression, []core.Value, int) (core.Value, error)
 	expand = func(expression *Expression, env []core.Value, depth int) (core.Value, error) {

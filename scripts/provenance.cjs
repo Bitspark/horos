@@ -16,7 +16,7 @@ function context(receipt, env) {
     `${env.GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/heads/main`);
   assert.equal(receipt.source, env.GITHUB_SHA);
   assert.equal(receipt.mode, 'rehearse');
-  assert.equal(receipt.version, '0.7.0');
+  assert.equal(receipt.version, '0.8.0');
   return {
     repository: `https://github.com/${env.GITHUB_REPOSITORY}`,
     source: receipt.source,
@@ -25,7 +25,7 @@ function context(receipt, env) {
 }
 
 function subject(archive) {
-  return { name: 'pkg:npm/%40bitspark/horos@0.7.0',
+  return { name: 'pkg:npm/%40bitspark/horos@0.8.0',
     digest: { sha512: createHash('sha512').update(archive).digest('hex') } };
 }
 
@@ -54,7 +54,7 @@ async function main(directory) {
   const receipt = JSON.parse(fs.readFileSync(path.join(directory, 'candidate.json')));
   const expected = context(receipt, process.env);
   assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), receipt.source);
-  const archive = fs.readFileSync(path.join(directory, 'bitspark-horos-0.7.0.tgz'));
+  const archive = fs.readFileSync(path.join(directory, 'bitspark-horos-0.8.0.tgz'));
   const pkg = receipt.packages.find(p => p.registry === 'npm');
   assert.equal(pkg.name, '@bitspark/horos');
   assert.equal(pkg.sha256, createHash('sha256').update(archive).digest('hex'));
@@ -75,7 +75,7 @@ async function main(directory) {
     certificateIdentityURI: `${expected.repository}/.github/workflows/release.yml@refs/heads/main`,
     certificateIssuer: 'https://token.actions.githubusercontent.com',
   });
-  const file = path.join(directory, 'bitspark-horos-0.7.0.sigstore');
+  const file = path.join(directory, 'bitspark-horos-0.8.0.sigstore');
   fs.writeFileSync(file, JSON.stringify(bundle) + '\n', { flag: 'wx' });
   await verifyProvenance(expectedSubject, file);
   const result = { source: receipt.source, candidateRun: receipt.run_id,

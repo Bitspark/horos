@@ -2,7 +2,7 @@
 
 The package `github.com/Bitspark/horos/core/go/declarations` implements the
 [revision-1 declaration model](../../../docs/spec/declarations.md) in Horos
-0.7.0. It consumes Ontos 0.16.0
+0.8.0. It consumes Ontos 0.16.0
 module values and supplies no source parser, native generator or runtime binding.
 
 Use `Resolve(root, dependencies)` to check a root and the supplied transitive
@@ -85,7 +85,7 @@ with `any` is not the algorithm. Descriptor operands are rebuilt together so a
 wide record or tuple does not cause one complete tuple copy per field.
 
 Run the maintained remote Go gate (`scripts/check.sh go` on a GitHub runner).
-It includes pagination, nested/imported binding, every lifted descriptor
+It includes pagination, nested/imported binding, every parameterized descriptor
 position, specialization conformance, literal boundaries, invalid structures,
 cycles, limits, defensive accessors and concurrent specialization under the
 race detector. The existing cross-language ground conformance gate is retained.

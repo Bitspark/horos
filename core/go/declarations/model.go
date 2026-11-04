@@ -96,14 +96,3 @@ func (p *Program) Specialize(id DeclarationID, arguments []core.Value) (core.Val
 	}
 	return inner.Specialize(id, arguments)
 }
-
-// Close specializes an independently closed expression from this exact Program.
-// It permits explicit closed embedding of a subtree without lifting its generic
-// dependencies. Open or foreign expressions fail; literal data is never scanned.
-func (p *Program) Close(expression *Expression) (core.Value, error) {
-	var inner *model.Program
-	if p != nil {
-		inner = p.inner
-	}
-	return inner.Close(expression)
-}

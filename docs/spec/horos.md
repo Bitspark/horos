@@ -134,7 +134,7 @@ Library names such as Function, Stream and Cell are not built-in descriptor kind
 The [declaration model](declarations.md) specifies a separate layer for named
 modules, generic slots and applications, reusing descriptor positions and
 specializing to this existing vocabulary. The Go declarations package implements
-that layer in 0.7.0; the separate ground checker does not accept module
+that layer in 0.8.0; the separate ground checker does not accept module
 or open-template values. Declaration semantics belong to horos; syntax and native
 generation belong to bittype. No ground descriptor constructor is added.
 

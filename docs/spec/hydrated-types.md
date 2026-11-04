@@ -13,7 +13,7 @@ was implemented, and neither becomes a compatibility format. The optional
 [horos/wire profile](wire-types.md) has its own envelope, revision and
 interpretation. No existing Horos constructor, generic domain or ground judgment
 changes. The [static Go API](../../core/go/wire/README.md) implements the optional
-declaration profile and explicit lifting; live runtime integration remains separate.
+declaration profile and closed ground embedding; live runtime integration remains separate.
 
 ## What Horos describes
 
@@ -37,7 +37,7 @@ resolve that name, establish authority or recognize a live endpoint.
 descriptors retain their existing ground interpretation. In particular,
 `any()` does not start accepting Wires. Unknown constructors remain invalid.
 
-Declaration revision 1 retains its existing scope in Horos 0.7.0. The release
+Declaration revision 1 retains its existing scope in Horos 0.8.0. The release
 includes both Go declaration packages, while Rust and TypeScript retain their
 ground-only implementations. Source identity, binder identity, application
 resolution and explicit specialization remain as specified in
@@ -87,7 +87,7 @@ mixed-value checker or changes ground descriptor checking.
 | Ontos core | Ground data values, structural identity and encoding |
 | Optional ontos/wire | Go/TypeScript mixed value profile, native tuple structure and exact ground correspondence |
 | Horos core and data declarations | Data descriptors, declaration binding, specialization and ground conformance |
-| Optional horos/wire | Static Go mixed type/declaration profile and explicit partial lifting semantics |
+| Optional horos/wire | Static Go mixed type/declaration profile and explicit closed ground embedding |
 | Bittype | AST/CST and semantic projections, provider composition, transformations and native type generation |
 | Bitwire / bitruntime | Existing sending-capability contracts and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |
@@ -107,16 +107,15 @@ Structural admission, runtime recognition, current operational validity and
 remote protocol compliance are separate judgments; none follows merely from a
 well-formed type description or from recognizing a Wire leaf.
 
-`Page<Person>` remains a Horos data application. `Page<Wire<Message>>` is not
-an admissible application of that data declaration. Reusing Page's structure
-over capabilities requires horos/wire's
-[explicit partial template lift](wire-types.md#4-explicit-embedding-and-partial-template-lifting)
-and a separately identified derived declaration. Bittype implements that
-transformation, preserving source declarations, bindings, applications and
-provenance. It does not require another authored Page or expanded interface.
-Unsupported open forms fail with located diagnostics. Closed embedding and
-template lifting remain separate operations; neither silently widens a source
-slot or passes a live result to ground `WF`/`Conforms`.
+A ground `Page<Person>` remains a Horos data application. To support both data
+and capabilities, author `Page<T>` directly in horos/wire and apply that same
+declaration to `Data(PersonDescriptor)`, `Wire(Message)` or a library-owned Cell.
+The parameter already has the intended optional-profile domain; no copied
+template or derived module is needed. See the [direct pagination example](wire-types.md#4-direct-authoring-and-ground-embedding).
+A closed ground specialization can separately be embedded as `Data(G)`. That
+operation creates no declaration and never widens an existing ground slot.
+The owner removed template lifting on 4 November 2026; there is no compatibility
+API or Bittype transformer for it.
 
 Library-owned native representations, dynamic adapters, binding contexts,
 resource ownership and static-versus-dynamic limits remain in Bittype's
@@ -139,8 +138,7 @@ library behavior from a name or structural fingerprint. A static analysis
 result does not prove endpoint recognition or protocol compliance. Loading a
 description performs no sends, capability binding, exporting or resource allocation.
 
-The optional profiles, their Bittype providers, native mappings and illustrative
-library declarations remain proposals. This change adds no implementation,
-dependency, runtime binding, test vector or package release. The
+The optional Go profiles and Bittype frontends are implemented. Native mappings,
+runtime bindings and the illustrative library protocols remain separate work. The
 [cross-repository preservation map](https://github.com/Bitspark/bittype/blob/main/docs/wire-extension-preservation.md)
 records the retained concepts and explicitly superseded ownership choices.
