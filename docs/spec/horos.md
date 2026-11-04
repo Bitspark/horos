@@ -10,7 +10,7 @@ Tuple(Atom("horos/<constructor>"), argument0, argument1, ...)
 
 This document uses `C(arguments...)` as shorthand for that representation. `int`,
 `text`, `list`, `map`, `set`, `bool` and `null` used as values below are the
-canonical [ontos/data embeddings](https://github.com/Bitspark/ontos/blob/v0.15.0/docs/spec/ontos-data.md).
+canonical [ontos/data embeddings](https://github.com/Bitspark/ontos/blob/v0.16.0/docs/spec/ontos-data.md).
 An ordinary atom is an arbitrary finite byte string. Descriptors add no equality:
 value and descriptor identity remain exact ontos structural identity.
 
@@ -113,7 +113,7 @@ exhausted sibling regardless of order. On completed inputs diagnostics agree
 with the boolean recognizer; exhaustion makes no completed classification claim.
 See the [diagnostic rules](../architecture/decisions/0008-diagnostic-outcomes-kleene.md).
 
-ontos 0.15.0 supplies stack-safe Rust value equality and destruction. The Rust CLI
+ontos 0.16.0 supplies stack-safe Rust value equality and destruction. The Rust CLI
 uses a larger thread stack for the checker's bounded descriptor/value traversal.
 Go and TypeScript compare `exact` literals iteratively; data inside a literal is
 not descriptor descent and does not consume the checker's depth budget.
@@ -134,12 +134,12 @@ Library names such as Function, Stream and Cell are not built-in descriptor kind
 The [declaration model](declarations.md) specifies a separate layer for named
 modules, generic slots and applications, reusing descriptor positions and
 specializing to this existing vocabulary. The Go declarations package implements
-that layer in current source; the published 0.6.0 checker does not accept module
+that layer in 0.7.0; the separate ground checker does not accept module
 or open-template values. Declaration semantics belong to horos; syntax and native
 generation belong to bittype. No ground descriptor constructor is added.
 
-The [data/hydration boundary](hydrated-types.md) keeps Horos data-only. Bittype
-owns the proposed Wire type and mixed data/capability compositions above Horos;
-hydration stays in the existing Wire/runtime layers. There is no Horos Wire
-constructor or widened ground judgment. Function, Stream and Cell belong to
+The [data/hydration boundary](hydrated-types.md) keeps ground Horos data-only.
+Optional horos/wire owns mixed type/declaration semantics; Bittype supplies
+tooling projections. Hydration stays in the existing Wire/runtime layers.
+There is no ground Horos Wire constructor or widened ground judgment. Function, Stream and Cell belong to
 ordinary libraries above that boundary.

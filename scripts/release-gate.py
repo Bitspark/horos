@@ -30,15 +30,15 @@ else:
     assert run["workflow_id"] == workflow["id"]
     assert run["event"] == "workflow_dispatch" and run["head_branch"] == "main"
     assert run["conclusion"] == "success", "rehearsal must have completed successfully"
-    gh("run", "download", run_id, "--repo", repo, "--name", "candidate-0.6.0", "--dir", str(candidate))
+    gh("run", "download", run_id, "--repo", repo, "--name", "candidate-0.7.0", "--dir", str(candidate))
     receipt = json.loads((candidate / "candidate.json").read_text())
-    assert receipt["mode"] == "rehearse" and receipt["version"] == "0.6.0"
+    assert receipt["mode"] == "rehearse" and receipt["version"] == "0.7.0"
     assert receipt["run_id"] == run_id and receipt["source"] == run["head_sha"]
     source = receipt["source"]
     if mode == "provenance":
         assert source == os.environ["GITHUB_SHA"], "provenance must identify the actual dispatch revision"
     assert api(base)["private"] is False and repo.lower() == "bitspark/horos"
-    for tag in ("v0.6.0", "core/go/v0.6.0"):
+    for tag in ("v0.7.0", "core/go/v0.7.0"):
         assert api(f"{base}/commits/{urllib.parse.quote(tag, safe='')}")["sha"] == source, tag
     # Tagged release source must be reachable from main, even for a later retry.
     comparison = api(f"{base}/compare/{source}...main")

@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "bitspark-horos"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bitspark-ontos-codec",
  "bitspark-ontos-core",
@@ -14,24 +14,24 @@ dependencies = [
 
 [[package]]
 name = "bitspark-ontos-codec"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385f18e8c85d71239b54868419a52f4d896e35f6a327fd1451b5ee973ba41dc1"
+checksum = "288c52787edee678c6b077b358f163a36544dffdda040c2e465ecfa30e8b1b98"
 dependencies = [
  "bitspark-ontos-core",
 ]
 
 [[package]]
 name = "bitspark-ontos-core"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f772691815b38232f936fbfa1308b72a1e0675fef0801a46834dd7b181b3bc9f"
+checksum = "30a9ee218a69d174234d10a23e5cbb7cedbf8ba78656a83ea6f53d461f0e0251"
 
 [[package]]
 name = "bitspark-ontos-data"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3db3af065f211787d81ab28c7bfd8bb1e13ad73061e54dcf3a311199d173cf90"
+checksum = "00fb54999ebc677e37f01b0fd3f7ed601122c6c201467f17a2ce9826f4e1d0e5"
 dependencies = [
  "bitspark-ontos-codec",
  "bitspark-ontos-core",

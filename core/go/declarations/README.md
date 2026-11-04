@@ -1,8 +1,8 @@
 # Go declaration tooling
 
 The package `github.com/Bitspark/horos/core/go/declarations` implements the
-[revision-1 declaration model](../../../docs/spec/declarations.md) in current
-source. It is not included in the published 0.6.0 packages. It consumes Ontos
+[revision-1 declaration model](../../../docs/spec/declarations.md) in Horos
+0.7.0. It consumes Ontos 0.16.0
 module values and supplies no source parser, native generator or runtime binding.
 
 Use `Resolve(root, dependencies)` to check a root and the supplied transitive

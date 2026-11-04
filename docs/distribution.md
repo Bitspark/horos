@@ -5,12 +5,12 @@ private history and are not tags in this repository.
 
 | Surface | Distribution | Dependency |
 | --- | --- | --- |
-| TypeScript | npmjs `@bitspark/horos@0.6.0` | ontos core, codec and data 0.15.0 |
-| Rust | crates.io `bitspark-horos@0.6.0`, library `horos` | bitspark-ontos-core/codec/data 0.15.0 |
-| Go | `github.com/Bitspark/horos/core/go@v0.6.0` | github.com/bitspark/ontos v0.15.0 |
-| Python | Source-only validation lane | ontos v0.15.0 Python source |
+| TypeScript | npmjs `@bitspark/horos@0.7.0` | ontos core, codec and data 0.16.0 |
+| Rust | crates.io `bitspark-horos@0.7.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
+| Go | `github.com/Bitspark/horos/core/go@v0.7.0` | github.com/bitspark/ontos v0.16.0 |
+| Python | Source-only validation lane | ontos v0.16.0 Python source |
 
-The root `v0.6.0` and nested `core/go/v0.6.0` tags identify the same commit. There
+The root `v0.7.0` and nested `core/go/v0.7.0` tags identify the same commit. There
 are no private runtime dependencies, hidden registry routes or compatibility
 exports for the pre-public proof/witness APIs. Code-generation tools do not form
 part of the runtime dependency graph.
@@ -50,7 +50,15 @@ with the original rehearsal so all registries and anonymous consumers are checke
 before the GitHub release is finalized. Later publications use the trusted
 publisher in the hosted workflow; the first-publication bootstrap is unnecessary.
 
-Current Go source additionally contains `declarations` and optional `wire`
-subpackages in the same `core/go` module. They are absent from the published
-0.6.0 package; tooling consumers must pin an immutable source revision until a
-later release. No corresponding Rust or TypeScript declaration APIs are claimed.
+The 0.7.0 Go module includes `declarations` and optional static `wire` subpackages.
+No corresponding Rust or TypeScript declaration APIs are claimed. All consumers
+must align to Ontos 0.16.0; no compatibility shim, local replacement or duplicate
+value implementation bridges older versions. In TypeScript, a second installed
+Ontos core means different Atom/Tuple constructors even if its bytes are unchanged.
+
+The installed-consumer gate explicitly installs Ontos core/codec/data/wire 0.16.0
+and Bitwire 0.7.0 with Horos, checks a single constructor family, replays ground
+conformance through both codecs, and checks the static ground/mixed boundary.
+Bitwire is only a qualification dependency, not a Horos runtime dependency.
+Rust and Go consumer checks use public Ontos 0.16.0. These checks establish no
+live mixed-value conformance, capability authority or service deployment.
