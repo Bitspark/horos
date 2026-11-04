@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	decl "github.com/Bitspark/horos/core/go/declarations"
 	core "github.com/bitspark/ontos/core/go"
 	data "github.com/bitspark/ontos/data/go"
 )
@@ -233,6 +234,24 @@ func TestHigherKindSummariesAgreeWithIndependentEagerOracle(t *testing.T) {
 			isData, err := oracleData(expected.proper, 0)
 			if err != nil {
 				t.Fatal(err)
+			}
+			// Compare the optimized proof before requesting materialization.
+			// DataDescriptor alone could hide a broken summary by reclassifying
+			// an independently correct expanded descriptor.
+			declaration, ok := p.Declaration(id(p, name))
+			if !ok {
+				t.Fatal("closed oracle root is absent")
+			}
+			wantStatus := decl.DataFailed
+			if isData {
+				wantStatus = decl.DataProven
+			}
+			if declaration.DataStatus() != wantStatus || declaration.Expression().DataStatus() != wantStatus {
+				t.Fatalf("optimized closed summary = %s, independent classification = %s", declaration.DataStatus(), wantStatus)
+			}
+			proved, err := p.Satisfies(id(p, name), publicProper(t, decl.DataClaim))
+			if err != nil || proved != isData {
+				t.Fatalf("optimized interface proof = %t, independent classification = %t: %v", proved, isData, err)
 			}
 			actual, err := p.Specialize(id(p, name), nil)
 			if err != nil || !core.Equal(actual, expected.proper) {
