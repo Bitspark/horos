@@ -1,7 +1,7 @@
 # Canonical declarations, revision 1
 
-**2 November 2026. Status: implemented in the Go declarations tooling package,
-not included in published 0.6.0 packages.** The owner authorized the declaration
+**2 November 2026; distribution updated 4 November. Status: implemented in the
+Go declarations tooling package, included in Horos 0.7.0.** The owner authorized the declaration
 model and bittype AST after reviewing this format. The existing ground descriptor
 APIs remain separate. Rust and TypeScript declaration tooling, readable source
 syntax, native generators and runtime bindings are outside this increment.
@@ -17,7 +17,7 @@ types only, for TypeScript, Go, Rust and C++.
 
 A declaration document is an ordinary finite ontos value. Its variables are
 encoded declaration syntax, not variables added to ontos. Storage uses the frozen
-[ontos-codec-v1](https://github.com/Bitspark/ontos/blob/v0.15.0/docs/spec/ontos-codec.md).
+[ontos-codec-v1](https://github.com/Bitspark/ontos/blob/v0.16.0/docs/spec/ontos-codec.md).
 No new codec or JSON value model is introduced.
 
 The following abbreviations specify exact values throughout this document:
@@ -72,7 +72,7 @@ namespaces, selected explicitly by the target form. Record field names retain
 horos's existing text semantics; they are not restricted to these identifiers.
 
 The module revision fixes this declaration grammar and the v1 descriptor
-vocabulary retained by horos 0.6.0, using ontos 0.15.0 embeddings and codec v1.
+vocabulary retained by horos 0.6.0, using ontos 0.16.0 embeddings and codec v1.
 A package version does not silently extend a document's admitted grammar.
 
 ## 3. Type expressions reuse descriptor positions

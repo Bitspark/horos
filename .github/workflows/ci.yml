@@ -13,6 +13,8 @@ jobs:
   check:
     name: check (${{ matrix.target }})
     runs-on: ubuntu-latest
+    env:
+      EXPECTED_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -21,7 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Verify exact source revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
       - uses: actions/setup-go@v7
         with:
           go-version: '1.25'
@@ -35,7 +40,7 @@ jobs:
       - run: rustup toolchain install --no-self-update
       - name: Public Python dependency
         if: matrix.target == 'python'
-        run: git -c credential.helper= clone --depth 1 --branch v0.15.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
+        run: git -c credential.helper= clone --depth 1 --branch v0.16.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
       - name: Check
         id: check
         env:

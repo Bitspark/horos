@@ -99,7 +99,7 @@ enters a receiver or performs an interaction.
 
 G must be a complete, closed, well-formed descriptor of the unchanged ground
 Horos profile. This first wire-profile revision fixes the same v1 descriptor
-vocabulary and Ontos 0.15.0 embeddings/codec v1 as ground declaration revision 1;
+vocabulary and Ontos 0.16.0 embeddings/codec v1 as ground declaration revision 1;
 it does not inherit whatever a newer installed package happens to accept.
 `Data(G)` admits exactly the values `embed(v)` for ground values
 v that conform to G:

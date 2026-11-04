@@ -49,8 +49,13 @@ def main():
         npm = root / "npm"
         npm.mkdir()
         (npm / "package.json").write_text('{"name":"horos-consumer","private":true,"type":"module"}')
-        target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.6.0.tgz")
-        run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target, "typescript@5.7.3"], npm, env, args.mode == "published")
+        target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.7.0.tgz")
+        run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target,
+             "@bitspark/ontos-core@0.16.0", "@bitspark/ontos-codec@0.16.0",
+             "@bitspark/ontos-data@0.16.0", "@bitspark/ontos-wire@0.16.0",
+             "@bitspark/bitwire@0.7.0", "typescript@5.7.3"], npm, env, args.mode == "published")
+        shutil.copyfile(ROOT / "conformance/installed-ontos.mjs", npm / "installed-ontos.mjs")
+        run(["node", "installed-ontos.mjs"], npm, env)
         (npm / "check.mjs").write_text('''import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {decode} from "@bitspark/ontos-codec";
@@ -75,8 +80,15 @@ console.log(`npm: ${doc.cases.length} oracle descriptors and diagnostics from in
         (npm / "check.ts").write_text('''import {wf, conforms} from "@bitspark/horos";
 import {diagnose, type Diagnosis} from "@bitspark/horos/diagnose";
 import {tuple} from "@bitspark/ontos-core";
+import type {NativeValue} from "@bitspark/ontos-wire/native";
+import type {HydratedValue, HydratedWire} from "@bitspark/bitwire";
 const value=tuple([]); const result:Diagnosis=diagnose(value,value);
-void [wf(value), conforms(value,value),result];
+const shared:NativeValue<HydratedWire>=value;
+const hydrated:HydratedValue=shared;
+void [wf(value), conforms(value,value),result,hydrated];
+declare const mixed:HydratedValue;
+// @ts-expect-error The mixed domain is not a ground Horos checker input.
+conforms(mixed,value);
 ''')
         run(["node", "check.mjs"], npm, env)
         run(["node", "node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext", "check.ts"], npm, env)
@@ -88,11 +100,11 @@ void [wf(value), conforms(value,value),result];
         dependency = f'bitspark-horos = "={VERSION}"'
         if args.mode == "candidate":
             extracted = root / "crate"
-            with tarfile.open(directory / "bitspark-horos-0.6.0.crate") as archive:
+            with tarfile.open(directory / "bitspark-horos-0.7.0.crate") as archive:
                 archive.extractall(extracted, filter="data")
-            run(["cargo", "test", "--locked"], extracted / "bitspark-horos-0.6.0", env)
-            dependency = 'bitspark-horos = { path = ' + json.dumps(str(extracted / "bitspark-horos-0.6.0")) + ' }'
-        (rust / "Cargo.toml").write_text('[package]\nname="horos-consumer"\nversion="0.0.0"\nedition="2024"\n[dependencies]\n' + dependency + '\nontos-codec={package="bitspark-ontos-codec",version="=0.15.0"}\nserde_json="1"\n')
+            run(["cargo", "test", "--locked"], extracted / "bitspark-horos-0.7.0", env)
+            dependency = 'bitspark-horos = { path = ' + json.dumps(str(extracted / "bitspark-horos-0.7.0")) + ' }'
+        (rust / "Cargo.toml").write_text('[package]\nname="horos-consumer"\nversion="0.0.0"\nedition="2024"\n[dependencies]\n' + dependency + '\nontos-codec={package="bitspark-ontos-codec",version="=0.16.0"}\nserde_json="1"\n')
         (rust / "src/main.rs").write_text('''fn main() {
     std::thread::Builder::new().stack_size(64*1024*1024).spawn(|| {
         fn decode(s:&str)->ontos_codec::Value { unreachable!() }
@@ -119,17 +131,21 @@ void [wf(value), conforms(value,value),result];
             go = root / "go"
             go.mkdir()
             (go / "go.mod").write_text("module consumer\n\ngo 1.25\n")
-            meta = json.loads(run(["go", "mod", "download", "-json", "github.com/Bitspark/horos/core/go@v0.6.0"], go, env, True))
+            meta = json.loads(run(["go", "mod", "download", "-json", "github.com/Bitspark/horos/core/go@v0.7.0"], go, env, True))
             assert not meta.get("Error"), meta
             go_origin = meta["Origin"]
             assert go_origin["Hash"] == accepted["source"], "Go proxy tag/source mismatch"
             # Tests ship inside the module, including its independently authored oracle.
             assert digest(Path(meta["Dir"]) / "testdata/conformance.json") == accepted["oracle_sha256"]
             run(["go", "test", "-mod=readonly", "-race", "-count=1", "./..."], Path(meta["Dir"]), env)
+            run(["go", "get", "github.com/Bitspark/horos/core/go@v0.7.0", "github.com/bitspark/ontos@v0.16.0"], go, env)
+            selected = json.loads(run(["go", "list", "-m", "-json", "github.com/bitspark/ontos"], go, env))
+            assert selected["Version"] == "v0.16.0" and "Replace" not in selected
 
         verification = {"source": accepted["source"], "version": VERSION, "mode": args.mode,
                         "anonymous_consumers": ["npm", "crates.io"] + (["Go proxy"] if go_origin else []),
                         "oracle_sha256": accepted["oracle_sha256"], "go_origin": go_origin,
+                        "ontos_version": "0.16.0", "bitwire_consumer_version": "0.7.0",
                         "ci": os.environ.get("ACCEPTED_CI"), "run_id": os.environ.get("GITHUB_RUN_ID")}
         (directory / f"{args.mode}-verification.json").write_text(json.dumps(verification, indent=2) + "\n")
 

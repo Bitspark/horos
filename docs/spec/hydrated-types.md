@@ -1,6 +1,6 @@
 # Data cores, optional Wire extensions and hydration
 
-**Owner direction, 3 November 2026. Status: static Go extension implemented.**
+**Owner direction, 3 November 2026; alignment updated 4 November.**
 The existing Ontos and Horos cores remain data-only. Optional `ontos/wire` and
 `horos/wire` extensions own mixed values and their type/declaration
 semantics. Bittype supplies tooling for those canonical definitions; hydration
@@ -28,7 +28,7 @@ GroundValue = ByteAtom | Tuple(GroundValue*)
 ```
 
 Ontos values are immutable and context-free. A live endpoint depends on a
-runtime, authority and lifetime, so it is not an Ontos value. A name or encoded
+runtime, authority and lifetime, so it is not a ground Ontos value. A name or encoded
 reference can be ordinary data; interpreting it as a capability requires a
 separate binding context. Horos may check the data representation, but does not
 resolve that name, establish authority or recognize a live endpoint.
@@ -37,10 +37,9 @@ resolve that name, establish authority or recognize a live endpoint.
 descriptors retain their existing ground interpretation. In particular,
 `any()` does not start accepting Wires. Unknown constructors remain invalid.
 
-Implemented declaration revision 1 and published 0.6.0 ground packages retain
-their existing scope. The Go declaration implementation in current source is
-distinct from those published packages and from the ground-only Rust and
-TypeScript implementations. Source identity, binder identity, application
+Declaration revision 1 retains its existing scope in Horos 0.7.0. The release
+includes both Go declaration packages, while Rust and TypeScript retain their
+ground-only implementations. Source identity, binder identity, application
 resolution and explicit specialization remain as specified in
 [declarations](declarations.md).
 
@@ -50,11 +49,11 @@ resolution and explicit specialization remain as specified in
 allows opaque contents, including live capabilities. Structural selection does
 not interpret them or confer portable identity, equality or serialization.
 The [ground Ontos projection](https://github.com/Bitspark/ontos/blob/a3f1d081f2e82f1e0ec39688c4060b5606b16c63/projection/deixis/PROJECTION.md)
-uses the Deixis structure with optional byte contents. The proposed
-[ontos/wire extension](https://github.com/Bitspark/ontos/blob/main/docs/design/0007-optional-wire-extension.md)
-would define a separate recognized profile with byte-or-capability payloads:
-an atom leaf, a Wire leaf or a dense positional tuple. Arbitrary Deixis nodes
-would not become mixed values. This uses Deixis as a value foundation, not as a
+uses the Deixis structure with optional byte contents. The
+[ontos/wire extension](https://github.com/Bitspark/ontos/blob/v0.16.0/docs/design/0007-optional-wire-extension.md)
+implements a separate recognized profile in Go and TypeScript with
+byte-or-capability payloads: an atom leaf, an opaque capability leaf or a dense
+positional tuple. Arbitrary Deixis nodes do not become mixed values. This uses Deixis as a value foundation, not as a
 replacement for type semantics or ASTs.
 
 The profile must preserve immutable bytes, captured tuple children and exact
@@ -69,17 +68,16 @@ Bitwire already defines a separate live domain:
 HydratedValue = ByteAtom | HydratedTuple(HydratedValue*) | Wire
 ```
 
-This is an existing runtime domain, not evidence that the proposed optional
-profile is implemented. Wires are opaque sending capabilities recognized by the
-runtime; hydrated tuples may contain them. The
-[native hydrated contract](https://github.com/Bitspark/bitwire/blob/e2d2d641744a49f1d8098b6ea5f2724454d72b96/docs/wire/hydrated-native.md)
-places this boundary above ground Wire without extending Ontos. Hydration
-conveys sending faces through exports and proxies; receiving and closure remain
-owner operations. Bitruntime implements that existing boundary; it does not
-consult Horos to hydrate values. Future adoption of the optional value profile
-must qualify this correspondence and language-specific package identities. It
-does not require a new runtime carrier or memory-layout rewrite by definition.
-None of this is ground Horos descriptor checking.
+Bitwire 0.7.0 specializes the Ontos 0.16.0 native mixed value model for its
+sending contract. Bitruntime 0.8.0 uses the shared immutable tuple factory with
+runtime-owned handle recognition. The
+[native hydrated contract](https://github.com/Bitspark/bitwire/blob/v0.7.0/docs/wire/hydrated-native.md)
+keeps raw Wire ground-only. The pure reference/frame codec remains in Bitwire;
+exports, proxies, ownership, admission and lifetimes remain in Bitruntime.
+Neither structural capture nor conversion sends, exports or tests liveness.
+The explicit Deixis projection is not inserted into every send. Bitruntime does
+not consult Horos to hydrate values. None of this supplies a public Horos
+mixed-value checker or changes ground descriptor checking.
 
 ## Ownership and composition
 
@@ -87,14 +85,14 @@ None of this is ground Horos descriptor checking.
 | --- | --- |
 | Deixis | Generic structure over opaque contents |
 | Ontos core | Ground data values, structural identity and encoding |
-| Optional ontos/wire | Proposed mixed value profile and exact ground correspondence |
+| Optional ontos/wire | Go/TypeScript mixed value profile, native tuple structure and exact ground correspondence |
 | Horos core and data declarations | Data descriptors, declaration binding, specialization and ground conformance |
-| Optional horos/wire | Proposed mixed type/declaration profile and explicit partial lifting semantics |
+| Optional horos/wire | Static Go mixed type/declaration profile and explicit partial lifting semantics |
 | Bittype | AST/CST and semantic projections, provider composition, transformations and native type generation |
 | Bitwire / bitruntime | Existing sending-capability contracts and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |
 
-The [horos/wire proposal](wire-types.md) owns the canonical Wire expression,
+The [horos/wire profile](wire-types.md) owns the canonical Wire expression,
 module format and illustrative Function, Cell and Stream library compositions.
 It is an optional semantic profile, not a widening of the ground profile.
 Its static definitions must not depend on Bittype, Bitwire or a live runtime.

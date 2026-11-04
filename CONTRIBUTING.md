@@ -28,11 +28,18 @@ that profile's canonical type/declaration and lifting semantics; Bittype
 owns its tooling projections and transformations. Do not widen revision 1's
 generic arguments or ground judgments, infer a profile from Wire occurrences,
 or revive a superseded syntax as an alias. The optional static Go profile and lifting are implemented in `core/go/wire`;
-see its [API scope](core/go/wire/README.md). Existing ground APIs and published
-0.6.0 packages are unchanged. Live value checking and runtime integration remain
+see its [API scope](core/go/wire/README.md). Horos 0.7.0 aligns every supported
+consumer with Ontos 0.16.0 and includes both Go declaration profiles. Ground
+semantics and historical release artifacts are unchanged. Live value checking and runtime integration remain
 outside that package.
 Hydration and library protocols stay with their existing owners.
 
 Release versions and tags are immutable. Maintainers rehearse the exact candidate,
 review its receipt, publish it and verify installations from the public registries.
 Contributions use Apache-2.0; retain existing copyright and license notices.
+
+The owner requires a clean dependency cut: consumers upgrade together. Do not
+add duplicate Ontos models, old-version fallbacks, compatibility exports or
+structural coercion to accept values from a different installed constructor family.
+The release consumer checks install public Ontos 0.16.0 and Bitwire 0.7.0 alongside
+Horos and check that ground values, codecs and diagnostics share one value model.
