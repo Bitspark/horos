@@ -13,7 +13,8 @@ Use A(s) for a UTF-8 atom, T(s) for embedded text, I(n) for an embedded integer,
 L(...) for the canonical list and M{...} for a canonical map with text keys.
 H(c,...) is Tuple(A("horos/" + c),...). D(c,...) is
 Tuple(A("horos/decl/" + c),...). Imports retain expected names and exact SHA-256
-pins of canonical module bytes, with all supplied dependencies checked.
+pins of canonical module bytes, with the complete reachable import closure checked, including unused declared
+imports. Unrelated pool values are bounded and hashed but not interpreted as modules.
 
 ```text
 D("module", I(2), T(name), imports, declarations)

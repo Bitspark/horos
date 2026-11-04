@@ -2,6 +2,8 @@ package declarations_test
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"testing"
 
 	hor "github.com/Bitspark/horos/core/go"
@@ -201,5 +203,61 @@ func TestBoundFailuresInDependenciesAndClosedArguments(t *testing.T) {
 		if !errors.As(err, &detail) || detail.Subject != decl.SubjectRequest {
 			t.Fatal("bad invocation was attributed to immutable source", err)
 		}
+	}
+}
+
+func TestClosedBoundFailuresRetainNestedOperandLocations(t *testing.T) {
+	bad := h("tuple", h("not", h("wire", person())))
+	root := module("bad", mapping(), entry("Value", typeDefinition(bad)))
+	program, err := decl.Resolve(root, nil)
+	detail := diagnostic(t, err, decl.BoundViolation, decl.SubjectSource)
+	if program != nil || detail.Declaration != "Value" || !slices.Equal(detail.Path, []int{1, 1}) {
+		t.Fatal("closed operand lost its source location", detail)
+	}
+	consumer := module("consumer", mapping(entry("bad", importValue(t, "bad", root))))
+	program, err = decl.Resolve(consumer, []value{root})
+	detail = diagnostic(t, err, decl.BoundViolation, decl.SubjectContext)
+	if program != nil || detail.Module != pin(t, root) || detail.Dependency != pin(t, root) || !slices.Equal(detail.Path, []int{1, 1}) {
+		t.Fatal("closed operand lost its dependency location", detail)
+	}
+	caller := module("caller", mapping(), entry("Identity", typeDefinition(param(0), "T")),
+		entry("Value", typeDefinition(local("Identity", bad))))
+	program, err = decl.Resolve(caller, nil)
+	detail = diagnostic(t, err, decl.BoundViolation, decl.SubjectSource)
+	if program != nil || detail.Declaration != "Value" || !slices.Equal(detail.Path, []int{2, 1, 1, 1}) {
+		t.Fatal("argument prefix was lost or repeated", detail)
+	}
+}
+
+func TestSymbolicBoundPropagationHasItsOwnWorkLimit(t *testing.T) {
+	var names []string
+	var members []value
+	for i := 0; i < 128; i++ {
+		names = append(names, fmt.Sprintf("T%d", i))
+		members = append(members, param(i))
+	}
+	body := h("tuple", members...)
+	for i := 0; i < 64; i++ {
+		body = h("list-of", body)
+	}
+	root := module("wide", mapping(), entry("Wide", typeDefinition(body, names...)))
+	limits := decl.DefaultLimits()
+	limits.MaxNodes = 4096
+	if _, err := decl.PinWithLimits(root, limits); err != nil {
+		t.Fatal("fixture must fit raw source admission before symbolic work", err)
+	}
+	program, err := decl.ResolveWithLimits(root, nil, limits)
+	diagnostic(t, err, decl.Exhausted, decl.SubjectRequest)
+	if program != nil {
+		t.Fatal("incomplete bound proof exposed a partial program")
+	}
+	// The same structure with known Data slots needs no Type-condition sets.
+	dataRoot := module("wide", mapping(), entry("Wide", definition(body, names...)))
+	if program, err := decl.ResolveWithLimits(dataRoot, nil, limits); err != nil || program == nil {
+		t.Fatal("syntax/graph admission exhausted before the targeted proof phase", err)
+	}
+	limits.MaxNodes = 16384
+	if program, err := decl.ResolveWithLimits(root, nil, limits); err != nil || program == nil {
+		t.Fatal("sufficient proof budget did not complete", err)
 	}
 }

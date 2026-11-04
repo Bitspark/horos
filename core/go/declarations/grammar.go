@@ -1,6 +1,8 @@
 package declarations
 
 import (
+	"slices"
+
 	horos "github.com/Bitspark/horos/core/go"
 	model "github.com/Bitspark/horos/core/go/internal/declmodel"
 	core "github.com/bitspark/ontos/core/go"
@@ -50,15 +52,15 @@ func descriptorData(value core.Value) (bool, error) {
 			}
 			skeleton, childData, err := visit(child)
 			if err != nil {
-				return nil, false, err
+				return nil, false, operandFailure(err, path)
 			}
 			if rule.RequiresData && !childData {
-				return nil, false, model.Failure(BoundViolation, "constructor operand requires Data")
+				return nil, false, operandFailure(model.Failure(BoundViolation, "constructor operand requires Data"), path)
 			}
 			if rule.Capability {
 				// A message schema is closed under its own recursion binders.
 				if err := groundWF(skeleton); err != nil {
-					return nil, false, err
+					return nil, false, operandFailure(err, path)
 				}
 			}
 			isData = isData && childData
@@ -83,6 +85,17 @@ func descriptorData(value core.Value) (bool, error) {
 		return false, err
 	}
 	return isData, nil
+}
+
+// Grammar failures carry paths relative to their checked expression. The
+// declaration resolver prefixes its body/argument location exactly once.
+func operandFailure(err error, path []int) error {
+	if detail, ok := err.(*model.Error); ok && detail.Declaration == "" {
+		copy := *detail
+		copy.Path = append(slices.Clone(path), detail.Path...)
+		return &copy
+	}
+	return err
 }
 
 func descriptorRule(constructor string, args []core.Value) model.DomainRule {

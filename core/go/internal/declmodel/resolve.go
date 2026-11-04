@@ -139,7 +139,7 @@ func locate(err error, id DeclarationID, path []int) error {
 		copy := *detail
 		copy.Module = id.Module
 		copy.Declaration = id.Name
-		copy.Path = slices.Clone(path)
+		copy.Path = append(slices.Clone(path), detail.Path...)
 		return &copy
 	}
 	return err
