@@ -2,10 +2,10 @@
 
 ## Current Go declaration delivery
 
-The general-kind change publishes only `core/go/v0.10.0` for the public Go
+The general-kind change publishes only `core/go/v0.10.1` for the public Go
 module. Its declaration grammar is revision 4. npm and Cargo installations stay
 on their existing 0.9.0 releases; this change does not publish those packages or
-create a root v0.10.0 tag. See the [Go release notes](releases/v0.10.0.md).
+create a root v0.10.1 tag. See the [Go release notes](releases/v0.10.1.md).
 
 For this Go-only path, land the source on main and publish the immutable nested
 module tag. Bittype then selects that public Go version. No archive-building,
@@ -20,7 +20,7 @@ private history and are not tags in this repository.
 | --- | --- | --- |
 | TypeScript | npmjs `@bitspark/horos@0.9.0` | ontos core, codec and data 0.16.0 |
 | Rust | crates.io `bitspark-horos@0.9.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
-| Go | `github.com/Bitspark/horos/core/go@v0.10.0` | github.com/bitspark/ontos v0.16.0 |
+| Go | `github.com/Bitspark/horos/core/go@v0.10.1` | github.com/bitspark/ontos v0.16.0 |
 | Python | Source-only validation lane | ontos v0.16.0 Python source |
 
 There are no private runtime dependencies, hidden registry routes or compatibility
@@ -87,7 +87,7 @@ the tagged source. Never replace tags or archives or rewrite GitHub identity
 variables. Later publications use the trusted publisher in the hosted workflow;
 the first-publication bootstrap is unnecessary.
 
-The 0.10.0 Go module includes the unified revision-4 `declarations` package.
+The 0.10.1 Go module includes the unified revision-4 `declarations` package.
 Ordinary structural kinds, constructor contracts and checked symbolic bodies
 express generic contracts in one language. Earlier revisions are no longer
 accepted; imports must be repinned after canonical module migration. The removed
