@@ -26,11 +26,13 @@ def run(args, cwd, env, retry=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["candidate", "published"])
-    parser.add_argument("directory", type=Path)
+    parser.add_argument("mode", choices=["candidate", "published", "typescript"])
+    parser.add_argument("directory", type=Path, nargs="?")
     args = parser.parse_args()
-    directory = args.directory.resolve()
-    accepted = receipt(directory)
+    directory = args.directory.resolve() if args.directory else None
+    if args.mode != "typescript" and directory is None:
+        parser.error("candidate and published modes require an artifact directory")
+    accepted = receipt(directory) if args.mode != "typescript" else None
     with tempfile.TemporaryDirectory(prefix="horos-consumer-") as temp:
         root = Path(temp)
         # The verify job receives no publishing credentials. Also scrub inherited config
@@ -49,7 +51,12 @@ def main():
         npm = root / "npm"
         npm.mkdir()
         (npm / "package.json").write_text('{"name":"horos-consumer","private":true,"type":"module"}')
-        target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.7.0.tgz")
+        if args.mode == "typescript":
+            packed = json.loads(run(["npm", "pack", "--json", "--pack-destination", str(root)], ROOT / "core/ts", env))
+            assert len(packed) == 1
+            target = str(root / packed[0]["filename"])
+        else:
+            target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.7.0.tgz")
         run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target,
              "@bitspark/ontos-core@0.16.0", "@bitspark/ontos-codec@0.16.0",
              "@bitspark/ontos-data@0.16.0", "@bitspark/ontos-wire@0.16.0",
@@ -94,6 +101,8 @@ conforms(mixed,value);
         run(["node", "node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext", "check.ts"], npm, env)
         if args.mode == "published":
             run(["npm", "audit", "signatures"], npm, env)
+        if args.mode == "typescript":
+            return
 
         rust = root / "rust"
         (rust / "src").mkdir(parents=True)
