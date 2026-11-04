@@ -4,7 +4,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [rehearse, provenance, publish, verify]
+        options: [rehearse, provenance, diagnose, publish, verify]
         default: rehearse
         required: true
       ref:
@@ -12,7 +12,7 @@ on:
         default: main
         required: true
       candidate_run:
-        description: Successful rehearsal run ID (provenance, publish and verify)
+        description: Successful rehearsal run ID (provenance, diagnose, publish and verify)
         default: ''
 permissions:
   contents: read
@@ -98,6 +98,53 @@ jobs:
           name: provenance-0.7.0
           path: ${{ env.CANDIDATE }}
           if-no-files-found: error
+
+  diagnose:
+    if: inputs.mode == 'diagnose'
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      NODE_AUTH_TOKEN: ''
+    steps:
+      - name: Check out the accepted artifact source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.gate.outputs.source }}
+          path: source
+          persist-credentials: false
+      - name: Check out the diagnostic at the workflow revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: operator
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+      - name: Retrieve and validate the accepted rehearsal
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ inputs.candidate_run }}
+        run: |
+          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.7.0 --dir "$CANDIDATE"
+          python3 source/scripts/package.py check "$CANDIDATE"
+      - name: Install the client from the failed publication
+        run: npm install --global --ignore-scripts npm@11.19.1 --registry=https://registry.npmjs.org/
+      - name: Diagnose npm 11.19.1 without uploading
+        working-directory: source
+        run: node ../operator/scripts/diagnose-npm-oidc.cjs 11.19.1
+      - name: Install the current pinned client for comparison
+        run: npm install --global --ignore-scripts npm@12.2.1 --registry=https://registry.npmjs.org/
+      - name: Diagnose npm 12.2.1 without uploading
+        working-directory: source
+        run: node ../operator/scripts/diagnose-npm-oidc.cjs 12.2.1
 
   publish:
     if: inputs.mode == 'publish'
