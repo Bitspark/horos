@@ -18,7 +18,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: release-0.9.0
+  group: release-0.10.0
   cancel-in-progress: false
 env:
   CANDIDATE: ${{ github.workspace }}/.artifacts/candidate
@@ -60,7 +60,7 @@ jobs:
         run: python3 scripts/consumer.py candidate "$CANDIDATE"
       - uses: actions/upload-artifact@v4
         with:
-          name: candidate-0.9.0
+          name: candidate-0.10.0
           path: ${{ env.CANDIDATE }}
           if-no-files-found: error
 
@@ -88,14 +88,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ inputs.candidate_run }}
-        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.9.0 --dir "$CANDIDATE"
+        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.10.0 --dir "$CANDIDATE"
       - name: Sign the accepted archive without publishing
         run: |
           python3 scripts/package.py check "$CANDIDATE"
           node scripts/provenance.cjs "$CANDIDATE"
       - uses: actions/upload-artifact@v4
         with:
-          name: provenance-0.9.0
+          name: provenance-0.10.0
           path: ${{ env.CANDIDATE }}
           if-no-files-found: error
 
@@ -133,7 +133,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ inputs.candidate_run }}
         run: |
-          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.9.0 --dir "$CANDIDATE"
+          gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.10.0 --dir "$CANDIDATE"
           python3 source/scripts/package.py check "$CANDIDATE"
       - name: Install the client from the failed publication
         run: npm install --global --ignore-scripts npm@11.19.1 --registry=https://registry.npmjs.org/
@@ -170,7 +170,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ inputs.candidate_run }}
-        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.9.0 --dir "$CANDIDATE"
+        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.10.0 --dir "$CANDIDATE"
       - name: Validate source and registry state
         run: |
           python3 scripts/package.py check "$CANDIDATE"
@@ -182,7 +182,7 @@ jobs:
           set -euo pipefail
           state=$(python3 -c 'import json,os; print(next(p["status"] for p in json.load(open(os.environ["CANDIDATE"]+"/registry.json")) if p["name"] == "@bitspark/horos"))')
           if [ "$state" = absent ]; then
-            npm publish "$CANDIDATE/bitspark-horos-0.9.0.tgz" --access public --provenance --registry=https://registry.npmjs.org/
+            npm publish "$CANDIDATE/bitspark-horos-0.10.0.tgz" --access public --provenance --registry=https://registry.npmjs.org/
           fi
       - id: cratesio-auth
         if: vars.CRATES_IO_TRUSTED_PUBLISHING == 'true'
@@ -223,7 +223,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ inputs.candidate_run }}
-        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.9.0 --dir "$CANDIDATE"
+        run: gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name candidate-0.10.0 --dir "$CANDIDATE"
       - name: Verify published archives and anonymous consumers
         env:
           ACCEPTED_CI: ${{ needs.gate.outputs.ci }}
@@ -237,6 +237,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: verification-0.9.0
+          name: verification-0.10.0
           path: ${{ env.CANDIDATE }}
           if-no-files-found: error

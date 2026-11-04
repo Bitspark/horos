@@ -14,15 +14,19 @@ Do not add their names, adapters or protocols to the checker. A descriptor chang
 requires a concrete type-model case and corresponding cross-language evidence.
 
 The [canonical declaration format](docs/spec/declarations.md) is implemented by
-the Go declarations tooling package. Keep module, binder, application and
-specialization and Type/Data bound rules for declarations in horos, with syntax/AST projections
-and native generators in bittype. Ground-descriptor APIs do not accept open
+the Go declarations tooling package. Keep module, binder, kind/interface,
+application, Data-proof and specialization rules in horos, with syntax/AST
+projections and native generators in bittype. Ground-descriptor APIs do not accept open
 templates. Keep source capabilities separate from published versions and other
 language implementations.
 
 The [unified declaration decision](docs/spec/unified-declarations.md), selected
 by the owner on 4 November 2026, replaces the separate Horos/Wire profile.
-Use one revision-2 module grammar with explicit Type/Data bounds. Ground
+Use one revision-3 module grammar with explicit interfaces and result claims.
+Constructor inputs may themselves be constructors; applications remain fully
+saturated and produce proper types. Data is a refined kind established through
+the prescribed compositional proof rules. Preserve original input admission
+while deriving stronger result guarantees for known declarations. Ground
 WF/Conforms and `any` remain data-only; capabilities are static expressions until
 a separate library/runtime integration gives them behavior. See the
 [Go API](core/go/declarations/README.md) and [data/hydration boundary](docs/spec/hydrated-types.md).
@@ -30,6 +34,13 @@ Remove superseded profiles, exports and readers without aliases. Preserve opaque
 literals, canonical pins, lexical binding and diagnostic subjects. Bittype owns
 projections, not a parallel type algebra. Hydration and library protocols stay
 with their existing owners.
+
+Qualify substitution and Data preservation with independently authored judgments
+and a bounded eager-expansion oracle. Cover abstract versus known constructors,
+nested interface polarity, invalid unused arguments, literal opacity, every
+semantic reference in cycle checking, recursion closure, same-Program sealed
+arguments and aggregate work/output limits. Formatting, compilation and tests
+run through the maintained hosted gates; a source commit alone is not validation.
 
 Release versions and tags are immutable. Maintainers rehearse the exact candidate,
 review its receipt, publish it and verify installations from the public registries.

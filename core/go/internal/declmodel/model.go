@@ -30,17 +30,9 @@ type ParameterID struct {
 	Index       int
 }
 
-// Bound is a constraint on type arguments, not a runtime value type.
-type Bound string
-
-const (
-	TypeBound Bound = "type"
-	DataBound Bound = "data"
-)
-
 type TypeParameter struct {
-	Name  string
-	Bound Bound
+	Name      string
+	Interface Interface
 }
 
 type Code string
@@ -48,6 +40,7 @@ type Code string
 const (
 	Invalid            Code = "invalid"
 	BoundViolation     Code = "bound-violation"
+	KindMismatch       Code = "kind-mismatch"
 	MissingDependency  Code = "missing-dependency"
 	ImportMismatch     Code = "import-mismatch"
 	UnknownImport      Code = "unknown-import"
@@ -79,17 +72,19 @@ const (
 // a missing declaration, or the declaration requested by invalid specialization
 // arguments. Details are absent when the operation could not establish them.
 type Error struct {
-	Code         Code
-	Subject      Subject
-	Module       Digest
-	Declaration  string
-	Path         []int
-	ImportAlias  string
-	Dependency   Digest
-	ExpectedName string
-	ActualName   string
-	Target       DeclarationID
-	Message      string
+	Code            Code
+	Subject         Subject
+	Module          Digest
+	Declaration     string
+	Path            []int
+	ImportAlias     string
+	Dependency      Digest
+	ExpectedName    string
+	ActualName      string
+	Target          DeclarationID
+	CalleeParameter ParameterID
+	Expected        Interface
+	Message         string
 }
 
 func (e *Error) Error() string {
@@ -126,13 +121,14 @@ func (l Limits) valid() bool {
 	return l.MaxDepth > 0 && l.MaxDepth <= 512 && l.MaxNodes > 0 && l.MaxBytes > 0 && l.MaxModules > 0
 }
 
-// Kind classifies declaration expressions, never behavioral library contracts.
-type Kind string
+// ExpressionKind classifies syntax forms, independently of their shape kinds.
+type ExpressionKind string
 
 const (
-	Descriptor  Kind = "descriptor"
-	Parameter   Kind = "parameter"
-	Application Kind = "application"
+	Descriptor  ExpressionKind = "descriptor"
+	Parameter   ExpressionKind = "parameter"
+	Reference   ExpressionKind = "reference"
+	Application ExpressionKind = "application"
 )
 
 // Operand identifies a descriptor child without interpreting literal operands.
@@ -149,19 +145,23 @@ func (o Operand) Expression() *Expression { return copyExpression(o.expression) 
 // return independent storage. Application arguments keep their caller bindings.
 type Expression struct {
 	path        []int
-	kind        Kind
+	kind        ExpressionKind
 	value       core.Value
 	constructor string
 	operands    []Operand
 	parameter   ParameterID
 	target      DeclarationID
+	callee      *Expression
 	arguments   []*Expression
+	interface_  Interface
+	summary     *DataSummary
+	dataStatus  DataStatus
 }
 
-func (e *Expression) Kind() Kind          { return e.kind }
-func (e *Expression) Value() core.Value   { return e.value }
-func (e *Expression) Constructor() string { return e.constructor }
-func (e *Expression) Operands() []Operand { return slices.Clone(e.operands) }
+func (e *Expression) Kind() ExpressionKind { return e.kind }
+func (e *Expression) Value() core.Value    { return e.value }
+func (e *Expression) Constructor() string  { return e.constructor }
+func (e *Expression) Operands() []Operand  { return slices.Clone(e.operands) }
 func (e *Expression) Arguments() []*Expression {
 	result := make([]*Expression, len(e.arguments))
 	for i, child := range e.arguments {
@@ -173,8 +173,14 @@ func (e *Expression) Parameter() (ParameterID, bool) {
 	return e.parameter, e.kind == Parameter
 }
 func (e *Expression) Target() (DeclarationID, bool) {
-	return e.target, e.kind == Application
+	return e.target, e.kind == Reference
 }
+func (e *Expression) Callee() *Expression       { return copyExpression(e.callee) }
+func (e *Expression) Interface() Interface      { return cloneInterface(e.interface_) }
+func (e *Expression) KindShape() Kind           { return e.interface_.Kind() }
+func (e *Expression) DataSummary() *DataSummary { return copySummary(e.summary) }
+func (e *Expression) DataStatus() DataStatus    { return e.dataStatus }
+func (e *Expression) Path() []int               { return slices.Clone(e.path) }
 
 type Import struct {
 	alias string
@@ -189,13 +195,28 @@ func (i Import) Pin() Digest   { return i.pin }
 type Declaration struct {
 	id         DeclarationID
 	parameters []TypeParameter
+	result     Claim
+	interface_ Interface
 	body       core.Value
 	expression *Expression
 }
 
-func (d *Declaration) ID() DeclarationID           { return d.id }
-func (d *Declaration) Parameters() []TypeParameter { return slices.Clone(d.parameters) }
-func (d *Declaration) Expression() *Expression     { return copyExpression(d.expression) }
+func (d *Declaration) ID() DeclarationID { return d.id }
+func (d *Declaration) Parameters() []TypeParameter {
+	result := slices.Clone(d.parameters)
+	for i := range result {
+		result[i].Interface = cloneInterface(result[i].Interface)
+	}
+	return result
+}
+func (d *Declaration) Expression() *Expression { return copyExpression(d.expression) }
+func (d *Declaration) Result() Claim           { return d.result }
+func (d *Declaration) Interface() Interface {
+	return cloneInterface(d.interface_)
+}
+func (d *Declaration) Kind() Kind                { return d.interface_.Kind() }
+func (d *Declaration) DataSummary() *DataSummary { return copySummary(d.expression.summary) }
+func (d *Declaration) DataStatus() DataStatus    { return d.expression.dataStatus }
 
 type Module struct {
 	pin          Digest
@@ -221,12 +242,13 @@ func (m *Module) Declarations() []*Declaration {
 // Program is a checked, immutable transitive module closure, safe for concurrent
 // reading and specialization. Its zero value is not a resolved program.
 type Program struct {
-	grammar      Grammar
-	root         Digest
-	modules      map[Digest]*Module
-	order        []*Module
-	declarations map[DeclarationID]*Declaration
-	limits       Limits
+	grammar          Grammar
+	root             Digest
+	modules          map[Digest]*Module
+	order            []*Module
+	declarations     map[DeclarationID]*Declaration
+	declarationOrder []*Declaration
+	limits           Limits
 }
 
 func (p *Program) Root() Digest { return p.root }

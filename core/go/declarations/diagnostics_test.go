@@ -160,10 +160,7 @@ func TestSpecializationArgumentsAreRequestFailures(t *testing.T) {
 	program := resolve(t, people, pages)
 	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
 	for _, argument := range []value{nil, a("not-a-descriptor"), param(0), h("ref", a("outside"))} {
-		result, err := program.Specialize(pageID, []value{argument})
-		if result != nil {
-			t.Fatal("invalid argument published a partial descriptor")
-		}
+		_, err := program.Proper(argument)
 		diagnostic(t, err, decl.Invalid, decl.SubjectRequest)
 		unchanged, err := program.Specialize(id(program, "PeoplePage"), nil)
 		if err != nil || !core.Equal(unchanged, page(person())) {
@@ -171,7 +168,7 @@ func TestSpecializationArgumentsAreRequestFailures(t *testing.T) {
 		}
 	}
 	literal := h("exact", param(0))
-	result, err := program.Specialize(pageID, []value{literal})
+	result, err := program.Specialize(pageID, properArgs(t, program, literal))
 	if err != nil || !core.Equal(result, page(literal)) {
 		t.Fatalf("declaration-shaped literal was not a valid ground argument: %v", err)
 	}
