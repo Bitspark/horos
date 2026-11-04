@@ -39,19 +39,40 @@ func entry(name string, v value) [2]value { return [2]value{text(name), v} }
 func definition(body value, parameters ...string) value {
 	var names []value
 	for _, name := range parameters {
-		names = append(names, d("parameter", text(name), a("data")))
+		names = append(names, d("parameter", text(name), d("proper", a("data"))))
 	}
-	return d("type", list(names...), body)
+	return d("type", list(names...), a("type"), body)
 }
 func module(name string, imports value, entries ...[2]value) value {
-	return d("module", integer(2), text(name), imports, mapping(entries...))
+	return d("module", integer(3), text(name), imports, mapping(entries...))
 }
 func param(i int64) value { return d("param", integer(i)) }
 func local(name string, args ...value) value {
+	if len(args) == 0 {
+		return d("local", text(name))
+	}
 	return d("apply", d("local", text(name)), list(args...))
 }
 func imported(alias, name string, args ...value) value {
+	if len(args) == 0 {
+		return d("imported", text(alias), text(name))
+	}
 	return d("apply", d("imported", text(alias), text(name)), list(args...))
+}
+func properArgs(t *testing.T, p *decl.Program, values ...value) []decl.Argument {
+	t.Helper()
+	arguments := make([]decl.Argument, len(values))
+	for i, v := range values {
+		argument, err := p.Proper(v)
+		if err != nil {
+			t.Fatalf("proper argument %d: %v", i, err)
+		}
+		arguments[i] = argument
+	}
+	return arguments
+}
+func parameterIs(parameter decl.TypeParameter, name string, claim decl.Claim) bool {
+	return parameter.Name == name && !parameter.Interface.IsConstructor() && parameter.Interface.Result() == claim
 }
 func pin(t *testing.T, v value) decl.Digest {
 	t.Helper()
@@ -110,7 +131,7 @@ func TestPagination(t *testing.T) {
 	}
 	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
 	open, ok := p.Declaration(pageID)
-	if !ok || len(open.Parameters()) != 1 || open.Parameters()[0] != (decl.TypeParameter{Name: "T", Bound: decl.DataBound}) {
+	if !ok || len(open.Parameters()) != 1 || !parameterIs(open.Parameters()[0], "T", decl.DataClaim) {
 		t.Fatal("open generic declaration was lost")
 	}
 	slot := open.Expression().Operands()[0].Expression().Operands()[0].Expression()
@@ -119,7 +140,7 @@ func TestPagination(t *testing.T) {
 		t.Fatal("Page binder origin was lost")
 	}
 	applied, _ := p.Declaration(id(p, "PeoplePage"))
-	target, ok := applied.Expression().Target()
+	target, ok := applied.Expression().Callee().Target()
 	if !ok || target != pageID {
 		t.Fatal("imported application target was lost")
 	}
@@ -155,7 +176,7 @@ func TestPagination(t *testing.T) {
 			}
 		})
 	}
-	again, err := p.Specialize(pageID, []value{person()})
+	again, err := p.Specialize(pageID, properArgs(t, p, person()))
 	if err != nil || !core.Equal(actual, again) || slot.Kind() != decl.Parameter {
 		t.Fatal("direct application differs or mutated open declaration")
 	}
@@ -177,7 +198,7 @@ func TestCallerBindingNestedGenericsAndIdentity(t *testing.T) {
 	if err != nil || !core.Equal(actual, page(person())) {
 		t.Fatal("callee's same-spelled Person captured the caller argument")
 	}
-	nested, err := p.Specialize(id(p, "Nested"), []value{person()})
+	nested, err := p.Specialize(id(p, "Nested"), properArgs(t, p, person()))
 	if err != nil || !core.Equal(nested, page(page(person()))) {
 		t.Fatal("nested application lost its original binder")
 	}
@@ -188,7 +209,7 @@ func TestCallerBindingNestedGenericsAndIdentity(t *testing.T) {
 	if b1 == b2 || b1.Index != 0 || b2.Index != 0 {
 		t.Fatal("same-spelled binders were merged")
 	}
-	swapped, err := p.Specialize(id(p, "Swap"), []value{h("scalar", a("int")), person()})
+	swapped, err := p.Specialize(id(p, "Swap"), properArgs(t, p, h("scalar", a("int")), person()))
 	if err != nil || !core.Equal(swapped, h("tuple", person(), h("scalar", a("int")))) {
 		t.Fatal("parameter order was not preserved")
 	}
@@ -220,7 +241,7 @@ func TestLiteralBoundaryAndDescriptorPositions(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			p := resolve(t, module("positions", mapping(), entry("Generic", definition(test.body, "T"))))
-			got, err := p.Specialize(id(p, "Generic"), []value{person()})
+			got, err := p.Specialize(id(p, "Generic"), properArgs(t, p, person()))
 			if err != nil || !core.Equal(got, test.want) {
 				t.Fatalf("wrong parameterized position: %v", err)
 			}
@@ -243,7 +264,6 @@ func TestRejectedDeclarations(t *testing.T) {
 		{"invalid parameter name", param(0), []string{"T.A"}, decl.Invalid},
 		{"unknown target", local("Missing"), nil, decl.UnknownDeclaration},
 		{"unknown import", imported("missing", "X"), nil, decl.UnknownImport},
-		{"bare target", d("local", text("Generic")), nil, decl.Invalid},
 		{"unknown descriptor", h("function", param(0)), []string{"T"}, decl.Invalid},
 		{"literal scalar kind", h("scalar", param(0)), []string{"T"}, decl.Invalid},
 		{"literal record mode", h("record", param(0)), []string{"T"}, decl.Invalid},
@@ -261,7 +281,7 @@ func TestRejectedDeclarations(t *testing.T) {
 		})
 	}
 	for _, arguments := range [][]value{nil, {person(), person()}} {
-		root := module("arity", mapping(), entry("Generic", definition(param(0), "T")), entry("Bad", definition(local("Generic", arguments...))))
+		root := module("arity", mapping(), entry("Generic", definition(param(0), "T")), entry("Bad", definition(apply(local("Generic"), arguments...))))
 		p, err := decl.Resolve(root, nil)
 		if p != nil {
 			t.Fatal("arity failure returned partial program")
@@ -318,10 +338,11 @@ func TestModulePinsAndImports(t *testing.T) {
 	}
 	for _, invalid := range []value{
 		d("module", integer(1), text("m"), mapping(), mapping()),
-		d("module", integer(2), text("bad..name"), mapping(), mapping()),
-		d("module", integer(2), text(strings.Repeat(".", 1<<16)), mapping(), mapping()),
-		d("module", integer(2), text("m"), list(), mapping()),
-		d("module", integer(2), text("m"), mapping(), mapping(), h("any")),
+		d("module", integer(2), text("m"), mapping(), mapping()),
+		d("module", integer(3), text("bad..name"), mapping(), mapping()),
+		d("module", integer(3), text(strings.Repeat(".", 1<<16)), mapping(), mapping()),
+		d("module", integer(3), text("m"), list(), mapping()),
+		d("module", integer(3), text("m"), mapping(), mapping(), h("any")),
 		module("m", mapping(entry("p", d("import", text("p"), a("short"))))),
 	} {
 		_, err := decl.Resolve(invalid, nil)
@@ -330,7 +351,7 @@ func TestModulePinsAndImports(t *testing.T) {
 	duplicate := core.NewTuple(a("map"),
 		core.NewTuple(text("X"), definition(h("any"))),
 		core.NewTuple(text("X"), definition(h("any"))))
-	_, err = decl.Resolve(d("module", integer(2), text("m"), mapping(), duplicate), nil)
+	_, err = decl.Resolve(d("module", integer(3), text("m"), mapping(), duplicate), nil)
 	expectCode(t, err, decl.Invalid)
 }
 
@@ -375,14 +396,14 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 	pageID := decl.DeclarationID{Module: pin(t, pages), Name: "Page"}
 	open, _ := p.Declaration(pageID)
 	names := open.Parameters()
-	names[0] = decl.TypeParameter{Name: "Changed", Bound: decl.TypeBound}
+	names[0] = decl.TypeParameter{Name: "Changed"}
 	operands := open.Expression().Operands()
 	path := operands[0].Path()
 	path[0] = 900
 	operands[0] = decl.Operand{}
 	modules := p.Modules()
 	modules[0] = nil
-	if open.Parameters()[0] != (decl.TypeParameter{Name: "T", Bound: decl.DataBound}) || open.Expression().Operands()[0].Path()[0] != 2 || p.Modules()[0] == nil {
+	if !parameterIs(open.Parameters()[0], "T", decl.DataClaim) || open.Expression().Operands()[0].Path()[0] != 2 || p.Modules()[0] == nil {
 		t.Fatal("accessor leaked mutable storage")
 	}
 	var workers sync.WaitGroup
@@ -400,7 +421,7 @@ func TestLimitsNoPartialOutputAndConcurrentSnapshots(t *testing.T) {
 		}()
 	}
 	workers.Wait()
-	for _, args := range [][]value{nil, {param(0)}, {h("ref", a("outside"))}, {nil}} {
+	for _, args := range [][]decl.Argument{nil, {{}}, properArgs(t, p, person(), person())} {
 		result, err := p.Specialize(pageID, args)
 		if result != nil || err == nil {
 			t.Fatal("invalid specialization did not fail atomically")
