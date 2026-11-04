@@ -52,11 +52,28 @@ bundle verification and registry authentication. Keep the original CI artifact
 and its hashes; do not repack, edit the archive, synthesize CI identity or copy
 login credentials into CI.
 
-Once the package exists, configure its trusted GitHub publisher for
-`Bitspark/horos`, `release.yml` and environment `release`. Resume `publish`/`verify`
-with the original rehearsal so all registries and anonymous consumers are checked
-before the GitHub release is finalized. Later publications use the trusted
-publisher in the hosted workflow; the first-publication bootstrap is unnecessary.
+Once the package exists and a qualified release is ready for a real upload,
+configure its trusted GitHub publisher for `Bitspark/horos`, `release.yml` and
+environment `release`. npm requires its first successful publication within
+[two days of creation](https://docs.npmjs.com/trusted-publishers/#trusted-publisher-configuration-expiry).
+Configuration readback, an authenticated dry-run and reuse of an already published
+archive do not validate the publisher. The first real OIDC upload binds the
+configuration to the repository's immutable identity. Preserve GitHub's immutable
+subject settings; do not add a name-only subject or reusable-token workaround.
+
+If that initial window expires, renew only the expired configuration with the
+same repository, workflow, environment and permissions, then publish the accepted
+candidate promptly. Do not create a dummy version to validate access. Keep
+publisher configuration, successful authentication, actual publication and fresh
+installed-consumer verification distinct in the release evidence.
+
+Resume `publish`/`verify` with the original rehearsal so all registries and
+anonymous consumers are checked before the GitHub release is finalized. When
+repairing access after the workflow has advanced, rerun the original failed
+publication at its original revision to keep automatic npm provenance tied to
+the tagged source. Never replace tags or archives or rewrite GitHub identity
+variables. Later publications use the trusted publisher in the hosted workflow;
+the first-publication bootstrap is unnecessary.
 
 The 0.7.0 Go module includes `declarations` and optional static `wire` subpackages.
 No corresponding Rust or TypeScript declaration APIs are claimed. All consumers
