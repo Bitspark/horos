@@ -64,7 +64,7 @@ const (
 
 type Program struct{ inner *model.Program }
 
-func DefaultLimits() Limits                { return model.DefaultLimits() }
+func DefaultLimits() Limits                          { return model.DefaultLimits() }
 func ProperInterface(claim Claim) (Interface, error) { return model.ProperInterface(claim) }
 func ConstructorInterface(inputs []Interface, result Claim) (Interface, error) {
 	return model.ConstructorInterface(inputs, result)
@@ -115,17 +115,23 @@ func (p *Program) Declaration(id DeclarationID) (*Declaration, bool) {
 }
 func (p *Program) Proper(value core.Value) (Argument, error) {
 	var inner *model.Program
-	if p != nil { inner = p.inner }
+	if p != nil {
+		inner = p.inner
+	}
 	return inner.Proper(value)
 }
 func (p *Program) Constructor(id DeclarationID) (Argument, error) {
 	var inner *model.Program
-	if p != nil { inner = p.inner }
+	if p != nil {
+		inner = p.inner
+	}
 	return inner.Constructor(id)
 }
 func (p *Program) Satisfies(id DeclarationID, expected Interface) (bool, error) {
 	var inner *model.Program
-	if p != nil { inner = p.inner }
+	if p != nil {
+		inner = p.inner
+	}
 	return inner.Satisfies(id, expected)
 }
 func (p *Program) Specialize(id DeclarationID, arguments []Argument) (core.Value, error) {

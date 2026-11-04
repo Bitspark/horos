@@ -206,7 +206,9 @@ func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) 
 			return nil, failure(Invalid, "parameters must be a canonical list")
 		}
 		claim, err := readClaim(args[1])
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		declaration := &Declaration{id: DeclarationID{Module: pin, Name: name}, result: claim, body: args[2]}
 		names := make(map[string]bool)
 		for _, param := range params {
@@ -219,7 +221,9 @@ func readModule(pin Digest, value core.Value, grammar Grammar) (*Module, error) 
 				return nil, failure(Invalid, "invalid or duplicate parameter name")
 			}
 			iface, err := readInterface(parts[1], grammar)
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 			names[name] = true
 			declaration.parameters = append(declaration.parameters, TypeParameter{Name: name, Interface: iface})
 		}
@@ -293,18 +297,24 @@ func (r *expressionReader) readIn(value core.Value, owner *Declaration, path []i
 		}
 		iface := owner.parameters[slot].Interface
 		var skeleton core.Value
-		if !iface.IsConstructor() { skeleton = r.program.grammar.Any() }
+		if !iface.IsConstructor() {
+			skeleton = r.program.grammar.Any()
+		}
 		return &Expression{kind: Parameter, value: value, parameter: ParameterID{Declaration: owner.id, Index: slot}, interface_: iface}, skeleton, nil
 	}
 	_, local := r.program.grammar.form(value, "local", 1)
 	_, imported := r.program.grammar.form(value, "imported", 2)
 	if local || imported {
 		target, err := r.target(value, owner.id)
-		if err != nil { return nil, nil, err }
+		if err != nil {
+			return nil, nil, err
+		}
 		iface := r.program.declarations[target].interface_
 		r.edges[owner.id] = append(r.edges[owner.id], target)
 		var skeleton core.Value
-		if !iface.IsConstructor() { skeleton = r.program.grammar.Any() }
+		if !iface.IsConstructor() {
+			skeleton = r.program.grammar.Any()
+		}
 		return &Expression{kind: Reference, value: value, target: target, interface_: iface}, skeleton, nil
 	}
 	if args, ok := r.program.grammar.form(value, "apply", 2); ok {

@@ -72,19 +72,19 @@ const (
 // a missing declaration, or the declaration requested by invalid specialization
 // arguments. Details are absent when the operation could not establish them.
 type Error struct {
-	Code         Code
-	Subject      Subject
-	Module       Digest
-	Declaration  string
-	Path         []int
-	ImportAlias  string
-	Dependency   Digest
-	ExpectedName string
-	ActualName   string
-	Target       DeclarationID
+	Code            Code
+	Subject         Subject
+	Module          Digest
+	Declaration     string
+	Path            []int
+	ImportAlias     string
+	Dependency      Digest
+	ExpectedName    string
+	ActualName      string
+	Target          DeclarationID
 	CalleeParameter ParameterID
-	Expected     Interface
-	Message      string
+	Expected        Interface
+	Message         string
 }
 
 func (e *Error) Error() string {
@@ -159,9 +159,9 @@ type Expression struct {
 }
 
 func (e *Expression) Kind() ExpressionKind { return e.kind }
-func (e *Expression) Value() core.Value   { return e.value }
-func (e *Expression) Constructor() string { return e.constructor }
-func (e *Expression) Operands() []Operand { return slices.Clone(e.operands) }
+func (e *Expression) Value() core.Value    { return e.value }
+func (e *Expression) Constructor() string  { return e.constructor }
+func (e *Expression) Operands() []Operand  { return slices.Clone(e.operands) }
 func (e *Expression) Arguments() []*Expression {
 	result := make([]*Expression, len(e.arguments))
 	for i, child := range e.arguments {
@@ -175,12 +175,12 @@ func (e *Expression) Parameter() (ParameterID, bool) {
 func (e *Expression) Target() (DeclarationID, bool) {
 	return e.target, e.kind == Reference
 }
-func (e *Expression) Callee() *Expression { return copyExpression(e.callee) }
-func (e *Expression) Interface() Interface { return cloneInterface(e.interface_) }
-func (e *Expression) KindShape() Kind { return e.interface_.Kind() }
+func (e *Expression) Callee() *Expression       { return copyExpression(e.callee) }
+func (e *Expression) Interface() Interface      { return cloneInterface(e.interface_) }
+func (e *Expression) KindShape() Kind           { return e.interface_.Kind() }
 func (e *Expression) DataSummary() *DataSummary { return copySummary(e.summary) }
-func (e *Expression) DataStatus() DataStatus { return e.dataStatus }
-func (e *Expression) Path() []int { return slices.Clone(e.path) }
+func (e *Expression) DataStatus() DataStatus    { return e.dataStatus }
+func (e *Expression) Path() []int               { return slices.Clone(e.path) }
 
 type Import struct {
 	alias string
@@ -201,20 +201,22 @@ type Declaration struct {
 	expression *Expression
 }
 
-func (d *Declaration) ID() DeclarationID           { return d.id }
+func (d *Declaration) ID() DeclarationID { return d.id }
 func (d *Declaration) Parameters() []TypeParameter {
 	result := slices.Clone(d.parameters)
-	for i := range result { result[i].Interface = cloneInterface(result[i].Interface) }
+	for i := range result {
+		result[i].Interface = cloneInterface(result[i].Interface)
+	}
 	return result
 }
-func (d *Declaration) Expression() *Expression     { return copyExpression(d.expression) }
-func (d *Declaration) Result() Claim { return d.result }
+func (d *Declaration) Expression() *Expression { return copyExpression(d.expression) }
+func (d *Declaration) Result() Claim           { return d.result }
 func (d *Declaration) Interface() Interface {
 	return cloneInterface(d.interface_)
 }
-func (d *Declaration) Kind() Kind { return d.interface_.Kind() }
+func (d *Declaration) Kind() Kind                { return d.interface_.Kind() }
 func (d *Declaration) DataSummary() *DataSummary { return copySummary(d.expression.summary) }
-func (d *Declaration) DataStatus() DataStatus { return d.expression.dataStatus }
+func (d *Declaration) DataStatus() DataStatus    { return d.expression.dataStatus }
 
 type Module struct {
 	pin          Digest
@@ -240,13 +242,13 @@ func (m *Module) Declarations() []*Declaration {
 // Program is a checked, immutable transitive module closure, safe for concurrent
 // reading and specialization. Its zero value is not a resolved program.
 type Program struct {
-	grammar      Grammar
-	root         Digest
-	modules      map[Digest]*Module
-	order        []*Module
-	declarations map[DeclarationID]*Declaration
+	grammar          Grammar
+	root             Digest
+	modules          map[Digest]*Module
+	order            []*Module
+	declarations     map[DeclarationID]*Declaration
 	declarationOrder []*Declaration
-	limits       Limits
+	limits           Limits
 }
 
 func (p *Program) Root() Digest { return p.root }
