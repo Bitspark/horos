@@ -24,4 +24,4 @@ type DomainRule struct {
 
 func Failure(code Code, message string) error                           { return failure(code, message) }
 func Head(value core.Value, prefix string) (string, []core.Value, bool) { return head(value, prefix) }
-func (p *Program) Limits() Limits { return p.limits }
+func (p *Program) Limits() Limits                                       { return p.limits }

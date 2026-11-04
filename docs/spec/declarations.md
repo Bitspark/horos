@@ -116,8 +116,8 @@ parameter scope. A module-level bare parameter is invalid.
 
 `apply` supplies every argument position exactly once, in declaration order.
 A reference to a nongeneric declaration is the same operation with `L()`.
-There is no inference, partial application, implicit `any`, defaults or constraint
-inference or alternate shorthand in the canonical value grammar.
+There is no type inference, partial application, implicit `any`, default argument
+or alternate shorthand in the canonical value grammar.
 
 ### Type and Data bounds
 
