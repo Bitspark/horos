@@ -1,0 +1,43 @@
+module horos.kinds;
+
+kind Type = top(P);
+kind Any = node("any", {}, epsilon);
+kind AtomFamily =
+    node("atom", {}, epsilon)
+  | node("atom-exact", {}, epsilon)
+  | node("atom-len", {}, epsilon)
+  | node("atom-in", {}, epsilon);
+
+kind Int = node("scalar", {"selector": "int"}, epsilon);
+kind Text = node("scalar", {"selector": "utf8-text"}, epsilon);
+kind Bool = node("scalar", {"selector": "bool"}, epsilon);
+kind Scalar =
+    Int | Text | Bool
+  | node("text-len", {}, epsilon)
+  | node("key-grammar", {}, epsilon)
+  | node("text-non-blank", {}, epsilon)
+  | node("lowercase-uuid", {}, epsilon);
+kind Exact = node("exact", {}, epsilon);
+
+kind List<K> = node("list-of", {}, item(K));
+kind Seq<K> = node("seq", {}, item(K));
+kind Set<K> = node("set-of", {}, item(K));
+kind Not<K> = node("not", {}, item(K));
+kind Wire<K> = node("wire", {}, item(K));
+
+kind Tuple<K> = node("tuple", {}, star(item(K)));
+kind Compound<K> = node("compound", {}, star(item(K)));
+kind UnionOf<K> = node("union", {}, star(item(K)));
+kind AndOf<K> = node("and", {}, star(item(K)));
+kind Map<K, V> = node("map-of", {}, concat(item(K), item(V)));
+kind Record<K> = node("record", {}, star(item(K)));
+kind ClosedRecord<K> = node("record", {"mode": "closed"}, star(item(K)));
+kind OpenRecord<K> = node("record", {"mode": "open"}, star(item(K)));
+
+kind Data = nu {
+  D = Any | AtomFamily | Scalar | Exact
+    | Tuple<D> | Compound<D> | Seq<D>
+    | List<D> | Set<D> | Map<D, D>
+    | ClosedRecord<D> | OpenRecord<D>
+    | UnionOf<D> | AndOf<D> | Not<D>;
+} in D;

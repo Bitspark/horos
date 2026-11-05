@@ -148,9 +148,12 @@ D("kind", L(), D("sort-proper"),
 ```
 
 The bundled `horos.kinds` module provides Type, Data and the structural families
-through this same language. Type is proper top. Data is an ordinary guarded
+through this same language. Its authoritative definitions are maintained in
+[Horos source](../../core/go/declarations/standard/horos.kinds.horos); Bittype's
+ordinary frontend prepares the canonical asset that Horos decodes and loads.
+Type is proper top. Data is an ordinary guarded
 recursive union of the ground forms, with recursively constrained children and
-no Wire alternative; [its complete family definition](kinds.md#3-ordinary-prelude-definitions)
+no Wire alternative; [its complete family definition](../../core/go/declarations/standard/horos.kinds.horos)
 contains no hidden Data flag.
 
 Authors explicitly import `horos.kinds` to use its names. The resolver uses that

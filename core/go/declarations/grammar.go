@@ -7,7 +7,21 @@ import (
 	model "github.com/Bitspark/horos/core/go/internal/declmodel"
 	"github.com/Bitspark/horos/core/go/internal/kindmodel"
 	core "github.com/bitspark/ontos/core/go"
+	data "github.com/bitspark/ontos/data/go"
 )
+
+func declarationForm(tag string, values ...core.Value) core.Value {
+	items := make([]core.Value, len(values)+1)
+	items[0] = core.NewAtom([]byte("horos/decl/" + tag))
+	copy(items[1:], values)
+	return core.NewTuple(items...)
+}
+
+func declarationText(value string) core.Value { return data.MustEncodeText(value) }
+
+func localKindReference(name string) core.Value {
+	return declarationForm("kind-local", declarationText(name))
+}
 
 func grammar() model.Grammar {
 	return model.Grammar{
@@ -21,7 +35,7 @@ func grammar() model.Grammar {
 		Schema:            descriptorSchema(),
 		Prelude:           Prelude(),
 		OperandKind:       descriptorOperandKind,
-		GroundKind:        preludeReference("Data"),
+		GroundKind:        localKindReference("Data"),
 	}
 }
 
@@ -105,15 +119,15 @@ func operandFailure(err error, path []int) error {
 func descriptorOperandKind(constructor string, args []core.Value) core.Value {
 	switch constructor {
 	case "seq", "set-of", "map-of", "and", "not", "rec":
-		return preludeReference("Data")
+		return localKindReference("Data")
 	case "record":
 		if len(args) > 0 {
 			if mode, ok := args[0].(core.Atom); ok && string(mode.Bytes()) == "open" {
-				return preludeReference("Data")
+				return localKindReference("Data")
 			}
 		}
 	}
-	return preludeForm("top", preludeForm("sort-proper"))
+	return declarationForm("top", declarationForm("sort-proper"))
 }
 
 func descriptorMetadata(constructor string, args []core.Value) ([]kindmodel.Selector, error) {

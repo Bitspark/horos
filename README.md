@@ -29,14 +29,15 @@ and [distribution](docs/distribution.md).
 ```sh
 npm install @bitspark/horos@0.9.0
 cargo add bitspark-horos@0.9.0
-go get github.com/Bitspark/horos/core/go@v0.10.1
+go get github.com/Bitspark/horos/core/go@v0.10.2
 ```
 
 The Rust package's library name is `horos`. All three packages use public ontos
 0.16.0, retaining a single ontos value type in each dependency graph. Consumers
 must upgrade their Ontos dependencies together; no old-version adapter or copied
-value implementation is provided. The [Go 0.10.1 release](docs/releases/v0.10.1.md)
-changes declaration tooling; it does not publish new npm or Cargo packages.
+value implementation is provided. The [Go 0.10.2 release](docs/releases/v0.10.2.md)
+moves standard kind definitions into Horos source; it does not publish new npm
+or Cargo packages.
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
@@ -51,7 +52,11 @@ It replaces the closed Type/Data interface model with
 constructor aliases and constructor-valued results.
 
 Type and Data are ordinary definitions in the explicitly imported `horos.kinds`
-module. User-defined categories use the same node patterns, finite child
+module, maintained in [Horos source](core/go/declarations/standard/horos.kinds.horos).
+Bittype's ordinary source encoder prepares its canonical distribution asset;
+Horos decodes and loads that module through the same machinery as consumer
+modules. See the [standard module guide](core/go/declarations/standard/README.md).
+User-defined categories use the same node patterns, finite child
 sequences, unions, intersections and positive recursion. `Page<T>` is authored
 once: its body can establish `Data => Data` or guarantees involving unrelated
 kinds such as Scalar and Rows. The kind engine is separate from Horos primitive
