@@ -1,6 +1,6 @@
 # Go declaration tooling
 
-**Revision-4 API, implemented in Go source, 4 November 2026.** The
+**Revision-4 API, Go 0.10.2, 5 November 2026.** The
 package `github.com/Bitspark/horos/core/go/declarations` is the public Go boundary
 for [canonical declarations](../../../docs/spec/declarations.md) and
 [general structural kinds](../../../docs/spec/kinds.md). It consumes Ontos
@@ -36,6 +36,22 @@ value; the importing module chooses its alias. Resolution uses the exact bundled
 prelude internally for primitive formation contracts. A user must still import
 it explicitly to refer to Type, Data, Scalar, List or any other prelude name.
 A local declaration called Data does not replace those bound formation contracts.
+
+The complete module is maintained in
+[standard/horos.kinds.horos](standard/horos.kinds.horos). Bittype's ordinary
+single-module encoder lowers that source into the packaged canonical Ontos asset.
+This package embeds and decodes the asset; it has no readable-source parser or
+Bittype runtime dependency. Resolution then admits it through the same module
+loader and general kind calculus as every other module. The former Go definition
+builders are removed. See [standard-module authoring](standard/README.md).
+
+The selected standard module is part of this release's formation semantics.
+Changing its Data definition can affect primitive admission even without an
+explicit user import. Importing another module or another version does not
+replace the resolver's selected formation dependency. The maintained source is
+distributed alongside the asset, but canonical-only callers need not parse it;
+source-aware tools obtain actual text locations by supplying it through their
+ordinary source pipeline.
 
 A checked Program retains immutable source values, declarations, resolved
 references and binding environments. Declaration identity contains its module

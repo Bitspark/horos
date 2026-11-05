@@ -88,49 +88,39 @@ does not establish `Record<Scalar>` because its implicit any child is not Scalar
 
 ## 3. Ordinary prelude definitions
 
-`horos.kinds` is a normal canonical module. Authors explicitly import its module
-identity before using its names. The resolver also uses the bundled module
-internally to bind primitive operand contracts. This internal use does not make
-its names implicitly visible in user modules.
+`horos.kinds` is a normal canonical module, authored in the complete
+[Horos source file](../../core/go/declarations/standard/horos.kinds.horos).
+Bittype's ordinary parser and syntax-to-canonical encoder prepare its packaged
+Ontos asset. Horos decodes the asset and admits its definitions through the same
+module loader and general kind calculus as consumer definitions. The
+[standard-module guide](../../core/go/declarations/standard/README.md) describes
+authoring and regeneration.
 
-The following equations expand only into ordinary node, sequence, union,
-reference and recursive-kind forms. `leaf(form)` abbreviates a node with an empty
-selector map and epsilon children:
+Authors explicitly import its module identity before using its names. The
+resolver also uses the bundled module internally to bind primitive operand
+contracts. This internal use does not make its names implicitly visible in user
+modules. The Go implementation retains the primitive vocabulary and formation
+wiring; the kind definition bodies are maintained only in Horos source.
+
+For example, the source defines these ordinary kinds:
 
 ```text
-Type       = top(proper)
-Any        = leaf("any")
-AtomFamily = leaf("atom") | leaf("atom-exact")
-           | leaf("atom-len") | leaf("atom-in")
-Text       = node("scalar", {selector: "utf8-text"}, epsilon)
-Scalar     = node("scalar", {selector: "int"}, epsilon)
-           | Text | node("scalar", {selector: "bool"}, epsilon)
-           | leaf("text-len") | leaf("key-grammar")
-           | leaf("text-non-blank") | leaf("lowercase-uuid")
-Exact      = leaf("exact")
+kind Type = top(P);
+kind List<K> = node("list-of", {}, item(K));
+kind Record<K> = node("record", {}, star(item(K)));
 
-Tuple<K>        = node("tuple", {}, star(item(K)))
-Compound<K>     = node("compound", {}, star(item(K)))
-Seq<K>          = node("seq", {}, item(K))
-List<K>         = node("list-of", {}, item(K))
-Set<K>          = node("set-of", {}, item(K))
-Map<K,V>        = node("map-of", {}, concat(item(K), item(V)))
-Record<K>       = node("record", {}, star(item(K)))
-ClosedRecord<K> = node("record", {mode: "closed"}, star(item(K)))
-OpenRecord<K>   = node("record", {mode: "open"}, star(item(K)))
-UnionOf<K>      = node("union", {}, star(item(K)))
-AndOf<K>        = node("and", {}, star(item(K)))
-Not<K>          = node("not", {}, item(K))
-Wire<K>         = node("wire", {}, item(K))
-WireFamily      = Wire<Type>
-
-Data = nu D.
-    Any | AtomFamily | Scalar | Exact
-  | Tuple<D> | Compound<D> | Seq<D>
-  | List<D> | Set<D> | Map<D,D>
-  | ClosedRecord<D> | OpenRecord<D>
-  | UnionOf<D> | AndOf<D> | Not<D>
+kind Data = nu {
+  D = Any | AtomFamily | Scalar | Exact
+    | Tuple<D> | Compound<D> | Seq<D>
+    | List<D> | Set<D> | Map<D, D>
+    | ClosedRecord<D> | OpenRecord<D>
+    | UnionOf<D> | AndOf<D> | Not<D>;
+} in D;
 ```
+
+The other referenced families are ordinary definitions in that source module.
+`Wire<Type>` is an ordinary application that admits Wire descriptions with any
+proper message type; there is no additional exported WireFamily definition.
 
 There is no hidden data-leaf flag. An exact text singleton belongs to Exact,
 without automatically becoming a scalar-shaped type. Ground rec/ref require no
@@ -141,6 +131,12 @@ Renaming a definition, importing an equivalent one or defining an unrelated
 recursive category uses the same machinery. A user's unrelated Data declaration
 does not alter primitive contracts: those refer to the bundled module's actual
 declaration identity, not its display spelling.
+
+The selected standard Data definition participates in this release's primitive
+formation semantics. Changing it can affect admission in modules that never
+import it explicitly. A user's pinned import of another version does not change
+the resolver's standard formation dependency. Canonical module identity follows
+the encoded value; semantic equivalence alone does not imply equal module pins.
 
 The language revision fixes primitive forms, supported metadata selectors,
 type-child positions and formation rules. Their implementation is separate from
