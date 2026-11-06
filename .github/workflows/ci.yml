@@ -103,6 +103,7 @@ jobs:
           cd "$RUNNER_TEMP/installed-consumer"
           go mod init installed.consumer
           go get "github.com/Bitspark/horos/tooling/bittype@$EXPECTED_REVISION"
+          go mod tidy
           test -z "$(go list -m -f '{{if .Replace}}{{.Path}}{{end}}' all)"
           go test -count=1 -v ./...
       - name: Check formatting and dependency metadata

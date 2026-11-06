@@ -41,6 +41,13 @@ or Cargo packages.
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
+## Native type generation
+
+The optional [Bittype integration module](tooling/bittype/README.md) supplies
+Horos-owned mappings and default compositions for TypeScript, Go, Rust and C++.
+Bittype owns the agnostic composer and native syntax machinery. This separate
+module adds no Bittype dependency to Horos core and no runtime bindings.
+
 ## Scope
 
 Horos owns ground data descriptors and conformance, plus one
