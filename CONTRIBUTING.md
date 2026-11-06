@@ -14,18 +14,19 @@ packages, Python replay, package-consumer checks, the authored oracle and seeded
 cross-language conformance. Toolchains are Go 1.25, Rust 1.96.0, Node 24 and Python
 3.13. CI runs these on GitHub-hosted runners with public dependencies.
 
-Bittype owns the generation SPI, composer and native syntax backends. Horos-owned
-representations live in the optional [tooling/bittype](tooling/bittype/README.md)
-module. Keep it separate from core; neither core nor Bittype may import its
-default compositions. Behavioral contracts remain library-owned.
+Bittype owns the generation SPI, composer, native syntax backends and
+[Horos mapping implementations](https://github.com/Bitspark/bittype/tree/main/generation/syntax/mapping/horos).
+Owner placement correction, 6 November 2026: generator code and its tests belong
+in Bittype, with mappings supplied through its public SPI. Horos owns the model
+and has no generator module depending on Bittype. Behavioral contracts remain library-owned.
 Do not add their names, adapters or protocols to the checker. A descriptor change
 requires a concrete type-model case and corresponding cross-language evidence.
 
 The [canonical declaration format](docs/spec/declarations.md) is implemented by
 the Go declarations tooling package. Keep module, binder, general-kind,
 application, membership and specialization rules in horos, with syntax/AST
-projections and native generation machinery in Bittype and optional Horos-owned
-mappings in tooling/bittype. Ground-descriptor APIs do not accept open
+projections, native generation machinery and builtin mappings in Bittype.
+Ground-descriptor APIs do not accept open
 templates. Keep source capabilities separate from published versions and other
 language implementations.
 

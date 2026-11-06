@@ -16,8 +16,7 @@ for name in files:
     if name.endswith((".ts", ".go", ".rs", ".py", ".json", ".toml", ".yml", ".md", ".sh")):
         text = (ROOT / name).read_text(encoding="utf-8")
         # Test code may assert absence of old entrypoints; no private dependency or URL.
-        # logos-contract is the separate public checker used by the optional tooling tests.
-        for pattern in (r"npm\.pkg\.github\.com", r"@bitspark/logos", r"github\.com/[Bb]itspark/(?!logos-contract(?:/|$))(logos|atlas|design)(?:/|\b)", r"vars\.CI_RUNNER", r"uses:\s*Bitspark/", r"seat:[a-z]", r"Acted-by:"):
+        for pattern in (r"npm\.pkg\.github\.com", r"@bitspark/logos", r"github\.com/[Bb]itspark/(logos|atlas|design)(?:/|\b)", r"vars\.CI_RUNNER", r"uses:\s*Bitspark/", r"seat:[a-z]", r"Acted-by:"):
             if name == "scripts/verify-public.py":
                 continue
             assert not re.search(pattern, text), (name, pattern)
