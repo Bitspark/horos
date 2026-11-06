@@ -35,7 +35,7 @@ jobs:
           git add -N .
           git diff --binary > "$RUNNER_TEMP/preparation.patch"
           git rev-parse HEAD > "$RUNNER_TEMP/source.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: preparation
           path: |
