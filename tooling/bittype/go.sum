@@ -1,0 +1,6 @@
+github.com/Bitspark/bittype v0.0.0-20261106081636-ac2d28332ae5 h1:d2YvWZLtQcDxDZ4kZ5qkBI0ia70x+cGF6ikjFD9yIuQ=
+github.com/Bitspark/bittype v0.0.0-20261106081636-ac2d28332ae5/go.mod h1:HPVgF2bBJrFq4faL5tsl9gWiU7hoqSm1W5oNFrjVv0Q=
+github.com/Bitspark/horos/core/go v0.10.2 h1:baTh8ZXIJqSEYXxSMeRkYx8GuiQvzWfu2gX49PTVS0w=
+github.com/Bitspark/horos/core/go v0.10.2/go.mod h1:eksDk7qOGGTJwktE6XgOjaskLBbn58tn3Yq9r37IxT0=
+github.com/bitspark/ontos v0.16.0 h1:/LA9+ukd9+/WgIWLShUwlTB06bfpqEo43t9CGh9umgY=
+github.com/bitspark/ontos v0.16.0/go.mod h1:GLOg9USEPJXJ7RN7iiOJ7OVlyM8b3X4lN0ZVTg2G3QY=

@@ -15,9 +15,9 @@ import (
 	resolve "github.com/Bitspark/bittype/resolve/files/horos/go"
 	h "github.com/Bitspark/bittype/syntax/horos/go"
 	ts "github.com/Bitspark/bittype/syntax/typescript/go"
-	generate "github.com/Bitspark/horos/tooling/bittype/transforms/horos-to-typescript/go"
 	"github.com/Bitspark/bittype/trees/ast/go"
 	"github.com/Bitspark/bittype/trees/representation/go"
+	generate "github.com/Bitspark/horos/tooling/bittype/transforms/horos-to-typescript/go"
 	"strings"
 	"testing"
 )
