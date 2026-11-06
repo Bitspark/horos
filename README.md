@@ -43,10 +43,10 @@ The TypeScript package exports its checker at `@bitspark/horos` and diagnostics 
 
 ## Native type generation
 
-The optional [Bittype integration module](tooling/bittype/README.md) supplies
-Horos-owned mappings and default compositions for TypeScript, Go, Rust and C++.
-Bittype owns the agnostic composer and native syntax machinery. This separate
-module adds no Bittype dependency to Horos core and no runtime bindings.
+[Bittype's Horos mapping packages](https://github.com/Bitspark/bittype/tree/main/generation/syntax/mapping/horos)
+supply native representations and explicit default compositions for TypeScript,
+Go, Rust and C++. Bittype owns generation; Horos owns the canonical type model.
+Horos contains no generator module depending on Bittype and no runtime bindings.
 
 ## Scope
 
