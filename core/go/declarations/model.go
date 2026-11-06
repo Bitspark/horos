@@ -39,51 +39,51 @@ type TypeValue = model.TypeValue
 type Verdict = model.Verdict
 
 const (
-	Invalid              = model.Invalid
-	BoundViolation       = model.BoundViolation
-	KindMismatch         = model.KindMismatch
-	UnprovedObligation   = model.UnprovedObligation
-	MissingDependency    = model.MissingDependency
-	ImportMismatch       = model.ImportMismatch
-	UnknownImport        = model.UnknownImport
-	UnknownDeclaration   = model.UnknownDeclaration
-	InvalidOptions       = model.InvalidOptions
-	Cycle                = model.Cycle
-	Exhausted            = model.Exhausted
-	SubjectSource        = model.SubjectSource
-	SubjectContext       = model.SubjectContext
-	SubjectConfiguration = model.SubjectConfiguration
-	SubjectRequest       = model.SubjectRequest
-	Descriptor           = model.Descriptor
-	Parameter            = model.Parameter
-	Reference            = model.Reference
-	Application          = model.Application
-	TypeDefinition       = model.TypeDefinition
-	KindDefinition       = model.KindDefinition
-	KindTop              = model.KindTop
-	KindBottom           = model.KindBottom
+	Invalid                = model.Invalid
+	BoundViolation         = model.BoundViolation
+	KindMismatch           = model.KindMismatch
+	UnprovedObligation     = model.UnprovedObligation
+	MissingDependency      = model.MissingDependency
+	ImportMismatch         = model.ImportMismatch
+	UnknownImport          = model.UnknownImport
+	UnknownDeclaration     = model.UnknownDeclaration
+	InvalidOptions         = model.InvalidOptions
+	Cycle                  = model.Cycle
+	Exhausted              = model.Exhausted
+	SubjectSource          = model.SubjectSource
+	SubjectContext         = model.SubjectContext
+	SubjectConfiguration   = model.SubjectConfiguration
+	SubjectRequest         = model.SubjectRequest
+	Descriptor             = model.Descriptor
+	Parameter              = model.Parameter
+	Reference              = model.Reference
+	Application            = model.Application
+	TypeDefinition         = model.TypeDefinition
+	KindDefinition         = model.KindDefinition
+	KindTop                = model.KindTop
+	KindBottom             = model.KindBottom
 	KindParameterReference = model.KindParameterReference
-	KindReference        = model.KindReference
-	KindApplication      = model.KindApplication
-	KindUnion            = model.KindUnion
-	KindIntersection     = model.KindIntersection
-	KindNode             = model.KindNode
-	KindRecursive        = model.KindRecursive
-	KindVariable         = model.KindVariable
-	KindArrow            = model.KindArrow
-	SequenceEpsilon      = model.SequenceEpsilon
-	SequenceItem         = model.SequenceItem
-	SequenceConcat       = model.SequenceConcat
-	SequenceAlternative  = model.SequenceAlternative
-	SequenceStar         = model.SequenceStar
-	Proven               = model.Proven
-	Refuted              = model.Refuted
-	Unproved             = model.Unproved
+	KindReference          = model.KindReference
+	KindApplication        = model.KindApplication
+	KindUnion              = model.KindUnion
+	KindIntersection       = model.KindIntersection
+	KindNode               = model.KindNode
+	KindRecursive          = model.KindRecursive
+	KindVariable           = model.KindVariable
+	KindArrow              = model.KindArrow
+	SequenceEpsilon        = model.SequenceEpsilon
+	SequenceItem           = model.SequenceItem
+	SequenceConcat         = model.SequenceConcat
+	SequenceAlternative    = model.SequenceAlternative
+	SequenceStar           = model.SequenceStar
+	Proven                 = model.Proven
+	Refuted                = model.Refuted
+	Unproved               = model.Unproved
 )
 
 type Program struct{ inner *model.Program }
 
-func DefaultLimits() Limits { return model.DefaultLimits() }
+func DefaultLimits() Limits                { return model.DefaultLimits() }
 func Pin(value core.Value) (Digest, error) { return model.Pin(value) }
 func PinWithLimits(value core.Value, limits Limits) (Digest, error) {
 	return model.PinWithLimits(value, limits)

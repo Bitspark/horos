@@ -44,22 +44,22 @@ const (
 )
 
 type Selector struct {
-	Key string
+	Key   string
 	Value string
 }
 
 // SelectorDomain is an approved selector vocabulary. Open permits additional
 // equality values; inclusion partitions those into mentioned values and Other.
 type SelectorDomain struct {
-	Key string
-	Values []string
-	Open bool
+	Key      string
+	Values   []string
+	Open     bool
 	Optional bool
 }
 
 type Form struct {
-	Name string
-	Selectors []SelectorDomain
+	Name        string
+	Selectors   []SelectorDomain
 	MinChildren uint32
 	MaxChildren int64 // -1 permits every finite width at least MinChildren.
 }
@@ -69,19 +69,19 @@ type Schema struct {
 }
 
 type NodePattern struct {
-	Form string
+	Form      string
 	Selectors []Selector
-	Sequence SeqID
+	Sequence  SeqID
 }
 
 type State struct {
-	Op Op
+	Op   Op
 	Args []StateID
 	Node NodePattern
 }
 
 type Sequence struct {
-	Op SequenceOp
+	Op   SequenceOp
 	Item StateID
 	Args []SeqID
 }
@@ -90,30 +90,30 @@ type Sequence struct {
 // descend through a Node's observed child before returning to a state.
 // Sequence expressions themselves form a DAG; Star means finite repetition.
 type Definition struct {
-	Root StateID
-	States []State
+	Root      StateID
+	States    []State
 	Sequences []Sequence
 }
 
 type ObservationNode struct {
-	Form string
+	Form      string
 	Selectors []Selector
-	Children []ObsID
+	Children  []ObsID
 }
 
 // Observation is finite, but Children may contain backedges. Its unfolding can
 // be infinite vertically. Every individual child sequence remains finite.
 type Observation struct {
-	Root ObsID
+	Root  ObsID
 	Nodes []ObservationNode
 }
 
 // Kind is immutable. Compile copies its input; all query caches are local.
 type Kind struct {
-	valid bool
-	schema Schema
+	valid      bool
+	schema     Schema
 	definition Definition
-	forms map[string]int
+	forms      map[string]int
 }
 
 var ErrInvalid = errors.New("invalid structural kind model")
@@ -193,14 +193,14 @@ func keyGroups(b Budget, groups ...[]int) (string, error) {
 // label is a finite equivalence class of schema-approved root metadata.
 // Other and absent are separate from every concrete string value.
 type labelValue struct {
-	value string
-	other bool
+	value   string
+	other   bool
 	present bool
 }
 
 type label struct {
-	form string
-	values map[string]labelValue
+	form        string
+	values      map[string]labelValue
 	minChildren uint32
 	maxChildren int64
 }
@@ -221,22 +221,22 @@ func (l label) matches(pattern NodePattern) bool {
 // automaton is a nondeterministic top-down hedge automaton. Infinite vertical
 // runs are all accepting; its horizontal NFAs accept finite words only.
 type automaton struct {
-	root int
+	root   int
 	states []automatonState
 }
 
 type automatonState struct {
 	obligations []StateID
-	words []*wordNFA // indexed by label, nil means no transition.
+	words       []*wordNFA // indexed by label, nil means no transition.
 }
 
 type wordNFA struct {
-	start int
+	start  int
 	accept []bool
-	edges [][]wordEdge
+	edges  [][]wordEdge
 }
 
 type wordEdge struct {
-	to int
+	to     int
 	symbol int // -1 is epsilon; otherwise an automaton state.
 }

@@ -5,12 +5,12 @@ package kindmodel
 type automatonClauses [][]StateID
 
 type automatonBuilder struct {
-	k *Kind
-	labels []label
-	b Budget
-	out automaton
-	joints map[string]int
-	roots []automatonClauses
+	k         *Kind
+	labels    []label
+	b         Budget
+	out       automaton
+	joints    map[string]int
+	roots     []automatonClauses
 	sequences []*wordNFA
 }
 
@@ -143,7 +143,7 @@ func (c *automatonBuilder) joint(obligations []StateID) (int, error) {
 	id := len(c.out.states)
 	c.out.states = append(c.out.states, automatonState{
 		obligations: ids,
-		words: make([]*wordNFA, len(c.labels)),
+		words:       make([]*wordNFA, len(c.labels)),
 	})
 	c.joints[key] = id
 	return id, nil
@@ -169,7 +169,7 @@ func automatonCanonicalIDs(input []StateID, b Budget) ([]StateID, error) {
 			continue
 		}
 		result = append(result, 0)
-		for i := len(result)-1; i > at; i-- {
+		for i := len(result) - 1; i > at; i-- {
 			if err := step(b); err != nil {
 				return nil, err
 			}
@@ -186,7 +186,10 @@ func automatonRootClauses(states []State, b Budget) ([]automatonClauses, error) 
 	}
 	result := make([]automatonClauses, len(states))
 	color := make([]uint8, len(states))
-	type frame struct { id StateID; next int }
+	type frame struct {
+		id   StateID
+		next int
+	}
 	for initial := range states {
 		if err := step(b); err != nil {
 			return nil, err
@@ -203,7 +206,7 @@ func automatonRootClauses(states []State, b Budget) ([]automatonClauses, error) 
 			if err := step(b); err != nil {
 				return nil, err
 			}
-			last := len(stack)-1
+			last := len(stack) - 1
 			current := &stack[last]
 			state := states[current.id]
 			if state.Op == Or || state.Op == And || state.Op == Alias {
@@ -355,7 +358,7 @@ func automatonCopyWord(out, source *wordNFA, offset int, b Budget) error {
 		}
 		out.accept[offset+state] = source.accept[state]
 		for _, edge := range edges {
-			if err := automatonAddEdge(out, offset+state, wordEdge{to: offset+edge.to, symbol: edge.symbol}, b); err != nil {
+			if err := automatonAddEdge(out, offset+state, wordEdge{to: offset + edge.to, symbol: edge.symbol}, b); err != nil {
 				return err
 			}
 		}
@@ -397,7 +400,7 @@ func automatonUnionWords(parts []*wordNFA, b Budget) (*wordNFA, error) {
 		if err := automatonCopyWord(out, part, offset, b); err != nil {
 			return nil, err
 		}
-		if err := automatonAddEdge(out, 0, wordEdge{to: offset+part.start, symbol: -1}, b); err != nil {
+		if err := automatonAddEdge(out, 0, wordEdge{to: offset + part.start, symbol: -1}, b); err != nil {
 			return nil, err
 		}
 		offset += len(part.edges)
@@ -435,7 +438,7 @@ func automatonConcatWords(parts []*wordNFA, b Budget) (*wordNFA, error) {
 			return nil, err
 		}
 		if i+1 < len(parts) {
-			nextStart := offset+len(part.edges)+parts[i+1].start
+			nextStart := offset + len(part.edges) + parts[i+1].start
 			for state, final := range part.accept {
 				if err := step(b); err != nil {
 					return nil, err
@@ -465,7 +468,7 @@ func automatonStarWord(part *wordNFA, b Budget) (*wordNFA, error) {
 	if err := automatonCopyWord(out, part, 1, b); err != nil {
 		return nil, err
 	}
-	if err := automatonAddEdge(out, 0, wordEdge{to: part.start+1, symbol: -1}, b); err != nil {
+	if err := automatonAddEdge(out, 0, wordEdge{to: part.start + 1, symbol: -1}, b); err != nil {
 		return nil, err
 	}
 	for state, final := range part.accept {
@@ -504,7 +507,10 @@ func compileWords(k *Kind, symbol func(StateID) (int, error), b Budget) ([]*word
 	}
 	result := make([]*wordNFA, len(sequences))
 	color := make([]uint8, len(sequences))
-	type frame struct { id SeqID; next int }
+	type frame struct {
+		id   SeqID
+		next int
+	}
 	for initial := range sequences {
 		if err := step(b); err != nil {
 			return nil, err
@@ -521,7 +527,7 @@ func compileWords(k *Kind, symbol func(StateID) (int, error), b Budget) ([]*word
 			if err := step(b); err != nil {
 				return nil, err
 			}
-			last := len(stack)-1
+			last := len(stack) - 1
 			current := &stack[last]
 			sequence := sequences[current.id]
 			if current.next < len(sequence.Args) {
@@ -623,7 +629,7 @@ func (c *automatonBuilder) width(root label) (*wordNFA, error) {
 		}
 		word.accept[state] = uint64(state) >= uint64(root.minChildren)
 		if state+1 < len(word.edges) {
-			if err := automatonAddEdge(word, state, wordEdge{to: state+1, symbol: top}, c.b); err != nil {
+			if err := automatonAddEdge(word, state, wordEdge{to: state + 1, symbol: top}, c.b); err != nil {
 				return nil, err
 			}
 		} else if root.maxChildren < 0 {
@@ -779,7 +785,7 @@ func (c *automatonBuilder) intersectWords(parts []*wordNFA) (*wordNFA, error) {
 			if err := automatonAddEdge(out, state, wordEdge{to: to, symbol: child}, c.b); err != nil {
 				return nil, err
 			}
-			for component := len(positions)-1; component >= 0; component-- {
+			for component := len(positions) - 1; component >= 0; component-- {
 				if err := step(c.b); err != nil {
 					return nil, err
 				}
