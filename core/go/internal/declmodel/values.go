@@ -17,11 +17,15 @@ type budget struct {
 }
 
 func (b *budget) Step(depth uint64) error {
-	if depth > uint64(b.limits.MaxDepth) { return failure(Exhausted,"semantic depth limit reached") }
+	if depth > uint64(b.limits.MaxDepth) {
+		return failure(Exhausted, "semantic depth limit reached")
+	}
 	return b.step(int(depth))
 }
 func (b *budget) Bytes(size uint64) error {
-	if size > uint64(b.limits.MaxBytes) { return failure(Exhausted,"semantic byte limit reached") }
+	if size > uint64(b.limits.MaxBytes) {
+		return failure(Exhausted, "semantic byte limit reached")
+	}
 	return b.reserveBytes(int(size))
 }
 

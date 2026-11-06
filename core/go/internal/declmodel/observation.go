@@ -111,14 +111,14 @@ func bindGround(root *Expression, work *budget) error {
 // while primitive records own observation nodes. Proper abstract leaves retain
 // their bound kind but prevent publication of a closed observation.
 type shapeRecord struct {
-	term *kindTerm
-	alias *shapeRecord
-	form string
+	term      *kindTerm
+	alias     *shapeRecord
+	form      string
 	selectors []kindmodel.Selector
-	children []*shapeRecord
-	id kindmodel.ObsID
-	node bool
-	resolved *shapeRecord
+	children  []*shapeRecord
+	id        kindmodel.ObsID
+	node      bool
+	resolved  *shapeRecord
 	resolving bool
 }
 

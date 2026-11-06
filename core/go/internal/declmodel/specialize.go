@@ -157,7 +157,7 @@ func (s *admissionScope) semantic(value *semanticValue, depth int) error {
 		return err
 	}
 	if value.env != nil {
-		if err := s.record(depth+1); err != nil {
+		if err := s.record(depth + 1); err != nil {
 			return err
 		}
 		for _, binding := range value.env.bindings {

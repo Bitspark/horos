@@ -81,7 +81,7 @@ func Includes(left, right *Kind, b Budget) (bool, error) {
 }
 
 type prefixSummary struct {
-	left int
+	left  int
 	right []int
 }
 

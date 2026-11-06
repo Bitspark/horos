@@ -11,7 +11,7 @@ func Compile(schema Schema, definition Definition, b Budget) (*Kind, error) {
 	}
 	k := &Kind{
 		schema: Schema{Forms: make([]Form, len(schema.Forms))},
-		forms: make(map[string]int, len(schema.Forms)),
+		forms:  make(map[string]int, len(schema.Forms)),
 	}
 	for i, form := range schema.Forms {
 		if err := step(b); err != nil {
@@ -72,8 +72,8 @@ func Compile(schema Schema, definition Definition, b Budget) (*Kind, error) {
 		return nil, err
 	}
 	k.definition = Definition{
-		Root: definition.Root,
-		States: make([]State, len(definition.States)),
+		Root:      definition.Root,
+		States:    make([]State, len(definition.States)),
 		Sequences: make([]Sequence, len(definition.Sequences)),
 	}
 	for i, state := range definition.States {
