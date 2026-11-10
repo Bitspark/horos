@@ -7,7 +7,7 @@ whether a descriptor is well formed and whether a value conforms to it. Go, Rust
 and TypeScript implementations share one conformance corpus. A source-only Python
 implementation supplies an additional validation lane.
 
-The model covers atoms, scalar embeddings, tuples, labelled compounds, lists,
+The model covers atoms, scalar embeddings, integer bounds, tuples, labelled compounds, lists,
 sets, maps, open or closed records, unions, intersections, complements and guarded
 recursive descriptors. Required fields and optional fields have distinct meanings.
 Value identity and encoding remain ontos's.
