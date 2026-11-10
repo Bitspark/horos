@@ -208,12 +208,12 @@ func TestTheProfileAndTheLimitAreStated(t *testing.T) {
 	if LimitRecursionDepth.Value() != MaxRecursionDepth {
 		t.Errorf("limit value %d", LimitRecursionDepth.Value())
 	}
-	for _, d := range []Diagnosis{conformsD, mismatchD, notWellFormed} {
+	for _, d := range []Diagnosis{{Verdict: VerdictConforms}, {Verdict: VerdictMismatch}, {Verdict: VerdictNotWellFormed}} {
 		if !d.IsComplete() {
 			t.Errorf("%v should be complete", d)
 		}
 	}
-	ex := exhaustedD(LimitRecursionDepth)
+	ex := Diagnosis{Verdict: VerdictExhausted, Limit: LimitRecursionDepth}
 	if ex.IsComplete() {
 		t.Errorf("exhausted should not be complete")
 	}

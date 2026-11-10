@@ -1,0 +1,4749 @@
+{
+  "cases": [
+    {
+      "descriptor": "0104000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400046e616d6500037265710102000c686f726f732f7363616c61720009757466382d746578740104000b686f726f732f6669656c6401020009757466382d74657874000361676500036f70740102000c686f726f732f7363616c61720003696e74",
+      "name": "record-closed-fields",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "name present",
+          "value": "010200036d6170010201020009757466382d7465787400046e616d6501020009757466382d746578740003416461"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "field": "name",
+              "path": [],
+              "reason": "missing-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "required name missing",
+          "value": "010100036d6170"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "field": "zip",
+              "path": [],
+              "reason": "extra-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "extra key in a closed record",
+          "value": "010300036d6170010201020009757466382d7465787400037a697001020003696e7400020001010201020009757466382d7465787400046e616d6501020009757466382d746578740003416461"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "field": "name",
+              "path": [],
+              "reason": "missing-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "missing before extra",
+          "value": "010200036d6170010201020009757466382d7465787400037a697001020003696e7400020001"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3
+              ],
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "name"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "name is not text",
+          "value": "010200036d6170010201020009757466382d7465787400046e616d6501020003696e7400020005"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "field": "name",
+              "path": [],
+              "reason": "missing-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "missing before a bad present field",
+          "value": "010200036d6170010201020009757466382d74657874000361676501020009757466382d74657874000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                3,
+                3
+              ],
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "age"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "children in descriptor order",
+          "value": "010300036d6170010201020009757466382d74657874000361676501020009757466382d74657874000178010201020009757466382d7465787400046e616d6501020009757466382d746578740003416461"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "not a map",
+          "value": "000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "key"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "first non-text key",
+          "value": "010300036d6170010201020003696e740002000101020009757466382d74657874000178010201020009757466382d7465787400046e616d6501020009757466382d746578740003416461"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000c686f726f732f7265636f726400046f70656e0104000b686f726f732f6669656c6401020009757466382d7465787400056974656d7300037265710102000d686f726f732f6c6973742d6f660103000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d746578740002696400037265710102000c686f726f732f7363616c61720003696e74",
+      "name": "record-nested-list",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "open record ignores an extra key",
+          "value": "010300036d6170010201020009757466382d746578740005657874726101020004626f6f6c000101010201020009757466382d7465787400056974656d73010200046c697374010200036d6170010201020009757466382d746578740002696401020003696e7400020001"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3,
+                1,
+                2,
+                3
+              ],
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "items"
+                },
+                {
+                  "index": 1,
+                  "kind": "elem"
+                },
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "second element's id is not an int",
+          "value": "010300036d6170010201020009757466382d746578740005657874726101020004626f6f6c000101010201020009757466382d7465787400056974656d73010300046c697374010200036d6170010201020009757466382d746578740002696401020003696e7400020001010200036d6170010201020009757466382d746578740002696401020009757466382d74657874000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3,
+                1
+              ],
+              "field": "x",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "items"
+                },
+                {
+                  "index": 0,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "extra-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "inner closed record has an extra key",
+          "value": "010200036d6170010201020009757466382d7465787400056974656d73010200046c697374010300036d6170010201020009757466382d7465787400017801020003696e7400020002010201020009757466382d746578740002696401020003696e7400020001"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3,
+                1
+              ],
+              "field": "id",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "items"
+                },
+                {
+                  "index": 0,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "missing-field"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "inner record misses id",
+          "value": "010200036d6170010201020009757466382d7465787400056974656d73010200046c697374010100036d6170"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3
+              ],
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "items"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "items is not a list",
+          "value": "010200036d6170010201020009757466382d7465787400056974656d7301020009757466382d7465787400046e6f7065"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f660102000c686f726f732f7363616c61720009757466382d746578740102000c686f726f732f7363616c61720003696e74",
+      "name": "map-key-versus-value",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "empty map",
+          "value": "010100036d6170"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "value"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "second value is not an int",
+          "value": "010300036d6170010201020009757466382d7465787400016101020003696e7400020001010201020009757466382d7465787400016201020009757466382d74657874000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "key"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "key is not text",
+          "value": "010200036d6170010201020003696e740002000101020003696e7400020001"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "value"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "an earlier value before a later key",
+          "value": "010300036d6170010201020009757466382d7465787400016101020009757466382d746578740001780102010300016100016200016301020003696e7400020001"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "not a map",
+          "value": "010100046c697374"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e740101000a686f726f732f61746f6d",
+      "name": "tuple-items",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "second item is not an atom",
+          "value": "010201020003696e740002000101020009757466382d74657874000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "first failing item wins",
+          "value": "010200017801020003696e7400020005"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "wrong arity",
+          "value": "010101020003696e7400020001"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f7365710102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "seq-items",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "second item is not a bool",
+          "value": "010201020004626f6f6c00010101020003696e7400020001"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0104000e686f726f732f636f6d706f756e64000270740102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720003696e74",
+      "name": "compound-children",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                3
+              ],
+              "path": [
+                {
+                  "index": 2,
+                  "kind": "item"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "label is item 0, so y is item 2",
+          "value": "01030002707401020003696e740002000101020009757466382d74657874000178"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "different label",
+          "value": "01030002707101020003696e740002000101020003696e7400020002"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720003696e74",
+      "name": "list-elements",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 2,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "third element is the first failure",
+          "value": "010500046c69737401020003696e740002000101020003696e740002000201020009757466382d7465787400017801020009757466382d74657874000179"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000c686f726f732f7365742d6f660103000e686f726f732f61746f6d2d6c656e01020003696e740002000101020003696e7400020001",
+      "name": "set-elements",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "canonical order puts the long atom second",
+          "value": "0103000373657400016100026262"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000b686f726f732f657861637401020003696e7400020007",
+      "name": "exact-literal",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "different int",
+          "value": "01020003696e7400020008"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "same int",
+          "value": "01020003696e7400020007"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "union-no-alternative",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "no alternative descends",
+          "value": "000178"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "an alternative conforms",
+          "value": "01020004626f6f6c000100"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0101000b686f726f732f756e696f6e",
+      "name": "union-empty",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "bottom",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e740102000c686f726f732f7363616c61720003696e740102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720003696e74",
+      "name": "union-deepest-alternative",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "the list alternative descends further",
+          "value": "010300046c69737401020003696e740002000101020009757466382d74657874000178"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720003696e740102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "union-equal-depth-takes-first",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1,
+                1
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "both fail at element 0",
+          "value": "010200046c69737401020009757466382d74657874000178"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400036e696c0104000e686f726f732f636f6d706f756e640004636f6e730102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c",
+      "name": "rec-cons-list",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "empty",
+          "value": "00036e696c"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "two ints",
+          "value": "01030004636f6e7301020003696e740002000101030004636f6e7301020003696e740002000200036e696c"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 2,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "second head is not an int",
+          "value": "01030004636f6e7301020003696e740002000101030004636f6e7301020009757466382d7465787400017800036e696c"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 2,
+                  "kind": "item"
+                },
+                {
+                  "index": 2,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "bad tail: the union at that depth names itself",
+          "value": "01030004636f6e7301020003696e740002000101030004636f6e7301020003696e74000200020003656e64"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01040009686f726f732f616e640101000a686f726f732f61746f6d0103000e686f726f732f61746f6d2d6c656e01020003696e740002000101020003696e740002000201020009686f726f732f6e6f7401020010686f726f732f61746f6d2d657861637400026e6f",
+      "name": "and-first-conjunct",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "accepted",
+          "value": "00026f6b"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "too long",
+          "value": "0003616263"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                3
+              ],
+              "path": [],
+              "reason": "complement"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "excluded by the complement",
+          "value": "00026e6f"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "not an atom: the first conjunct",
+          "value": "01020009757466382d74657874000178"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f740102000c686f726f732f7363616c61720003696e74",
+      "name": "not-complement",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "complement"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "an int",
+          "value": "01020003696e7400020005"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "an atom",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f7401020009686f726f732f6e6f740102000c686f726f732f7363616c61720003696e74",
+      "name": "not-not",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "complement"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "an atom",
+          "value": "000178"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "an int",
+          "value": "01020003696e7400020005"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f6601020009686f726f732f6e6f740102000c686f726f732f7363616c61720003696e74",
+      "name": "list-of-not",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "complement"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "an int element",
+          "value": "010200046c69737401020003696e7400020001"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400025b5d0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c",
+      "name": "exhausted-cons-list",
+      "values": [
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "170 cells complete",
+          "value": "010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e740002000100025b5d"
+        },
+        {
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                2,
+                2,
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "171 cells reach the bound at the head",
+          "value": "010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e740002000100025b5d"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e01030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400025b5d0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c0102000c686f726f732f7363616c61720003696e74",
+      "name": "exhausted-union-sibling-mismatch",
+      "values": [
+        {
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                1,
+                2,
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "the exhausted alternative decides",
+          "value": "010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e740002000100025b5d"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f7401030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400025b5d0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c",
+      "name": "exhausted-complement",
+      "values": [
+        {
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                1,
+                2,
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "not preserves the inner exhaustion",
+          "value": "010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e740002000100025b5d"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f616e6401030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400025b5d0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c0102000c686f726f732f7363616c61720003696e74",
+      "name": "and-mismatch-beats-exhausted",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "the decisive conjunct",
+          "value": "010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e7400020001010201020003696e740002000100025b5d"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e740002000501020003696e7400020001",
+      "name": "wf-atom-len-lo-gt-hi",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 2,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 2,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000e686f726f732f61746f6d2d6c656e01020003696e740002010101020003696e7400020001",
+      "name": "wf-atom-len-negative-lo",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000e686f726f732f746578742d6c656e01020003696e7400020001000178",
+      "name": "wf-text-len-hi-not-int",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 2,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 2,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01020010686f726f732f61746f6d2d657861637401020003696e7400020001",
+      "name": "wf-atom-exact-not-atom",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f616e79000178",
+      "name": "wf-any-arity",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "arity"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "arity"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01010009686f726f732f736571",
+      "name": "wf-seq-arity",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "arity"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "arity"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0101000c686f726f732f7265636f7264",
+      "name": "wf-record-arity",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "arity"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "arity"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0102000c686f726f732f7265636f726400067365616c6564",
+      "name": "wf-record-mode",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000c686f726f732f7265636f726400046f70656e000178",
+      "name": "wf-record-field-form",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 2,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 2,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400016100037265710102000c686f726f732f7363616c61720003696e740104000b686f726f732f6669656c6401020009757466382d7465787400016100036f70740102000c686f726f732f7363616c61720004626f6f6c",
+      "name": "wf-duplicate-field",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 3,
+              "at": [],
+              "path": [],
+              "reason": "duplicate-field"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 3,
+          "at": [],
+          "path": [],
+          "reason": "duplicate-field"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d7465787400016100037265710102000c686f726f732f7363616c61720005666c6f61740104000b686f726f732f6669656c6401020009757466382d7465787400016100037265710102000c686f726f732f7363616c61720003696e74",
+      "name": "wf-duplicate-before-child",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 3,
+              "at": [],
+              "path": [],
+              "reason": "duplicate-field"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 3,
+          "at": [],
+          "path": [],
+          "reason": "duplicate-field"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0102000e686f726f732f636f6d706f756e6401020009757466382d7465787400027074",
+      "name": "wf-compound-label",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "000178",
+      "name": "wf-not-a-descriptor",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "not-descriptor"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "not-descriptor"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0104000b686f726f732f6669656c6401020009757466382d74657874000161000372657101010009686f726f732f616e79",
+      "name": "wf-field-is-not-a-descriptor",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "unknown-constructor"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "unknown-constructor"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0101000a686f726f732f61746f6d000767617262616765",
+      "name": "wf-union-garbage-alternative",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "not-descriptor"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [
+            2
+          ],
+          "path": [],
+          "reason": "not-descriptor"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f756e696f6e0102000c686f726f732f7363616c61720003696e740101000a686f726f732f66726f62",
+      "name": "wf-union-unknown-constructor",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "unknown-constructor"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [
+            2
+          ],
+          "path": [],
+          "reason": "unknown-constructor"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000c686f726f732f7363616c61720005666c6f6174",
+      "name": "wf-list-of-scalar-kind",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                1
+              ],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            1
+          ],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720005666c6f6174000178",
+      "name": "wf-tuple-first-child",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                1
+              ],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            1
+          ],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000c686f726f732f6d61702d6f6601010009686f726f732f616e790103000c686f726f732f7265636f726400046f70656e0104000b686f726f732f6669656c6401020009757466382d7465787400016b00056d6179626501010009686f726f732f616e79",
+      "name": "wf-map-value-field-flag",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 2,
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 2,
+          "at": [
+            2
+          ],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01020009686f726f732f72656600014c",
+      "name": "wf-unbound-ref",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "unbound-ref"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "unbound-ref"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014c0102000b686f726f732f7475706c6501020009686f726f732f72656600014d",
+      "name": "wf-unbound-inner-ref",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                2,
+                1
+              ],
+              "path": [],
+              "reason": "unbound-ref"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            2,
+            1
+          ],
+          "path": [],
+          "reason": "unbound-ref"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014c01020009686f726f732f72656600014c",
+      "name": "wf-unguarded-ref",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "unguarded-ref"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            2
+          ],
+          "path": [],
+          "reason": "unguarded-ref"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0104000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d74657874000161000372657101020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401010009686f726f732f616e79000178",
+      "name": "wf-own-form-beats-exhausted-child",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 3,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 3,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000b686f726f732f7475706c6501020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401020009686f726f732f6e6f7401010009686f726f732f616e79000178",
+      "name": "wf-exhausted-beats-malformed-sibling",
+      "values": [
+        {
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1
+              ],
+              "path": [],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "diagnose stops at the gate",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "limit": "recursion_depth",
+        "location": {
+          "at": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "path": [],
+          "reason": "limit"
+        },
+        "verdict": "exhausted"
+      }
+    }
+  ],
+  "note": "Hand-authored diagnostic locations (ADR 0009). `descriptor` and `value` are ontos-codec-v1 lowercase hex; `wf` is the expected diagnoseWf result and each `diagnosis` the expected diagnose result, in the JSON form of docs/spec/horos.md#diagnostic-locations, written from the specification. Generated inputs only: vectors/diagnose.py encodes them.",
+  "version": "horos-diagnose-v1"
+}

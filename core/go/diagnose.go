@@ -64,15 +64,10 @@ type Diagnosis struct {
 	Verdict Verdict
 	// Limit is set iff Verdict is VerdictExhausted.
 	Limit Limit
+	// Location names where the check failed (ADR 0009). It is nil iff Verdict is
+	// VerdictConforms. It never changes the verdict.
+	Location *Location
 }
-
-var (
-	conformsD     = Diagnosis{Verdict: VerdictConforms}
-	mismatchD     = Diagnosis{Verdict: VerdictMismatch}
-	notWellFormed = Diagnosis{Verdict: VerdictNotWellFormed}
-)
-
-func exhaustedD(l Limit) Diagnosis { return Diagnosis{Verdict: VerdictExhausted, Limit: l} }
 
 // IsComplete reports whether this outcome is a completed decision.
 func (d Diagnosis) IsComplete() bool { return d.Verdict != VerdictExhausted }
@@ -109,94 +104,84 @@ func CheckingProfile() Profile {
 	}
 }
 
-// ----- the Kleene folds (ADR 0008 D2/D3) -----
+// ----- internal outcomes: a verdict with its unmaterialized location -----
 
-// kleeneNot swaps the completed verdicts and PRESERVES exhaustion. It never completes an
-// incomplete subdecision — the rule this file exists for.
-func kleeneNot(inner Diagnosis) Diagnosis {
-	switch inner.Verdict {
-	case VerdictConforms:
-		return mismatchD
+type outcome struct {
+	verdict Verdict
+	limit   Limit
+	f       *fault
+}
+
+var conformsO = outcome{verdict: VerdictConforms}
+
+func failAt(verdict Verdict, path *pathNode, at *posNode, reason Reason) outcome {
+	return outcome{verdict: verdict, f: &fault{path: path, at: at, reason: reason}}
+}
+
+func exhaustedAt(path *pathNode, at *posNode) outcome {
+	return outcome{verdict: VerdictExhausted, limit: LimitRecursionDepth, f: &fault{path: path, at: at, reason: ReasonLimit}}
+}
+
+func (o outcome) diagnosis() Diagnosis {
+	d := Diagnosis{Verdict: o.verdict, Limit: o.limit}
+	if o.f != nil {
+		d.Location = o.f.location()
+	}
+	return d
+}
+
+// ----- the Kleene folds (ADR 0008 D2/D3), each keeping the first deciding location -----
+
+// allOf is conjunction: the first mismatch is decisive; otherwise the first exhaustion,
+// then the first malformed outcome. Order of evaluation never changes the verdict.
+type allOf struct {
+	exhausted, notWF *outcome
+}
+
+// add records o and reports whether it decides the conjunction (a mismatch).
+func (a *allOf) add(o outcome) bool {
+	switch o.verdict {
 	case VerdictMismatch:
-		return conformsD
-	default:
-		// NotWellFormed cannot arise below the entry wf gate; Exhausted is preserved.
-		return inner
-	}
-}
-
-// kleeneAny is disjunction: a decisive Conforms wins over an exhausted sibling.
-func kleeneAny(outcomes []Diagnosis) Diagnosis {
-	exhausted := LimitNone
-	notWF := false
-	for _, o := range outcomes {
-		switch o.Verdict {
-		case VerdictConforms:
-			return conformsD // decisive — stop here
-		case VerdictMismatch:
-		case VerdictNotWellFormed:
-			notWF = true
-		case VerdictExhausted:
-			if exhausted == LimitNone {
-				exhausted = o.Limit
-			}
+		return true
+	case VerdictExhausted:
+		if a.exhausted == nil {
+			a.exhausted = &o
+		}
+	case VerdictNotWellFormed:
+		if a.notWF == nil {
+			a.notWF = &o
 		}
 	}
-	if exhausted != LimitNone {
-		return exhaustedD(exhausted)
-	}
-	if notWF {
-		return notWellFormed
-	}
-	return mismatchD
+	return false
 }
 
-// kleeneAll is conjunction: a decisive Mismatch wins over an exhausted sibling.
-func kleeneAll(outcomes []Diagnosis) Diagnosis {
-	exhausted := LimitNone
-	notWF := false
-	for _, o := range outcomes {
-		switch o.Verdict {
-		case VerdictMismatch:
-			return mismatchD // decisive — stop here
-		case VerdictConforms:
-		case VerdictNotWellFormed:
-			notWF = true
-		case VerdictExhausted:
-			if exhausted == LimitNone {
-				exhausted = o.Limit
-			}
-		}
+func (a *allOf) result() outcome {
+	if a.exhausted != nil {
+		return *a.exhausted
 	}
-	if exhausted != LimitNone {
-		return exhaustedD(exhausted)
+	if a.notWF != nil {
+		return *a.notWF
 	}
-	if notWF {
-		return notWellFormed
-	}
-	return conformsD
+	return conformsO
 }
 
 // ----- the public entry points -----
 
 // DiagnoseWF diagnoses wf(T): Conforms when T is a well-formed descriptor, NotWellFormed when
 // it is conclusively not, and Exhausted when the well-formedness traversal itself could not
-// finish — the distinction horos-internal#211 asks for by name.
-func DiagnoseWF(t Value) Diagnosis { return diagnoseWFIn(t, nil, nil, 0) }
+// finish — the distinction horos-internal#211 asks for by name. A non-conforming result names
+// the malformed descriptor's position and, where one is at fault, its argument (ADR 0009).
+func DiagnoseWF(t Value) Diagnosis { return diagnoseWFIn(t, nil, nil, 0, nil).diagnosis() }
 
 // Diagnose diagnoses v : T. Mirrors Conforms: the wf(T) soundness gate runs first (spec §3
 // MUST), so a descriptor that is not well-formed yields NotWellFormed and a descriptor whose
 // well-formedness could not be decided yields Exhausted — neither is reported as a mismatch of
-// the value.
+// the value. A non-conforming result names where the check failed (ADR 0009).
 func Diagnose(v, t Value) Diagnosis {
-	switch w := DiagnoseWF(t); w.Verdict {
-	case VerdictConforms:
-		return diagnoseIn(v, t, nil, nil, 0)
-	case VerdictExhausted:
-		return w
-	default:
-		return notWellFormed
+	if w := diagnoseWFIn(t, nil, nil, 0, nil); w.verdict != VerdictConforms {
+		return w.diagnosis()
 	}
+	return diagnoseIn(v, t, nil, nil, 0, nil, nil).diagnosis()
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -204,12 +189,13 @@ func Diagnose(v, t Value) Diagnosis {
 type diagEnv struct {
 	name []byte
 	body Value
+	at   *posNode
 }
 
-func diagPushEnv(env []diagEnv, name []byte, body Value) []diagEnv {
+func diagPushEnv(env []diagEnv, b diagEnv) []diagEnv {
 	out := make([]diagEnv, len(env), len(env)+1)
 	copy(out, env)
-	return append(out, diagEnv{name: name, body: body})
+	return append(out, b)
 }
 
 func diagPushName(names [][]byte, name []byte) [][]byte {
@@ -227,149 +213,192 @@ func containsName(names [][]byte, name []byte) bool {
 	return false
 }
 
-func lookupEnv(env []diagEnv, name []byte) (Value, bool) {
+func lookupEnv(env []diagEnv, name []byte) (diagEnv, bool) {
 	for i := len(env) - 1; i >= 0; i-- {
 		if string(env[i].name) == string(name) {
-			return env[i].body, true
+			return env[i], true
 		}
 	}
-	return nil, false
+	return diagEnv{}, false
 }
 
-func diagnoseIn(v, t Value, env []diagEnv, pending [][]byte, depth int) Diagnosis {
+func diagnoseIn(v, t Value, env []diagEnv, pending [][]byte, depth int, path *pathNode, at *posNode) outcome {
 	if depth > MaxRecursionDepth {
-		return exhaustedD(LimitRecursionDepth)
+		return exhaustedAt(path, at)
 	}
+	refused := func() outcome { return failAt(VerdictMismatch, path, at, ReasonRefused) }
 	ctor, args, ok := head(t)
 	if !ok {
-		return mismatchD // not a horos descriptor
+		return refused() // not a horos descriptor; unreachable below the wf gate
 	}
 
 	// Leaves never recurse into a value position, so they are always decisive here.
 	if isLeafCtor(ctor) {
 		if leafClassifies(v, t) {
-			return conformsD
+			return conformsO
 		}
-		return mismatchD
+		return refused()
 	}
 
 	switch ctor {
 	// Composition on the SAME v — pending threads through unchanged.
 	case "union":
-		outs := make([]Diagnosis, 0, len(args))
-		for _, ct := range args {
-			outs = append(outs, diagnoseIn(v, ct, env, pending, depth+1))
+		// A conforming alternative is decisive; otherwise the first exhaustion. A mismatch
+		// reports the first alternative that descended furthest, else the union itself.
+		var exhausted *outcome
+		var deepest *fault
+		for i, ct := range args {
+			o := diagnoseIn(v, ct, env, pending, depth+1, path, at.push(i+1))
+			switch o.verdict {
+			case VerdictConforms:
+				return conformsO
+			case VerdictExhausted:
+				if exhausted == nil {
+					exhausted = &o
+				}
+			case VerdictMismatch:
+				if deepest == nil || o.f.path.len() > deepest.path.len() {
+					deepest = o.f
+				}
+			}
 		}
-		return kleeneAny(outs)
+		if exhausted != nil {
+			return *exhausted
+		}
+		if deepest == nil || deepest.path.len() <= path.len() {
+			return failAt(VerdictMismatch, path, at, ReasonNoAlternative)
+		}
+		return outcome{verdict: VerdictMismatch, f: deepest}
 	case "and":
-		outs := make([]Diagnosis, 0, len(args))
-		for _, ct := range args {
-			outs = append(outs, diagnoseIn(v, ct, env, pending, depth+1))
+		var all allOf
+		for i, ct := range args {
+			if o := diagnoseIn(v, ct, env, pending, depth+1, path, at.push(i+1)); all.add(o) {
+				return o
+			}
 		}
-		return kleeneAll(outs)
+		return all.result()
 	case "not":
 		if len(args) != 1 {
-			return mismatchD
+			return refused()
 		}
-		return kleeneNot(diagnoseIn(v, args[0], env, pending, depth+1))
+		switch o := diagnoseIn(v, args[0], env, pending, depth+1, path, at.push(1)); o.verdict {
+		case VerdictConforms:
+			return failAt(VerdictMismatch, path, at, ReasonComplement)
+		case VerdictMismatch:
+			return conformsO
+		default:
+			// NotWellFormed cannot arise below the entry wf gate; Exhausted is preserved.
+			return o
+		}
 
-	// Recursion — mirrors the recognizer's guard exactly.
+	// Recursion — mirrors the recognizer's guard exactly. A ref continues at its rec body's
+	// position, so a location is always a node of the written descriptor.
 	case "rec":
 		if len(args) != 2 {
-			return mismatchD
+			return refused()
 		}
 		nb, okn := atomBytes(args[0])
 		if !okn {
-			return mismatchD
+			return refused()
 		}
-		return diagnoseIn(v, args[1], diagPushEnv(env, nb, args[1]), diagPushName(pending, nb), depth+1)
+		bodyAt := at.push(2)
+		return diagnoseIn(v, args[1], diagPushEnv(env, diagEnv{name: nb, body: args[1], at: bodyAt}), diagPushName(pending, nb), depth+1, path, bodyAt)
 	case "ref":
 		if len(args) != 1 {
-			return mismatchD
+			return refused()
 		}
 		nb, okn := atomBytes(args[0])
-		if !okn {
-			return mismatchD
+		if !okn || containsName(pending, nb) {
+			return refused() // unguarded — the recognizer's false
 		}
-		if containsName(pending, nb) {
-			return mismatchD // unguarded — the recognizer's false
-		}
-		body, found := lookupEnv(env, nb)
+		b, found := lookupEnv(env, nb)
 		if !found {
-			return mismatchD // unbound
+			return refused() // unbound
 		}
-		return diagnoseIn(v, body, env, diagPushName(pending, nb), depth+1)
+		return diagnoseIn(v, b.body, env, diagPushName(pending, nb), depth+1, path, b.at)
 	}
 
 	// Structural arms: the gate is decisive, and a descent into a CHILD VALUE clears pending.
-	children, gateOK := structuralChildren(v, ctor, args)
-	if !gateOK {
-		return mismatchD
+	children, gate := structuralChildren(v, ctor, args)
+	if gate != nil {
+		f := &fault{path: path, at: at, reason: gate.reason, field: gate.field}
+		if gate.key >= 0 {
+			f.path = path.push(Step{Kind: StepKey, Index: gate.key})
+		}
+		return outcome{verdict: VerdictMismatch, f: f}
 	}
-	outs := make([]Diagnosis, 0, len(children))
+	var all allOf
 	for _, c := range children {
-		outs = append(outs, diagnoseIn(c[0], c[1], env, nil, depth+1))
+		if o := diagnoseIn(c.v, c.t, env, nil, depth+1, path.push(c.step), at.push(c.at...)); all.add(o) {
+			return o
+		}
 	}
-	return kleeneAll(outs)
+	return all.result()
 }
 
+// child is one sub-judgment of a structural arm: the child value, its descriptor, the path
+// step to the value and the item indices from the arm's descriptor to the child descriptor.
+type child struct {
+	v, t Value
+	step Step
+	at   []int
+}
+
+// gateFailure is a structural arm's own refusal. key is the entry index of a record key that
+// is not text, or -1.
+type gateFailure struct {
+	reason Reason
+	field  string
+	key    int
+}
+
+var gateRefused = &gateFailure{reason: ReasonRefused, key: -1}
+
 // structuralChildren is the structural gate plus the ordered child sub-judgments, for the arms
-// that descend into a child VALUE. Mirrors the recognizer's recursive arms; ok=false means the
-// gate failed, so v cannot conform regardless of any child.
-func structuralChildren(v Value, ctor string, args []Value) (children [][2]Value, ok bool) {
+// that descend into a child VALUE. Mirrors the recognizer's recursive arms; a non-nil
+// gateFailure means v cannot conform regardless of any child.
+func structuralChildren(v Value, ctor string, args []Value) ([]child, *gateFailure) {
+	var children []child
 	switch ctor {
 	case "tuple":
 		tv, isTup := v.(core.Tuple)
-		if !isTup {
-			return nil, false
-		}
-		tup := tv.Items()
-		if len(tup) != len(args) {
-			return nil, false
+		if !isTup || len(tv.Items()) != len(args) {
+			return nil, gateRefused
 		}
 		for i, ct := range args {
-			children = append(children, [2]Value{tup[i], ct})
+			children = append(children, child{tv.Items()[i], ct, Step{Kind: StepItem, Index: i}, []int{i + 1}})
 		}
-		return children, true
+		return children, nil
 	case "seq":
-		if len(args) != 1 {
-			return nil, false
-		}
 		tv, isTup := v.(core.Tuple)
-		if !isTup {
-			return nil, false
+		if len(args) != 1 || !isTup {
+			return nil, gateRefused
 		}
-		for _, c := range tv.Items() {
-			children = append(children, [2]Value{c, args[0]})
+		for i, c := range tv.Items() {
+			children = append(children, child{c, args[0], Step{Kind: StepItem, Index: i}, []int{1}})
 		}
-		return children, true
+		return children, nil
 	case "compound":
 		if len(args) < 1 {
-			return nil, false
+			return nil, gateRefused
 		}
 		lb, okl := atomBytes(args[0])
-		if !okl {
-			return nil, false
-		}
 		tv, isTup := v.(core.Tuple)
-		if !isTup {
-			return nil, false
+		if !okl || !isTup || len(tv.Items()) != len(args) {
+			return nil, gateRefused
 		}
 		tup := tv.Items()
-		if len(tup) != len(args) {
-			return nil, false
-		}
 		hb, okh := atomBytes(tup[0])
 		if !okh || string(hb) != string(lb) {
-			return nil, false
+			return nil, gateRefused
 		}
-		for i, ct := range args[1:] {
-			children = append(children, [2]Value{tup[i+1], ct})
+		for j := 1; j < len(tup); j++ {
+			children = append(children, child{tup[j], args[j], Step{Kind: StepItem, Index: j}, []int{j + 1}})
 		}
-		return children, true
+		return children, nil
 	case "list-of", "set-of":
 		if len(args) != 1 {
-			return nil, false
+			return nil, gateRefused
 		}
 		var elems []Value
 		var err error
@@ -379,181 +408,249 @@ func structuralChildren(v Value, ctor string, args []Value) (children [][2]Value
 			elems, err = data.ReadSet(v)
 		}
 		if err != nil {
-			return nil, false
+			return nil, gateRefused
 		}
-		for _, e := range elems {
-			children = append(children, [2]Value{e, args[0]})
+		for i, e := range elems {
+			children = append(children, child{e, args[0], Step{Kind: StepElem, Index: i}, []int{1}})
 		}
-		return children, true
+		return children, nil
 	case "map-of":
 		if len(args) != 2 {
-			return nil, false
+			return nil, gateRefused
 		}
 		entries, err := data.ReadMap(v)
 		if err != nil {
-			return nil, false
+			return nil, gateRefused
 		}
-		for _, kv := range entries {
-			children = append(children, [2]Value{kv[0], args[0]})
-			children = append(children, [2]Value{kv[1], args[1]})
+		for i, kv := range entries {
+			children = append(children,
+				child{kv[0], args[0], Step{Kind: StepKey, Index: i}, []int{1}},
+				child{kv[1], args[1], Step{Kind: StepValue, Index: i}, []int{2}})
 		}
-		return children, true
+		return children, nil
 	case "record":
 		if len(args) < 1 {
-			return nil, false
+			return nil, gateRefused
 		}
 		return recordChildren(v, args[0], args[1:])
 	}
-	return nil, false
+	return nil, gateRefused
 }
 
-// recordChildren mirrors conformsRecord's gate and present-field worklist.
-func recordChildren(v, mode Value, fields []Value) (children [][2]Value, ok bool) {
+// recordChildren mirrors conformsRecord's gate and present-field worklist, checking in the
+// contract's order: a canonical map, text keys, missing required fields in descriptor order,
+// extra keys of a closed record in canonical order, then the present declared fields.
+func recordChildren(v, mode Value, fields []Value) ([]child, *gateFailure) {
 	mb, okm := atomBytes(mode)
-	if !okm {
-		return nil, false
+	if !okm || (string(mb) != "closed" && string(mb) != "open") {
+		return nil, gateRefused
 	}
-	var closed bool
-	switch string(mb) {
-	case "closed":
-		closed = true
-	case "open":
-		closed = false
-	default:
-		return nil, false
-	}
+	closed := string(mb) == "closed"
 	entries, err := data.ReadMap(v)
 	if err != nil {
-		return nil, false
+		return nil, gateRefused
 	}
+	keys := make([]string, len(entries))
 	keyed := make(map[string]Value, len(entries))
-	for _, kv := range entries {
+	for i, kv := range entries {
 		k, errK := data.ReadText(kv[0])
 		if errK != nil {
-			return nil, false
+			return nil, &gateFailure{reason: ReasonRefused, key: i}
 		}
+		keys[i] = k
 		keyed[k] = kv[1]
 	}
-	declared := make(map[string]bool, len(fields))
-	for _, f := range fields {
+	type declaredField struct {
+		name string
+		ty   Value
+		item int
+	}
+	declared := make([]declaredField, 0, len(fields))
+	names := make(map[string]bool, len(fields))
+	for i, f := range fields {
 		name, required, ty, okf := readField(f)
 		if !okf {
-			return nil, false
+			return nil, gateRefused
 		}
-		declared[name] = true
-		val, present := keyed[name]
-		if !present {
-			if required {
-				return nil, false // a missing required field is decisive
-			}
-			continue
+		names[name] = true
+		if _, present := keyed[name]; !present && required {
+			return nil, &gateFailure{reason: ReasonMissingField, field: name, key: -1}
 		}
-		children = append(children, [2]Value{val, ty})
+		declared = append(declared, declaredField{name, ty, i + 2})
 	}
 	if closed {
-		for k := range keyed {
-			if !declared[k] {
-				return nil, false // an extra key in a closed record is decisive
+		for _, k := range keys {
+			if !names[k] {
+				return nil, &gateFailure{reason: ReasonExtraField, field: k, key: -1}
 			}
 		}
 	}
-	return children, true
+	var children []child
+	for _, f := range declared {
+		if val, present := keyed[f.name]; present {
+			children = append(children, child{val, f.ty, Step{Kind: StepField, Name: f.name}, []int{f.item, 3}})
+		}
+	}
+	return children, nil
 }
 
-func diagnoseWFIn(t Value, bound, pending [][]byte, depth int) Diagnosis {
+// ----- well-formedness: own form first, then child descriptors in item order -----
+
+func isDescriptorCtor(ctor string) bool {
+	switch ctor {
+	case "tuple", "seq", "compound", "list-of", "set-of", "map-of", "record", "union", "and", "not", "rec", "ref":
+		return true
+	}
+	return isLeafCtor(ctor)
+}
+
+// leafFault names the first fault of a leaf descriptor that leafWellFormed rejects: the
+// arity, then each argument in item order against the arguments before it.
+func leafFault(ctor string, args []Value) (Reason, int) {
+	arity := map[string]int{"any": 0, "atom": 0, "key-grammar": 0, "text-non-blank": 0, "lowercase-uuid": 0,
+		"atom-exact": 1, "atom-in": 1, "scalar": 1, "exact": 1, "atom-len": 2, "text-len": 2}[ctor]
+	if len(args) != arity {
+		return ReasonArity, 0
+	}
+	switch ctor {
+	case "atom-exact":
+		if _, ok := args[0].(core.Atom); !ok {
+			return ReasonArgument, 1
+		}
+	case "atom-in":
+		elems, err := data.ReadSet(args[0])
+		if err != nil {
+			return ReasonArgument, 1
+		}
+		for _, e := range elems {
+			if _, ok := e.(core.Atom); !ok {
+				return ReasonArgument, 1
+			}
+		}
+	case "scalar":
+		k, ok := atomBytes(args[0])
+		if !ok || (string(k) != "int" && string(k) != "utf8-text" && string(k) != "bool") {
+			return ReasonArgument, 1
+		}
+	case "atom-len", "text-len":
+		lo, err := data.ReadInt(args[0])
+		if err != nil || !atomLenBoundInRange(lo) || lo.Sign() < 0 {
+			return ReasonArgument, 1
+		}
+		hi, err := data.ReadInt(args[1])
+		if err != nil || !atomLenBoundInRange(hi) || lo.Cmp(hi) > 0 {
+			return ReasonArgument, 2
+		}
+	}
+	// Unreachable while leafFault mirrors leafWellFormed; name the descriptor itself.
+	return ReasonArgument, 0
+}
+
+func diagnoseWFIn(t Value, bound, pending [][]byte, depth int, at *posNode) outcome {
 	if depth > MaxRecursionDepth {
-		return exhaustedD(LimitRecursionDepth)
+		return exhaustedAt(nil, at)
+	}
+	malformed := func(reason Reason, arg int) outcome {
+		return outcome{verdict: VerdictNotWellFormed, f: &fault{at: at, reason: reason, arg: arg}}
 	}
 	ctor, args, ok := head(t)
 	if !ok {
-		return notWellFormed
+		return malformed(ReasonNotDescriptor, 0)
+	}
+	if !isDescriptorCtor(ctor) {
+		return malformed(ReasonUnknownConstructor, 0)
 	}
 	if isLeafCtor(ctor) {
 		if leafWellFormed(t) {
-			return conformsD
+			return conformsO
 		}
-		return notWellFormed
+		return malformed(leafFault(ctor, args))
 	}
-	wfAll := func(ts []Value, pending [][]byte) Diagnosis {
-		outs := make([]Diagnosis, 0, len(ts))
-		for _, ct := range ts {
-			outs = append(outs, diagnoseWFIn(ct, bound, pending, depth+1))
+	// children are judged in item order once the own form holds; exhaustion among them takes
+	// precedence over a malformed sibling (ADR 0008).
+	wfChildren := func(first int, ts []Value, pending [][]byte) outcome {
+		var all allOf
+		for i, ct := range ts {
+			all.add(diagnoseWFIn(ct, bound, pending, depth+1, at.push(first+i)))
 		}
-		return kleeneAll(outs)
+		return all.result()
 	}
 	switch ctor {
 	case "tuple":
-		return wfAll(args, nil)
-	case "seq":
+		return wfChildren(1, args, nil)
+	case "seq", "list-of", "set-of":
 		if len(args) != 1 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
-		return diagnoseWFIn(args[0], bound, nil, depth+1)
+		return wfChildren(1, args, nil)
 	case "compound":
 		if len(args) < 1 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
 		if _, okl := atomBytes(args[0]); !okl {
-			return notWellFormed
+			return malformed(ReasonArgument, 1)
 		}
-		return wfAll(args[1:], nil)
-	case "list-of", "set-of":
-		if len(args) != 1 {
-			return notWellFormed
-		}
-		return diagnoseWFIn(args[0], bound, nil, depth+1)
+		return wfChildren(2, args[1:], nil)
 	case "map-of":
 		if len(args) != 2 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
-		return kleeneAll([]Diagnosis{
-			diagnoseWFIn(args[0], bound, nil, depth+1),
-			diagnoseWFIn(args[1], bound, nil, depth+1),
-		})
+		return wfChildren(1, args, nil)
 	case "union", "and":
-		return wfAll(args, pending)
+		return wfChildren(1, args, pending)
 	case "not":
 		if len(args) != 1 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
-		return diagnoseWFIn(args[0], bound, pending, depth+1)
+		return wfChildren(1, args, pending)
 	case "rec":
 		if len(args) != 2 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
 		name, ok := atomBytes(args[0])
 		if !ok {
-			return notWellFormed
+			return malformed(ReasonArgument, 1)
 		}
-		return diagnoseWFIn(args[1], diagPushName(bound, name), diagPushName(pending, name), depth+1)
+		return diagnoseWFIn(args[1], diagPushName(bound, name), diagPushName(pending, name), depth+1, at.push(2))
 	case "ref":
 		if len(args) != 1 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
 		name, ok := atomBytes(args[0])
-		if ok && containsName(bound, name) && !containsName(pending, name) {
-			return conformsD
+		switch {
+		case !ok:
+			return malformed(ReasonArgument, 1)
+		case !containsName(bound, name):
+			return malformed(ReasonUnboundRef, 1)
+		case containsName(pending, name):
+			return malformed(ReasonUnguardedRef, 1)
 		}
-		return notWellFormed
-	case "record":
+		return conformsO
+	default: // "record"
 		if len(args) < 1 {
-			return notWellFormed
+			return malformed(ReasonArity, 0)
 		}
 		mode, ok := atomBytes(args[0])
 		if !ok || (string(mode) != "open" && string(mode) != "closed") {
-			return notWellFormed
+			return malformed(ReasonArgument, 1)
 		}
 		names := make(map[string]bool)
-		outcomes := make([]Diagnosis, 0, len(args)-1)
-		for _, field := range args[1:] {
+		types := make([]Value, 0, len(args)-1)
+		for i, field := range args[1:] {
 			name, _, ty, ok := readField(field)
-			if !ok || names[name] {
-				return notWellFormed
+			if !ok {
+				return malformed(ReasonArgument, i+2)
+			}
+			if names[name] {
+				return malformed(ReasonDuplicateField, i+2)
 			}
 			names[name] = true
-			outcomes = append(outcomes, diagnoseWFIn(ty, bound, nil, depth+1))
+			types = append(types, ty)
 		}
-		return kleeneAll(outcomes)
+		var all allOf
+		for i, ty := range types {
+			all.add(diagnoseWFIn(ty, bound, nil, depth+1, at.push(i+2, 3)))
+		}
+		return all.result()
 	}
-	return notWellFormed
 }
