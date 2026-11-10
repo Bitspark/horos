@@ -112,7 +112,11 @@ universe containing all admitted Horos observations. Free-shape inclusion is
 sufficient for a Horos guarantee; a failed free-shape comparison need not supply
 an admissible Horos counterexample. `Includes` reports that inconclusive case as
 Unproved; it does not fabricate a realizing descriptor. This is not a general
-parity engine.
+parity engine. Before building automata, a comparison first tries sound
+structural rules: identical kinds, recursive variables as their bodies, and
+union and intersection members. These rules can only establish inclusion; every
+other pair goes to the automaton comparison, so verdicts do not depend on the
+route, and both routes charge the operation's budget.
 
 Constructor reasoning is sound but incomplete. A known constructor retains its
 body and environment: the checker admits a requested input domain against the
