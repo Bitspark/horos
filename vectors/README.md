@@ -23,3 +23,9 @@ which only encodes the inputs. Run `python3 vectors/diagnose.py` with
 `ONTOS_PY_ROOT` set to rewrite the corpus and its Go and Rust package copies;
 the Python lane checks they match the source. Go, Rust and TypeScript replay it,
 and the CLI harness checks the three built command-line tools against it.
+
+`integer-bounds.json` is the hand-authored oracle for `int-min` and `int-max`
+([ADR 0010](../docs/architecture/decisions/0010-integer-bounds.md)), in the
+original oracle's format, since that oracle is pinned byte for byte. Its source is
+`integer-bounds.py`, which encodes the inputs only; run it as `diagnose.py` above.
+All four lanes and the CLI harness replay it.

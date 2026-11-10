@@ -30,6 +30,14 @@ This describes a finite binary tree with integer leaves. Each recursive referenc
 is beneath a compound child and therefore guarded. `rec "x" (ref "x")` is not
 well formed.
 
+```text
+record closed
+  field "count" req (int-min 0)
+```
+
+This describes a record whose count is a non-negative integer of any size.
+`and (int-min 0) (int-max 9)` is a closed range; a bound alone is half-open.
+
 The null singleton is `exact(null())`. An optional nullable text field combines
 presence and membership explicitly: `field "next" opt (union (scalar utf8-text)
 (exact null()))`. This is not a generic pagination declaration; generic binders
