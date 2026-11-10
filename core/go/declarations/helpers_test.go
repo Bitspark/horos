@@ -84,3 +84,37 @@ func expectCode(t *testing.T, err error, code decl.Code) *decl.Error {
 	}
 	return detail
 }
+
+// Kind and declaration constructors of docs/spec/declarations.md §2.
+func properSort() core.Value { return d("sort-proper") }
+func kType() core.Value      { return d("kind-imported", text("k"), text("Type")) }
+func kData() core.Value      { return d("kind-imported", text("k"), text("Data")) }
+func kPrelude(name string, args ...core.Value) core.Value {
+	ref := d("kind-imported", text("k"), text(name))
+	if len(args) == 0 {
+		return ref
+	}
+	return d("kind-apply", ref, list(args...))
+}
+func kLocal(name string) core.Value { return d("kind-local", text(name)) }
+func kOr(kinds ...core.Value) core.Value {
+	return d("or", properSort(), list(kinds...))
+}
+func kArrow(result core.Value, inputs ...core.Value) core.Value {
+	return d("arrow", list(inputs...), result)
+}
+func tparam(name string, kind core.Value) core.Value { return d("parameter", text(name), kind) }
+func preludeImports() core.Value                     { return mapping(entry("k", decl.PreludeImport())) }
+
+// The pagination example of docs/spec/declarations.md §5.
+func person() core.Value {
+	return h("record", a("closed"), h("field", text("name"), a("req"), h("scalar", a("utf8-text"))))
+}
+func page(element core.Value) core.Value {
+	return h("record", a("closed"),
+		h("field", text("items"), a("req"), h("list-of", element)),
+		h("field", text("next"), a("opt"), h("scalar", a("utf8-text"))))
+}
+
+// kTop is proper top written directly, for modules that import nothing.
+func kTop() core.Value { return d("top", properSort()) }
