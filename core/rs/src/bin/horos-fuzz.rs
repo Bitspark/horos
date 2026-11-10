@@ -137,19 +137,39 @@ fn rand_int(rng: &mut Rng) -> i128 {
     }
 }
 
+/// A canonical int beyond 128 bits (17 to 24 magnitude bytes), of either sign (ADR 0010).
+fn wide_int(rng: &mut Rng) -> Value {
+    let mut payload = vec![u8::from(rng.one_in(2))];
+    payload.push(rng.range(1, 255) as u8);
+    for _ in 0..rng.range(16, 23) {
+        payload.push(rng.below(256) as u8);
+    }
+    tup(vec![atom(b"int"), atom(&payload)])
+}
+
+/// An int-min/int-max bound: mostly in range, sometimes 2^127 (non-wf, past i128).
+fn rand_int_bound(rng: &mut Rng) -> Value {
+    if rng.one_in(8) {
+        int_two_pow_127()
+    } else {
+        encode_int(rand_int(rng))
+    }
+}
+
 /// A random GROUND value (an ordinary ontos value, not a descriptor), depth-bounded so the
 /// encoded form stays well under the codec's `max_depth`. Mixes atoms, raw tuples, and the
 /// ontos-data embeddings (int/text/bool/list/map/set), incl. the empty-collection edges.
 fn rand_value(rng: &mut Rng, depth: usize) -> Value {
     if depth == 0 || rng.one_in(2) {
         // a leaf
-        return match rng.below(7) {
+        return match rng.below(8) {
             0 => atom(&rand_atom_bytes(rng)),
             1 => encode_int(rand_int(rng)),
             2 => encode_text(&rand_text(rng)),
             3 => encode_bool(rng.one_in(2)),
             4 => atom(b"nil"),
-            5 => tup(vec![]),      // the empty tuple
+            5 => tup(vec![]), // the empty tuple
+            6 => wide_int(rng),
             _ => encode_list(&[]), // the empty list
         };
     }
@@ -261,12 +281,14 @@ fn rand_field(rng: &mut Rng, depth: usize) -> Value {
 fn rand_descriptor(rng: &mut Rng, depth: usize) -> Value {
     if depth == 0 {
         // a leaf descriptor (no further descent)
-        return match rng.below(6) {
+        return match rng.below(8) {
             0 => desc("any", vec![]),
             1 => desc("atom", vec![]),
             2 => desc("atom-exact", vec![atom(&rand_atom_bytes(rng))]),
             3 => desc("scalar", vec![rand_scalar_kind(rng)]),
             4 => desc("exact", vec![rand_value(rng, 2)]),
+            5 => desc("int-min", vec![rand_int_bound(rng)]),
+            6 => desc("int-max", vec![rand_int_bound(rng)]),
             _ => desc("ref", vec![atom(b"x")]), // unbound at a leaf → non-wf
         };
     }

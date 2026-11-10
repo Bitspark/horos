@@ -215,6 +215,18 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
         except DataError:
             return False
 
+    # Integer bounds (ADR 0010): a canonical int of any width against an inclusive,
+    # i128-capped canonical int bound.
+    if ctor in ("int-min", "int-max") and n == 1:
+        bound = _read_int_capped(args[0])
+        try:
+            value = read_int(v)
+        except DataError:
+            return False
+        if bound is None:
+            return False
+        return value >= bound if ctor == "int-min" else value <= bound
+
     # Scalars — delegate to the frozen ontos/data recognizers.
     if ctor == "scalar" and n == 1:
         kb = _atom_bytes(args[0])
@@ -411,6 +423,8 @@ def _wf_in(t: Value, bound, pending, depth: int) -> bool:
         return all(e.is_atom for e in elems)
     if ctor in ("key-grammar", "text-non-blank", "lowercase-uuid") and n == 0:
         return True
+    if ctor in ("int-min", "int-max") and n == 1:
+        return _read_int_capped(args[0]) is not None
     if ctor == "scalar" and n == 1:
         return _atom_bytes(args[0]) in (b"int", b"utf8-text", b"bool")
 
