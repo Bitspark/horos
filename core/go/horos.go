@@ -237,6 +237,21 @@ func conformsIn(v, t Value, env *envScope, pending *nameScope, depth int) bool {
 		return err == nil && matchesLowercaseUUID(s)
 
 	// Scalars — delegate to the frozen ontos/data recognizers.
+	// Integer bounds (ADR 0010): a canonical int of any width, compared exactly with an
+	// inclusive bound that is itself a canonical int in the i128 range.
+	case "int-min", "int-max":
+		if len(args) != 1 {
+			return false
+		}
+		bound, errB := data.ReadInt(args[0])
+		n, errV := data.ReadInt(v)
+		if errB != nil || errV != nil || !atomLenBoundInRange(bound) {
+			return false
+		}
+		if ctor == "int-min" {
+			return n.Cmp(bound) >= 0
+		}
+		return n.Cmp(bound) <= 0
 	case "scalar":
 		if len(args) != 1 {
 			return false
@@ -622,6 +637,12 @@ func wfIn(t Value, bound *nameScope, pending *nameScope, depth int) bool {
 		return lo.Sign() >= 0 && lo.Cmp(hi) <= 0
 	case "key-grammar", "text-non-blank", "lowercase-uuid":
 		return len(args) == 0
+	case "int-min", "int-max":
+		if len(args) != 1 {
+			return false
+		}
+		bound, err := data.ReadInt(args[0])
+		return err == nil && atomLenBoundInRange(bound)
 	case "scalar":
 		if len(args) != 1 {
 			return false
@@ -729,7 +750,7 @@ func wfIn(t Value, bound *nameScope, pending *nameScope, depth int) bool {
 // owns exactly these.
 func isLeafCtor(ctor string) bool {
 	switch ctor {
-	case "any", "atom", "atom-exact", "atom-len", "atom-in",
+	case "any", "atom", "atom-exact", "atom-len", "atom-in", "int-min", "int-max",
 		"text-len", "key-grammar", "text-non-blank", "lowercase-uuid", "scalar", "exact":
 		return true
 	default:

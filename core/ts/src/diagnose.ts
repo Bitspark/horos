@@ -638,6 +638,16 @@ function leafWfFault(
       return arity(1);
     case "atom-exact":
       return arity(1) ?? (atomBytesOf(args[0]!) === undefined ? argument(1) : undefined);
+    case "int-min":
+    case "int-max": {
+      const a = arity(1);
+      if (a !== undefined) return a;
+      try {
+        return boundInRange(readInt(args[0]!)) ? undefined : argument(1);
+      } catch {
+        return argument(1);
+      }
+    }
     case "atom-len":
     case "text-len": {
       const a = arity(2);

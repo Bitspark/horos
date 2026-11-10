@@ -408,6 +408,22 @@ function conformsIn(
     }
 
     // Scalars — delegate to the frozen ontos/data recognizers.
+    // Integer bounds (ADR 0010): a canonical int of any width, compared exactly with an
+    // inclusive bound that is itself a canonical int in the i128 range.
+    case "int-min":
+    case "int-max": {
+      if (args.length !== 1) return false;
+      let bound: bigint;
+      let n: bigint;
+      try {
+        bound = readInt(args[0]!);
+        n = readInt(v);
+      } catch {
+        return false;
+      }
+      if (!atomLenBoundInRange(bound)) return false;
+      return ctor === "int-min" ? n >= bound : n <= bound;
+    }
     case "scalar": {
       if (args.length !== 1) return false;
       const k = atomBytes(args[0]!);
@@ -683,6 +699,8 @@ export function isLeafCtor(ctor: string): boolean {
     case "atom-exact":
     case "atom-len":
     case "atom-in":
+    case "int-min":
+    case "int-max":
     case "text-len":
     case "key-grammar":
     case "text-non-blank":
@@ -803,6 +821,15 @@ function wfIn(
     case "text-non-blank":
     case "lowercase-uuid":
       return args.length === 0;
+    case "int-min":
+    case "int-max": {
+      if (args.length !== 1) return false;
+      try {
+        return atomLenBoundInRange(readInt(args[0]!));
+      } catch {
+        return false;
+      }
+    }
     case "scalar": {
       if (args.length !== 1) return false;
       const k = atomBytes(args[0]!);
