@@ -44,13 +44,14 @@ def main():
     args = parser.parse_args()
     checks = 0
     if args.seed is None:
-        doc = json.loads((ROOT / "vectors/conformance.json").read_text())
-        for case in doc["cases"]:
-            check(["wf", case["descriptor"]], case["wf"])
-            checks += 1
-            for value in case["values"]:
-                check(["conforms", case["descriptor"], value["value"]], value["conforms"])
+        for oracle in ("conformance.json", "integer-bounds.json"):
+            doc = json.loads((ROOT / "vectors" / oracle).read_text())
+            for case in doc["cases"]:
+                check(["wf", case["descriptor"]], case["wf"])
                 checks += 1
+                for value in case["values"]:
+                    check(["conforms", case["descriptor"], value["value"]], value["conforms"])
+                    checks += 1
         located = json.loads((ROOT / "vectors/diagnose.json").read_text())
         for case in located["cases"]:
             check_located(["diagnose-wf", case["descriptor"]], case["wf"])

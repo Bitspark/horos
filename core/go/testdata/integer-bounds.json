@@ -1,0 +1,414 @@
+{
+  "cases": [
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e74000100",
+      "name": "int-min-0",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the bound itself",
+          "value": "01020003696e74000100"
+        },
+        {
+          "conforms": true,
+          "note": "above",
+          "value": "01020003696e7400020001"
+        },
+        {
+          "conforms": false,
+          "note": "below",
+          "value": "01020003696e7400020101"
+        },
+        {
+          "conforms": true,
+          "note": "2^200, beyond 128 bits",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "-2^200, beyond 128 bits",
+          "value": "01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "an atom",
+          "value": "000135"
+        },
+        {
+          "conforms": false,
+          "note": "text",
+          "value": "01020009757466382d74657874000135"
+        },
+        {
+          "conforms": false,
+          "note": "a bool",
+          "value": "01020004626f6f6c000101"
+        },
+        {
+          "conforms": false,
+          "note": "a non-canonical leading zero",
+          "value": "01020003696e740003000001"
+        },
+        {
+          "conforms": false,
+          "note": "a non-canonical negative zero",
+          "value": "01020003696e74000101"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d617801020003696e7400020009",
+      "name": "int-max-9",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the bound itself",
+          "value": "01020003696e7400020009"
+        },
+        {
+          "conforms": false,
+          "note": "above",
+          "value": "01020003696e740002000a"
+        },
+        {
+          "conforms": true,
+          "note": "a negative",
+          "value": "01020003696e7400020109"
+        },
+        {
+          "conforms": true,
+          "note": "-2^200",
+          "value": "01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "2^200",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "an atom",
+          "value": "000139"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e740002010a",
+      "name": "int-min-negative",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the bound itself",
+          "value": "01020003696e740002010a"
+        },
+        {
+          "conforms": false,
+          "note": "below",
+          "value": "01020003696e740002010b"
+        },
+        {
+          "conforms": true,
+          "note": "zero",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e740011007fffffffffffffffffffffffffffffff",
+      "name": "int-min-at-i128-max",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the bound itself",
+          "value": "01020003696e740011007fffffffffffffffffffffffffffffff"
+        },
+        {
+          "conforms": true,
+          "note": "2^127, just past i128",
+          "value": "01020003696e7400110080000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "one below",
+          "value": "01020003696e740011007ffffffffffffffffffffffffffffffe"
+        },
+        {
+          "conforms": true,
+          "note": "2^200",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "-2^127 - 1, just past i128",
+          "value": "01020003696e7400110180000000000000000000000000000001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d617801020003696e7400110180000000000000000000000000000000",
+      "name": "int-max-at-i128-min",
+      "values": [
+        {
+          "conforms": true,
+          "note": "the bound itself",
+          "value": "01020003696e7400110180000000000000000000000000000000"
+        },
+        {
+          "conforms": true,
+          "note": "-2^127 - 1, just past i128",
+          "value": "01020003696e7400110180000000000000000000000000000001"
+        },
+        {
+          "conforms": false,
+          "note": "one above",
+          "value": "01020003696e740011017fffffffffffffffffffffffffffffff"
+        },
+        {
+          "conforms": true,
+          "note": "-2^200",
+          "value": "01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "zero",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640102000d686f726f732f696e742d6d696e01020003696e740001000102000d686f726f732f696e742d6d617801020003696e7400020009",
+      "name": "and-closed-range",
+      "values": [
+        {
+          "conforms": true,
+          "note": "low end",
+          "value": "01020003696e74000100"
+        },
+        {
+          "conforms": true,
+          "note": "high end",
+          "value": "01020003696e7400020009"
+        },
+        {
+          "conforms": false,
+          "note": "above",
+          "value": "01020003696e740002000a"
+        },
+        {
+          "conforms": false,
+          "note": "below",
+          "value": "01020003696e7400020101"
+        },
+        {
+          "conforms": false,
+          "note": "2^200",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "-2^200",
+          "value": "01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640102000d686f726f732f696e742d6d696e01020003696e74000200050102000d686f726f732f696e742d6d617801020003696e7400020001",
+      "name": "and-empty-range",
+      "values": [
+        {
+          "conforms": false,
+          "note": "between the bounds",
+          "value": "01020003696e7400020003"
+        },
+        {
+          "conforms": false,
+          "note": "at the lower bound",
+          "value": "01020003696e7400020005"
+        },
+        {
+          "conforms": false,
+          "note": "at the upper bound",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01020009686f726f732f6e6f740102000d686f726f732f696e742d6d696e01020003696e74000100",
+      "name": "not-int-min-0",
+      "values": [
+        {
+          "conforms": true,
+          "note": "a negative",
+          "value": "01020003696e7400020101"
+        },
+        {
+          "conforms": false,
+          "note": "zero",
+          "value": "01020003696e74000100"
+        },
+        {
+          "conforms": true,
+          "note": "not an int at all",
+          "value": "000178"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0103000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d746578740005636f756e7400037265710102000d686f726f732f696e742d6d696e01020003696e74000100",
+      "name": "record-count-non-negative",
+      "values": [
+        {
+          "conforms": true,
+          "note": "count 3",
+          "value": "010200036d6170010201020009757466382d746578740005636f756e7401020003696e7400020003"
+        },
+        {
+          "conforms": false,
+          "note": "count -1",
+          "value": "010200036d6170010201020009757466382d746578740005636f756e7401020003696e7400020101"
+        },
+        {
+          "conforms": true,
+          "note": "count 2^200",
+          "value": "010200036d6170010201020009757466382d746578740005636f756e7401020003696e74001b000100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000d686f726f732f696e742d6d617801020003696e74000200ff",
+      "name": "list-of-int-max-255",
+      "values": [
+        {
+          "conforms": true,
+          "note": "in range, with -2^200",
+          "value": "010300046c69737401020003696e74000200ff01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "conforms": false,
+          "note": "2^200 is above",
+          "value": "010300046c69737401020003696e740002000101020003696e74001b000100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e7400110080000000000000000000000000000000",
+      "name": "wf-int-min-bound-2pow127",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d617801020003696e7400110180000000000000000000000000000001",
+      "name": "wf-int-max-bound-below-i128",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e74001b000100000000000000000000000000000000000000000000000000",
+      "name": "wf-int-min-bound-2pow200",
+      "values": [
+        {
+          "conforms": false,
+          "note": "2^200",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0101000d686f726f732f696e742d6d696e",
+      "name": "wf-int-min-no-bound",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0103000d686f726f732f696e742d6d617801020003696e740002000101020003696e7400020002",
+      "name": "wf-int-max-two-bounds",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e000130",
+      "name": "wf-int-min-atom-bound",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d617801020009757466382d74657874000139",
+      "name": "wf-int-max-text-bound",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e740003000001",
+      "name": "wf-int-min-non-canonical-bound",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e7400020001"
+        }
+      ],
+      "wf": false
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640102000d686f726f732f696e742d6d696e01020003696e740001000102000d686f726f732f696e742d6d617801020003696e74000101",
+      "name": "wf-and-malformed-bound",
+      "values": [
+        {
+          "conforms": false,
+          "note": "an int",
+          "value": "01020003696e74000100"
+        }
+      ],
+      "wf": false
+    }
+  ],
+  "note": "Hand-authored oracle for int-min and int-max (ADR 0010). `descriptor` and `value` are ontos-codec-v1 lowercase hex; `wf`/`conforms` are the expected judgments, authored from docs/spec/horos.md. Generated inputs only: vectors/integer-bounds.py encodes them.",
+  "version": "horos-integer-bounds-v1"
+}
