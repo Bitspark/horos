@@ -1,4 +1,4 @@
-// Flat ESLint config (ESLint 9) for the horos TS core. Mirrors the Rust lane's
+// Flat ESLint config (ESLint 10) for the horos TS core. Mirrors the Rust lane's
 // fmt+clippy bar (horos-internal#21): a non-pedantic lint gate that holds the line on obvious
 // quality issues (unused vars, debugger, etc.) without churning the byte-for-byte
 // port in src/index.ts. Formatting is owned by Prettier (.prettierrc) and checked

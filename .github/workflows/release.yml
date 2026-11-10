@@ -58,7 +58,7 @@ jobs:
         run: python3 scripts/package.py prepare "$CANDIDATE"
       - name: Test installed candidate archives
         run: python3 scripts/consumer.py candidate "$CANDIDATE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: candidate-0.10.0
           path: ${{ env.CANDIDATE }}
@@ -93,7 +93,7 @@ jobs:
         run: |
           python3 scripts/package.py check "$CANDIDATE"
           node scripts/provenance.cjs "$CANDIDATE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: provenance-0.10.0
           path: ${{ env.CANDIDATE }}
@@ -234,7 +234,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/finalize-release.py "$CANDIDATE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: verification-0.10.0
