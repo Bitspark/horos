@@ -118,3 +118,5 @@ func page(element core.Value) core.Value {
 
 // kTop is proper top written directly, for modules that import nothing.
 func kTop() core.Value { return d("top", properSort()) }
+
+func asError(err error, target **decl.Error) bool { return errors.As(err, target) }

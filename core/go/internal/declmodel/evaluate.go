@@ -465,10 +465,14 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 			var applicable []*kindTerm
 			failedIndex := -1
 			var failedKind *Kind
+			// The alternative is refuted when it promises at least one arrow and
+			// a closed argument fails every arrow's input by exact nonmembership.
+			arrows, refuted := 0, true
 			for _, arrow := range alternative {
 				if arrow.form != KindArrow {
 					continue
 				}
+				arrows++
 				fits := true
 				for i, arg := range args {
 					v, err := branch.satisfies(arg, arrow.inputs[i], depth+1)
@@ -477,6 +481,7 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 					}
 					if v != Proven {
 						fits = false
+						refuted = refuted && v == Refuted
 						if failedIndex < 0 {
 							failedIndex = i
 							failedKind = arrow.inputs[i].origin
@@ -493,7 +498,11 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 				if failedIndex >= 0 {
 					path = []int{2, failedIndex + 1}
 				}
-				return &Error{Code: UnprovedObligation, Subject: SubjectSource, Path: path, Expected: copyKind(failedKind), Message: "abstract constructor has no applicable guarantee for every argument case"}
+				code := UnprovedObligation
+				if arrows > 0 && refuted {
+					code = BoundViolation
+				}
+				return &Error{Code: code, Subject: SubjectSource, Path: path, Expected: copyKind(failedKind), Message: "abstract constructor has no applicable guarantee for every argument case"}
 			}
 			results = append(results, combine(KindIntersection, resultSort, applicable))
 		}
