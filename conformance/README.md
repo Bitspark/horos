@@ -1,8 +1,10 @@
 # Built-artifact conformance
 
 `bash scripts/check.sh conformance` builds the Go, Rust and TypeScript CLIs,
-replays the original oracle through each, then compares judgments over 2,000
-seeded descriptor/value pairs. The generator chooses input; it does not author
+replays the original oracle and the diagnostic-location corpus through each,
+then compares judgments over 2,000 seeded descriptor/value pairs. For each pair
+the three diagnoses must be identical, location included, and a completed
+diagnosis must agree with the boolean. The generator chooses input; it does not author
 expected results. A disagreement includes the reproducing input hex.
 
 `python3 conformance/run.py --seed 123 --count 2000` repeats a sample after the

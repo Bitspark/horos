@@ -81,8 +81,12 @@ validator. The
 models and the existing Wire/runtime responsibilities.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
-exhausted check. The boolean API preserves its existing bounded behavior,
-including the limitations documented in the contract.
+exhausted check. Every non-conforming diagnosis also names where the check
+failed: the path into the value, the descriptor position, and the missing or
+extra record field or the malformed argument, chosen in one fixed order
+([diagnostic locations](docs/spec/horos.md#diagnostic-locations)). The boolean
+API preserves its existing bounded behavior, including the limitations
+documented in the contract.
 
 ## Develop
 
