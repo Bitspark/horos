@@ -1,6 +1,7 @@
 package declmodel
 
 import (
+	"errors"
 	"slices"
 	"strconv"
 	"strings"
@@ -465,10 +466,14 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 			var applicable []*kindTerm
 			failedIndex := -1
 			var failedKind *Kind
+			// The alternative is refuted when it promises at least one arrow and
+			// a closed argument fails every arrow's input by exact nonmembership.
+			arrows, refuted := 0, true
 			for _, arrow := range alternative {
 				if arrow.form != KindArrow {
 					continue
 				}
+				arrows++
 				fits := true
 				for i, arg := range args {
 					v, err := branch.satisfies(arg, arrow.inputs[i], depth+1)
@@ -477,6 +482,7 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 					}
 					if v != Proven {
 						fits = false
+						refuted = refuted && v == Refuted
 						if failedIndex < 0 {
 							failedIndex = i
 							failedKind = arrow.inputs[i].origin
@@ -493,7 +499,11 @@ func (c *checker) applyContracts(contract *kindTerm, args []*semanticValue, dept
 				if failedIndex >= 0 {
 					path = []int{2, failedIndex + 1}
 				}
-				return &Error{Code: UnprovedObligation, Subject: SubjectSource, Path: path, Expected: copyKind(failedKind), Message: "abstract constructor has no applicable guarantee for every argument case"}
+				code := UnprovedObligation
+				if arrows > 0 && refuted {
+					code = BoundViolation
+				}
+				return &Error{Code: code, Subject: SubjectSource, Path: path, Expected: copyKind(failedKind), Message: "abstract constructor has no applicable guarantee for every argument case"}
 			}
 			results = append(results, combine(KindIntersection, resultSort, applicable))
 		}
@@ -522,6 +532,19 @@ func (c *checker) includes(actual, expected *kindTerm, depth int) (bool, error) 
 	key := inclusionKey{actual, expected}
 	if v, ok := c.inclusions[key]; ok {
 		return v, nil
+	}
+	if actual.sort.IsProper() {
+		structural, err := c.includedByStructure(actual, expected, depth+1)
+		if err != nil {
+			return false, err
+		}
+		if structural {
+			if err := c.allocate(depth); err != nil {
+				return false, err
+			}
+			c.inclusions[key] = true
+			return true, nil
+		}
 	}
 	if actual.sort.IsProper() {
 		a, err := c.properKind(actual)
@@ -854,4 +877,162 @@ func (c *checker) checkExpression(e *Expression, env *environment, assumptions [
 	}
 	e.memberships = append(e.memberships, Membership{kind: e.contract, assumptions: slices.Clone(assumptions)})
 	return nil
+}
+
+// sameTerm decides structural identity of two instantiated kind terms,
+// ignoring their diagnostic origins. Each use of a named kind receives its own
+// copy carrying its source location, so pointer equality alone misses
+// reflexive comparisons. Recursive variables are compared coinductively: a
+// pair already under comparison is assumed identical, which is sound because
+// bisimilar positive equation systems denote the same greatest fixed point.
+// The comparison is iterative and charges the operation's work and bytes.
+func (c *checker) sameTerm(a, b *kindTerm) (bool, error) {
+	type pair struct{ a, b *kindTerm }
+	seen := map[pair]bool{}
+	stack := []pair{{a, b}}
+	push := func(x, y *kindTerm) error {
+		if x == y {
+			return nil
+		}
+		if x == nil || y == nil {
+			return errNotSame
+		}
+		p := pair{x, y}
+		if seen[p] {
+			return nil
+		}
+		if err := c.work.reserveBytes(32); err != nil {
+			return err
+		}
+		seen[p] = true
+		stack = append(stack, p)
+		return nil
+	}
+	var pushSequence func(x, y *sequenceTerm) error
+	pushSequence = func(x, y *sequenceTerm) error {
+		if err := c.work.step(0); err != nil {
+			return err
+		}
+		if x == y {
+			return nil
+		}
+		if x == nil || y == nil || x.form != y.form || len(x.children) != len(y.children) {
+			return errNotSame
+		}
+		if err := push(x.element, y.element); err != nil {
+			return err
+		}
+		for i := range x.children {
+			if err := pushSequence(x.children[i], y.children[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	check := func() error {
+		for len(stack) > 0 {
+			p := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			if err := c.work.step(0); err != nil {
+				return err
+			}
+			x, y := p.a, p.b
+			if x == y {
+				continue
+			}
+			if x.form != y.form || x.nodeForm != y.nodeForm || !sameSort(x.sort, y.sort) ||
+				len(x.children) != len(y.children) || len(x.inputs) != len(y.inputs) ||
+				!slices.Equal(x.selectors, y.selectors) {
+				return errNotSame
+			}
+			for i := range x.children {
+				if err := push(x.children[i], y.children[i]); err != nil {
+					return err
+				}
+			}
+			for i := range x.inputs {
+				if err := push(x.inputs[i], y.inputs[i]); err != nil {
+					return err
+				}
+			}
+			if (x.result == nil) != (y.result == nil) {
+				return errNotSame
+			}
+			if x.result != nil {
+				if err := push(x.result, y.result); err != nil {
+					return err
+				}
+			}
+			if err := pushSequence(x.sequence, y.sequence); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := check(); err != nil {
+		if errors.Is(err, errNotSame) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+var errNotSame = errors.New("kind terms differ")
+
+// includedByStructure is a sufficient, purely structural route to actual ⊆
+// expected that runs before automata. It uses only valid inclusion rules:
+// identical terms; a recursive variable denotes its equation body; a union on
+// the left needs every member; an intersection on the right needs every
+// member; a union on the right needs one member; an intersection on the left
+// needs one member. It never descends into a node, so every recursive cycle
+// (which must cross a node) ends it. It answers true or undecided, never
+// false: a failure still goes to the automaton comparison of the whole pair.
+func (c *checker) includedByStructure(actual, expected *kindTerm, depth int) (bool, error) {
+	if err := c.work.step(depth); err != nil {
+		return false, err
+	}
+	if actual == expected || expected.form == KindTop || actual.form == KindBottom {
+		return true, nil
+	}
+	if same, err := c.sameTerm(actual, expected); err != nil || same {
+		return same, err
+	}
+	all := func(terms []*kindTerm, f func(*kindTerm) (bool, error)) (bool, error) {
+		for _, t := range terms {
+			if ok, err := f(t); err != nil || !ok {
+				return false, err
+			}
+		}
+		return true, nil
+	}
+	some := func(terms []*kindTerm, f func(*kindTerm) (bool, error)) (bool, error) {
+		for _, t := range terms {
+			if ok, err := f(t); err != nil || ok {
+				return ok, err
+			}
+		}
+		return false, nil
+	}
+	left := func(t *kindTerm) (bool, error) { return c.includedByStructure(t, expected, depth+1) }
+	right := func(t *kindTerm) (bool, error) { return c.includedByStructure(actual, t, depth+1) }
+	switch {
+	case actual.form == KindVariable:
+		return c.includedByStructure(actual.children[0], expected, depth+1)
+	case expected.form == KindVariable:
+		return c.includedByStructure(actual, expected.children[0], depth+1)
+	case actual.form == KindUnion:
+		return all(actual.children, left)
+	case expected.form == KindIntersection:
+		return all(expected.children, right)
+	}
+	if expected.form == KindUnion {
+		if ok, err := some(expected.children, right); err != nil || ok {
+			return ok, err
+		}
+	}
+	if actual.form == KindIntersection {
+		return some(actual.children, left)
+	}
+	return false, nil
 }

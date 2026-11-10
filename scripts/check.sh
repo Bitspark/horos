@@ -39,6 +39,7 @@ case "${1:-all}" in
     prepare_bins
     python3 conformance/run.py
     python3 conformance/run.py --seed 1 --count "${HOROS_FUZZ_COUNT:-2000}"
+    python3 conformance/ground.py
     ;;
   public)
     python3 scripts/verify-public.py
