@@ -269,16 +269,11 @@ func TestMembershipAndInclusionVerdicts(t *testing.T) {
 }
 
 // kinds.md §5: abstract constructors expose their declared contracts.
-// Required obligations that stay Unproved block the Program.
-//
-// These run with MaxNodes raised to 2,000,000: under the default 100,000 work
-// units, contracts that mention Data exhaust (F: Data => Data, A: Data needs
-// about 544,000 units; the joint case below about 262,000). The documented
-// defaults stay (declarations.md §8); task 5b937075 makes the engine cheaper,
-// and that fix moves these cases back to DefaultLimits.
+// Required obligations that stay Unproved block the Program. Every case runs
+// under DefaultLimits (declarations.md §8): the spec's own examples must fit
+// its documented budget.
 func TestAbstractConstructorContracts(t *testing.T) {
 	limits := decl.DefaultLimits()
-	limits.MaxNodes = 2_000_000
 	flat, rows := kLocal("Flat"), kLocal("Rows")
 	unary := d("sort-arrow", list(properSort()), properSort())
 	base := func(entries ...[2]core.Value) core.Value {
@@ -303,11 +298,15 @@ func TestAbstractConstructorContracts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// F: Data => Data and A: Data establish F<A> : Data.
-	if _, err := decl.ResolveWithLimits(base(
-		entry("Higher", d("type", list(tparam("F", kArrow(kData(), kData())), tparam("A", kData())), kData(), call))),
-		nil, limits); err != nil {
-		t.Fatal(err)
+	// F: Data => Data and A: Data establish F<A> : Data, alone and together
+	// with the joint case in one module, whose operations share one budget.
+	higher := entry("Higher", d("type", list(tparam("F", kArrow(kData(), kData())), tparam("A", kData())), kData(), call))
+	joint := entry("Joint", d("type", list(tparam("F", d("and", unary, list(flatToRows, flatToData))), tparam("A", flat)),
+		d("and", properSort(), list(rows, kData())), call))
+	for name, root := range map[string]core.Value{"higher": base(higher), "combined": base(higher, joint)} {
+		if _, err := decl.ResolveWithLimits(root, nil, limits); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
 	}
 	if _, ok := p.Declaration(id(p, "Joint")); !ok {
 		t.Fatal("joint arrow contracts")
@@ -509,6 +508,45 @@ func TestKindDefinitions(t *testing.T) {
 		_, err := decl.Resolve(module("kinds", mapping(), entry("T", d("type", list(), kTop(), h("any"))), entry("K", kindDecl(body))), nil)
 		if err == nil {
 			t.Errorf("%s was admitted", name)
+		}
+	}
+}
+
+// kinds.md §6: inclusion verdicts do not depend on which sufficient route
+// establishes them. Identical, bisimilar and Boolean-composed kinds keep
+// their verdicts; a failed structural route never answers false.
+func TestInclusionRoutesKeepVerdicts(t *testing.T) {
+	variable := d("recursive-var", integer(0), integer(0))
+	nested := func(leaf core.Value) core.Value {
+		return d("kind", list(), properSort(), d("nu", list(kOr(leaf, kPrelude("List", variable))), integer(0)))
+	}
+	root := module("routes", preludeImports(),
+		entry("Flat", d("kind", list(), properSort(), kOr(kPrelude("Scalar"), kPrelude("List", kPrelude("Scalar"))))),
+		entry("Rows", d("kind", list(), properSort(), kPrelude("Record", kLocal("Flat")))),
+		entry("Nested", nested(kPrelude("Scalar"))),
+		entry("NestedAgain", nested(kPrelude("Scalar"))),
+		entry("NestedText", nested(kPrelude("Text"))))
+	p := resolve(t, root)
+	k := func(expr core.Value) decl.KindHandle { return kind(t, p, expr) }
+	rows, data_ := kLocal("Rows"), kData()
+	both := d("and", properSort(), list(rows, data_))
+	for _, c := range []struct {
+		name             string
+		actual, expected core.Value
+		want             decl.Verdict
+	}{
+		{"separate equal recursive definitions", kLocal("Nested"), kLocal("NestedAgain"), decl.Proven},
+		{"narrower leaf", kLocal("NestedText"), kLocal("Nested"), decl.Proven},
+		{"wider leaf", kLocal("Nested"), kLocal("NestedText"), decl.Unproved},
+		{"intersection within a member", both, rows, decl.Proven},
+		{"within an intersection", rows, both, decl.Proven},
+		{"within a union member", data_, kOr(kType(), data_), decl.Proven},
+		{"union needs every member", kOr(kPrelude("Scalar"), kPrelude("Exact")), kPrelude("Scalar"), decl.Unproved},
+		{"data within its own union", kPrelude("Int"), data_, decl.Proven},
+	} {
+		got, err := p.Includes(k(c.actual), k(c.expected))
+		if err != nil || got != c.want {
+			t.Errorf("%s: %s %v, want %s", c.name, got, err, c.want)
 		}
 	}
 }
