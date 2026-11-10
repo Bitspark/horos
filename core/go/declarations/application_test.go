@@ -273,9 +273,9 @@ func TestMembershipAndInclusionVerdicts(t *testing.T) {
 //
 // These run with MaxNodes raised to 2,000,000: under the default 100,000 work
 // units, contracts that mention Data exhaust (F: Data => Data, A: Data needs
-// about 544,000 units; the joint case below about 262,000). That calibration
-// is recorded on the task rather than changed here, because the defaults are
-// part of the documented contract (declarations.md §8).
+// about 544,000 units; the joint case below about 262,000). The documented
+// defaults stay (declarations.md §8); task 5b937075 makes the engine cheaper,
+// and that fix moves these cases back to DefaultLimits.
 func TestAbstractConstructorContracts(t *testing.T) {
 	limits := decl.DefaultLimits()
 	limits.MaxNodes = 2_000_000
