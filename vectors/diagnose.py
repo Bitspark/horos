@@ -294,6 +294,29 @@ case("not-complement", d("not", INT), OK, ("an int", I(5), MIS([], [], "compleme
 case("not-not", d("not", d("not", INT)), OK, ("an atom", A("x"), MIS([], [], "complement")), ("an int", I(5), OK))
 case("list-of-not", d("list-of", d("not", INT)), OK, ("an int element", L(I(1)), MIS([elem(0)], [1], "complement")))
 
+# Integer bounds (ADR 0010) are leaves: a refused value names the bound itself.
+case(
+    "int-bounds-in-a-record",
+    d("record", A("closed"), field("count", "req", d("int-min", I(0)))),
+    OK,
+    ("count -1", M((T("count"), I(-1))), MIS([fld("count")], [2, 3], "refused")),
+    ("count 2^200", M((T("count"), I(2**200))), OK),
+)
+case(
+    "int-bounds-closed-range",
+    d("and", d("int-min", I(0)), d("int-max", I(9))),
+    OK,
+    ("2^200 is above the range", I(2**200), MIS([], [2], "refused")),
+    ("-2^200 is below the range", I(-(2**200)), MIS([], [1], "refused")),
+    ("text is refused by the first bound", T("5"), MIS([], [1], "refused")),
+)
+case(
+    "int-bounds-list-element",
+    d("list-of", d("int-max", I(255))),
+    OK,
+    ("the second element is above", L(I(1), I(2**200)), MIS([elem(1)], [1], "refused")),
+)
+
 # Exhaustion. Cons level k's union is entered at depth 1 + 3k and its children at
 # 3 + 3k, so the 171st cell's children are the first entries past 512.
 FLAT_CONS = d("rec", A("L"), d("union", d("exact", A("[]")), d("tuple", INT, d("ref", A("L")))))
@@ -334,6 +357,11 @@ case(
 )
 
 # Well-formedness: own form first, then children in item order.
+malformed("wf-int-min-bound-past-i128", d("int-min", I(2**127)), loc([], [], "argument", arg=1))
+malformed("wf-int-max-text-bound", d("int-max", T("9")), loc([], [], "argument", arg=1))
+malformed("wf-int-min-arity", d("int-min"), loc([], [], "arity"))
+malformed("wf-int-max-arity", d("int-max", I(1), I(2)), loc([], [], "arity"))
+malformed("wf-int-bound-in-and", d("and", d("int-min", I(0)), d("int-max", A("9"))), loc([], [2], "argument", arg=1))
 malformed("wf-atom-len-lo-gt-hi", d("atom-len", I(5), I(1)), loc([], [], "argument", arg=2))
 malformed("wf-atom-len-negative-lo", d("atom-len", I(-1), I(1)), loc([], [], "argument", arg=1))
 malformed("wf-text-len-hi-not-int", d("text-len", I(1), A("x")), loc([], [], "argument", arg=2))

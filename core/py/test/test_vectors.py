@@ -39,38 +39,40 @@ sys.path.insert(0, str(_HERE.parents[1]))  # core/py → import horos
 from ontos_codec import decode  # noqa: E402
 from horos import conforms, wf  # noqa: E402
 
-_ORACLE = _HERE.parents[3] / "vectors" / "conformance.json"
+# The original oracle and the int-min/int-max oracle (ADR 0010), same format.
+_ORACLES = [_HERE.parents[3] / "vectors" / name for name in ("conformance.json", "integer-bounds.json")]
 
 
 class TestVectorsReplay(unittest.TestCase):
     """Every oracle verdict, byte-identical with the tri-core."""
 
     def test_replay_all_cases(self) -> None:
-        with open(_ORACLE, encoding="utf-8") as f:
-            oracle = json.load(f)
-        cases = oracle["cases"]
-        self.assertGreater(len(cases), 0, "oracle is empty?")
         checked_wf = 0
         checked_values = 0
-        for case in cases:
-            name = case["name"]
-            descriptor = decode(bytes.fromhex(case["descriptor"]))
-            self.assertEqual(
-                wf(descriptor), case["wf"], f"wf mismatch for case {name!r}"
-            )
-            checked_wf += 1
-            for i, vc in enumerate(case.get("values", [])):
-                value = decode(bytes.fromhex(vc["value"]))
-                note = vc.get("note", f"#{i}")
+        for path in _ORACLES:
+            with open(path, encoding="utf-8") as f:
+                oracle = json.load(f)
+            cases = oracle["cases"]
+            self.assertGreater(len(cases), 0, f"{path.name} is empty?")
+            for case in cases:
+                name = case["name"]
+                descriptor = decode(bytes.fromhex(case["descriptor"]))
                 self.assertEqual(
-                    conforms(value, descriptor),
-                    vc["conforms"],
-                    f"conforms mismatch for case {name!r}, value {note!r}",
+                    wf(descriptor), case["wf"], f"wf mismatch for {path.name} case {name!r}"
                 )
-                checked_values += 1
+                checked_wf += 1
+                for i, vc in enumerate(case.get("values", [])):
+                    value = decode(bytes.fromhex(vc["value"]))
+                    note = vc.get("note", f"#{i}")
+                    self.assertEqual(
+                        conforms(value, descriptor),
+                        vc["conforms"],
+                        f"conforms mismatch for {path.name} case {name!r}, value {note!r}",
+                    )
+                    checked_values += 1
         print(
             f"py replay: {checked_wf} wf verdicts + {checked_values} conforms "
-            f"verdicts, all matching the oracle"
+            f"verdicts, all matching the oracles"
         )
 
 
