@@ -41,6 +41,9 @@ expected = (ROOT / "vectors/conformance.sha256").read_text().strip()
 assert hashlib.sha256(oracle).hexdigest() == expected, "original oracle changed"
 for lane in ("go", "rs"):
     assert (ROOT / f"core/{lane}/testdata/conformance.json").read_bytes() == oracle
+locations = (ROOT / "vectors/diagnose.json").read_bytes()
+for lane in ("go", "rs"):
+    assert (ROOT / f"core/{lane}/testdata/diagnose.json").read_bytes() == locations, lane
 
 for name in files:
     if not name.endswith(".md"):
