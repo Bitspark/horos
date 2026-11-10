@@ -211,9 +211,13 @@ function matchesKeyGrammar(s: string): boolean {
   if (!(isAsciiLower(first) || isAsciiDigit(first))) return false;
   for (let i = 1; i < cps.length; i += 1) {
     const cp = cps[i]!.codePointAt(0)!;
-    if (
-      !(isAsciiLower(cp) || isAsciiDigit(cp) || cp === 0x2e || cp === 0x5f || cp === 0x2d)
-    ) {
+    if (!(
+      isAsciiLower(cp) ||
+      isAsciiDigit(cp) ||
+      cp === 0x2e ||
+      cp === 0x5f ||
+      cp === 0x2d
+    )) {
       return false; // . _ -
     }
   }

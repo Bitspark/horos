@@ -41,17 +41,17 @@
     "test": "npm run build && node --test dist/test/*.test.js"
   },
   "dependencies": {
-    "@bitspark/ontos-core": "0.16.0",
     "@bitspark/ontos-codec": "0.16.0",
+    "@bitspark/ontos-core": "0.16.0",
     "@bitspark/ontos-data": "0.16.0"
   },
   "devDependencies": {
-    "typescript": "^5.7",
+    "@eslint/js": "10.0.1",
     "@types/node": "^22",
-    "eslint": "9.39.4",
-    "@eslint/js": "9.39.4",
-    "@typescript-eslint/parser": "8.60.1",
-    "@typescript-eslint/eslint-plugin": "8.60.1",
-    "prettier": "3.8.3"
+    "@typescript-eslint/eslint-plugin": "8.72.2",
+    "@typescript-eslint/parser": "8.72.2",
+    "eslint": "10.14.0",
+    "prettier": "3.9.10",
+    "typescript": "^5.7"
   }
 }
