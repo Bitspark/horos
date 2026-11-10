@@ -34,6 +34,7 @@ import {
   ATOM_LEN_BOUND_MIN,
   isLeafCtor,
   leafClassifies,
+  leafWellFormed,
   MAX_RECURSION_DEPTH,
   NAMESPACE,
   readFieldDescriptor,
@@ -697,8 +698,10 @@ function diagnoseWfIn(
   if (h === undefined) return fault("not-descriptor");
   const { ctor, args } = h;
   if (isLeafCtor(ctor)) {
-    const f = leafWfFault(ctor, args);
-    return f === undefined ? CONFORMS : fault(f.reason, f.arg);
+    // The recognizer decides the verdict; leafWfFault only names the fault.
+    if (leafWellFormed(t)) return CONFORMS;
+    const f = leafWfFault(ctor, args) ?? { reason: "argument" as const };
+    return fault(f.reason, f.arg);
   }
 
   // Child descriptors at the given item indices, in order, after the own form is accepted.
