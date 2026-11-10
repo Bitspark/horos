@@ -187,12 +187,20 @@ test("the profile and the limit are stated (horos-internal#211)", () => {
   assert.equal(p.maxRecursionDepth, MAX_RECURSION_DEPTH);
   assert.equal(p.atomLenBoundMax, ATOM_LEN_BOUND_MAX);
   assert.equal(limitValue("recursion_depth"), MAX_RECURSION_DEPTH);
+  const location = { path: [], at: [], reason: "limit" } as const;
   assert.ok(isComplete({ verdict: "conforms" }));
-  assert.ok(isComplete({ verdict: "mismatch" }));
-  assert.ok(isComplete({ verdict: "not_well_formed" }));
-  assert.ok(!isComplete({ verdict: "exhausted", limit: "recursion_depth" }));
+  assert.ok(
+    isComplete({ verdict: "mismatch", location: { ...location, reason: "refused" } }),
+  );
+  assert.ok(
+    isComplete({
+      verdict: "not_well_formed",
+      location: { ...location, reason: "arity" },
+    }),
+  );
+  assert.ok(!isComplete({ verdict: "exhausted", limit: "recursion_depth", location }));
   assert.equal(
-    completedBool({ verdict: "exhausted", limit: "recursion_depth" }),
+    completedBool({ verdict: "exhausted", limit: "recursion_depth", location }),
     undefined,
     "an exhaustion must NOT collapse into a boolean",
   );

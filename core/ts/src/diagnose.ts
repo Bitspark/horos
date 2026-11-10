@@ -19,17 +19,21 @@
  *  - union/and are KLEENE: a DECISIVE alternative beats an exhausted sibling, so the evaluator
  *    short-circuits on a decisive result but NEVER on an Exhausted. The answer is a function of
  *    the SET of sub-outcomes, never of traversal order.
+ *
+ * Every outcome other than `conforms` carries one LOCATION (ADR 0009, docs/spec/horos.md
+ * "Diagnostic locations"): the value path, the descriptor position and a reason, chosen in a
+ * fixed order so the Go, Rust and TypeScript cores report the identical location. A location
+ * never changes which verdict is reported.
  */
 
 import { type Value } from "@bitspark/ontos-core";
-import { readList, readMap, readSet, readText } from "@bitspark/ontos-data";
+import { readInt, readList, readMap, readSet, readText } from "@bitspark/ontos-data";
 
 import {
   ATOM_LEN_BOUND_MAX,
   ATOM_LEN_BOUND_MIN,
   isLeafCtor,
   leafClassifies,
-  leafWellFormed,
   MAX_RECURSION_DEPTH,
   NAMESPACE,
   readFieldDescriptor,
@@ -46,22 +50,59 @@ export function limitValue(l: Limit): number {
 /** The completed/incomplete classification of a checking attempt. */
 export type Verdict = "conforms" | "mismatch" | "not_well_formed" | "exhausted";
 
+/** The kinds of value path step that select by a 0-based index in canonical order. */
+export type StepKind = "item" | "elem" | "key" | "value";
+
+/**
+ * One step of a value path: `item` of a bare tuple, `elem` of a list or set, `key` or
+ * `value` of a map entry, or the record `field` with this name.
+ */
+export type Step =
+  | { readonly kind: StepKind; readonly index: number }
+  | { readonly kind: "field"; readonly name: string };
+
+/** Why the check failed at a location (ADR 0009). */
+export type Reason =
+  | "refused"
+  | "missing-field"
+  | "extra-field"
+  | "no-alternative"
+  | "complement"
+  | "limit"
+  | "not-descriptor"
+  | "unknown-constructor"
+  | "arity"
+  | "argument"
+  | "duplicate-field"
+  | "unbound-ref"
+  | "unguarded-ref";
+
+/**
+ * Where a check failed: the path into the value, the position of the descriptor at fault
+ * (tuple-item indices from the root descriptor), and the reason. `field` names the record
+ * field for `missing-field` and `extra-field`; `arg` is the item index of the faulty argument
+ * for `argument`, `duplicate-field`, `unbound-ref` and `unguarded-ref`.
+ */
+export interface Location {
+  readonly path: readonly Step[];
+  readonly at: readonly number[];
+  readonly reason: Reason;
+  readonly field?: string;
+  readonly arg?: number;
+}
+
 /**
  * A checking outcome that distinguishes a completed decision from a reached bound.
  *
  * `exhausted` is INCOMPLETE: a statement about THIS bounded attempt, never a claim that the
- * value does or does not have the form, and never a refutation.
+ * value does or does not have the form, and never a refutation. Every outcome other than
+ * `conforms` names its location.
  */
 export type Diagnosis =
   | { readonly verdict: "conforms" }
-  | { readonly verdict: "mismatch" }
-  | { readonly verdict: "not_well_formed" }
-  | { readonly verdict: "exhausted"; readonly limit: Limit };
-
-const CONFORMS: Diagnosis = { verdict: "conforms" };
-const MISMATCH: Diagnosis = { verdict: "mismatch" };
-const NOT_WF: Diagnosis = { verdict: "not_well_formed" };
-const exhausted = (limit: Limit): Diagnosis => ({ verdict: "exhausted", limit });
+  | { readonly verdict: "mismatch"; readonly location: Location }
+  | { readonly verdict: "not_well_formed"; readonly location: Location }
+  | { readonly verdict: "exhausted"; readonly limit: Limit; readonly location: Location };
 
 /** Whether this outcome is a completed decision. */
 export function isComplete(d: Diagnosis): boolean {
@@ -105,16 +146,98 @@ export function checkingProfile(): Profile {
   };
 }
 
-// ----- the Kleene folds (ADR 0008 D2/D3) -----
+// ----- locations, built lazily -----
+
+/** A value path as a persistent chain, innermost step first; `undefined` is the root. */
+interface PathNode {
+  readonly parent: PathNode | undefined;
+  readonly step: Step;
+  readonly length: number;
+}
+
+/** A descriptor position as a persistent chain, innermost index first. */
+interface PosNode {
+  readonly parent: PosNode | undefined;
+  readonly index: number;
+}
+
+function stepInto(path: PathNode | undefined, step: Step): PathNode {
+  return { parent: path, step, length: pathLength(path) + 1 };
+}
+
+function pathLength(path: PathNode | undefined): number {
+  return path === undefined ? 0 : path.length;
+}
+
+function at(pos: PosNode | undefined, index: number): PosNode {
+  return { parent: pos, index };
+}
+
+/** A failure point, materialized into a {@link Location} only when it is reported. */
+interface Fault {
+  readonly path: PathNode | undefined;
+  readonly at: PosNode | undefined;
+  readonly reason: Reason;
+  readonly field?: string;
+  readonly arg?: number;
+}
+
+/** The internal outcome: a verdict with its unmaterialized location. */
+type Outcome =
+  | { readonly verdict: "conforms" }
+  | { readonly verdict: "mismatch" | "not_well_formed"; readonly fault: Fault }
+  | { readonly verdict: "exhausted"; readonly limit: Limit; readonly fault: Fault };
+
+const CONFORMS: Outcome = { verdict: "conforms" };
+const CONFORMS_D: Diagnosis = { verdict: "conforms" };
+
+const mismatch = (fault: Fault): Outcome => ({ verdict: "mismatch", fault });
+const notWf = (fault: Fault): Outcome => ({ verdict: "not_well_formed", fault });
+const exhausted = (path: PathNode | undefined, pos: PosNode | undefined): Outcome => ({
+  verdict: "exhausted",
+  limit: "recursion_depth",
+  fault: { path, at: pos, reason: "limit" },
+});
+
+function materialize(f: Fault): Location {
+  const path: Step[] = [];
+  for (let n = f.path; n !== undefined; n = n.parent) path.push(n.step);
+  path.reverse();
+  const pos: number[] = [];
+  for (let n = f.at; n !== undefined; n = n.parent) pos.push(n.index);
+  pos.reverse();
+  if (f.field !== undefined) return { path, at: pos, reason: f.reason, field: f.field };
+  if (f.arg !== undefined) return { path, at: pos, reason: f.reason, arg: f.arg };
+  return { path, at: pos, reason: f.reason };
+}
+
+function report(o: Outcome): Diagnosis {
+  switch (o.verdict) {
+    case "conforms":
+      return CONFORMS_D;
+    case "mismatch":
+      return { verdict: "mismatch", location: materialize(o.fault) };
+    case "not_well_formed":
+      return { verdict: "not_well_formed", location: materialize(o.fault) };
+    case "exhausted":
+      return { verdict: "exhausted", limit: o.limit, location: materialize(o.fault) };
+  }
+}
+
+// ----- the Kleene folds (ADR 0008 D2/D3), with the location order of ADR 0009 -----
 
 /**
  * `not`: swap the completed verdicts, PRESERVE exhaustion. Never completes an incomplete
- * subdecision — the rule this module exists for.
+ * subdecision — the rule this module exists for. A `not` that fails reports itself.
  */
-function kleeneNot(inner: Diagnosis): Diagnosis {
+function kleeneNot(
+  inner: Outcome,
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): Outcome {
   switch (inner.verdict) {
     case "conforms":
-      return MISMATCH;
+      return mismatch({ path, at: pos, reason: "complement" });
     case "mismatch":
       return CONFORMS;
     default:
@@ -123,30 +246,55 @@ function kleeneNot(inner: Diagnosis): Diagnosis {
   }
 }
 
-/** Kleene disjunction: a decisive `conforms` wins over an exhausted sibling. */
-function kleeneAny(outcomes: readonly Diagnosis[]): Diagnosis {
-  let limit: Limit | undefined;
-  let notWF = false;
-  for (const o of outcomes) {
-    if (o.verdict === "conforms") return CONFORMS; // decisive — stop here
-    if (o.verdict === "not_well_formed") notWF = true;
-    else if (o.verdict === "exhausted" && limit === undefined) limit = o.limit;
+/**
+ * Kleene conjunction over `count` sub-outcomes in the fixed order: a decisive `mismatch`
+ * wins over an exhausted sibling and is the first one in order. Otherwise the first
+ * exhausted, then the first not_well_formed sub-outcome decides.
+ */
+function kleeneAll(count: number, outcome: (i: number) => Outcome): Outcome {
+  let firstExhausted: Outcome | undefined;
+  let firstNotWf: Outcome | undefined;
+  for (let i = 0; i < count; i += 1) {
+    const o = outcome(i);
+    if (o.verdict === "mismatch") return o; // decisive — stop here
+    if (o.verdict === "exhausted") firstExhausted ??= o;
+    else if (o.verdict === "not_well_formed") firstNotWf ??= o;
   }
-  if (limit !== undefined) return exhausted(limit);
-  return notWF ? NOT_WF : MISMATCH;
+  return firstExhausted ?? firstNotWf ?? CONFORMS;
 }
 
-/** Kleene conjunction: a decisive `mismatch` wins over an exhausted sibling. */
-function kleeneAll(outcomes: readonly Diagnosis[]): Diagnosis {
-  let limit: Limit | undefined;
-  let notWF = false;
-  for (const o of outcomes) {
-    if (o.verdict === "mismatch") return MISMATCH; // decisive — stop here
-    if (o.verdict === "not_well_formed") notWF = true;
-    else if (o.verdict === "exhausted" && limit === undefined) limit = o.limit;
+/**
+ * Kleene disjunction for `union`: a decisive `conforms` wins over an exhausted sibling. A
+ * union with no conforming alternative is exhausted at its first exhausted alternative. A
+ * mismatching union reports the first alternative with the longest value path when that
+ * path goes deeper than the union's own value, and otherwise reports itself.
+ */
+function kleeneAny(
+  count: number,
+  outcome: (i: number) => Outcome,
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): Outcome {
+  let firstExhausted: Outcome | undefined;
+  let firstNotWf: Outcome | undefined;
+  let deepest: Outcome | undefined;
+  let deepestLength = pathLength(path);
+  for (let i = 0; i < count; i += 1) {
+    const o = outcome(i);
+    if (o.verdict === "conforms") return CONFORMS; // decisive — stop here
+    if (o.verdict === "exhausted") firstExhausted ??= o;
+    else if (o.verdict === "not_well_formed") firstNotWf ??= o;
+    else if (pathLength(o.fault.path) > deepestLength) {
+      deepest = o;
+      deepestLength = pathLength(o.fault.path);
+    }
   }
-  if (limit !== undefined) return exhausted(limit);
-  return notWF ? NOT_WF : CONFORMS;
+  return (
+    firstExhausted ??
+    firstNotWf ??
+    deepest ??
+    mismatch({ path, at: pos, reason: "no-alternative" })
+  );
 }
 
 // ----- the public entry points -----
@@ -154,23 +302,23 @@ function kleeneAll(outcomes: readonly Diagnosis[]): Diagnosis {
 /**
  * Diagnose `wf(T)`: `conforms` when T is a well-formed descriptor, `not_well_formed` when it is
  * conclusively not, and `exhausted` when the well-formedness traversal itself could not finish
- * — the distinction horos-internal#211 asks for by name.
+ * — the distinction horos-internal#211 asks for by name. A non-conforming outcome names the
+ * descriptor position and, where one argument is at fault, its item index.
  */
 export function diagnoseWf(t: Value): Diagnosis {
-  return diagnoseWfIn(t, [], [], 0);
+  return report(diagnoseWfIn(t, [], [], 0, undefined));
 }
 
 /**
  * Diagnose `v : T`. Mirrors `conforms`: the `wf(T)` soundness gate runs first (spec §3 MUST),
  * so a descriptor that is not well-formed yields `not_well_formed` and one whose
  * well-formedness could not be decided yields `exhausted` — neither is reported as a mismatch
- * of the value.
+ * of the value. Each carries the well-formedness location, with an empty value path.
  */
 export function diagnose(v: Value, t: Value): Diagnosis {
-  const w = diagnoseWf(t);
-  if (w.verdict === "conforms") return diagnoseIn(v, t, [], [], 0);
-  if (w.verdict === "exhausted") return w;
-  return NOT_WF;
+  const w = diagnoseWfIn(t, [], [], 0, undefined);
+  if (w.verdict !== "conforms") return report(w);
+  return report(diagnoseIn(v, t, [], [], 0, undefined, undefined));
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -178,6 +326,8 @@ export function diagnose(v: Value, t: Value): Diagnosis {
 interface Binding {
   readonly name: string;
   readonly body: Value;
+  /** The position of the `rec` body, where a `ref` to this binding continues. */
+  readonly at: PosNode;
 }
 
 function head(t: Value): { ctor: string; args: readonly Value[] } | undefined {
@@ -208,165 +358,325 @@ function atomStringOf(v: Value): string | undefined {
   return key;
 }
 
+/** One child sub-judgment of a structural arm: a child value, its descriptor and location. */
+interface Child {
+  readonly v: Value;
+  readonly t: Value;
+  readonly step: Step;
+  readonly at: PosNode;
+}
+
 function diagnoseIn(
   v: Value,
   t: Value,
   env: readonly Binding[],
   pending: readonly string[],
   depth: number,
-): Diagnosis {
-  if (depth > MAX_RECURSION_DEPTH) return exhausted("recursion_depth");
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): Outcome {
+  if (depth > MAX_RECURSION_DEPTH) return exhausted(path, pos);
+  const refused = (): Outcome => mismatch({ path, at: pos, reason: "refused" });
   const h = head(t);
-  if (h === undefined) return MISMATCH; // not a horos descriptor
+  if (h === undefined) return refused(); // not a horos descriptor; unreachable past the wf gate
   const { ctor, args } = h;
 
   // Leaves never recurse into a value position, so they are always decisive here.
-  if (isLeafCtor(ctor)) return leafClassifies(v, t) ? CONFORMS : MISMATCH;
+  if (isLeafCtor(ctor)) return leafClassifies(v, t) ? CONFORMS : refused();
 
   switch (ctor) {
     // Composition on the SAME v — pending threads through unchanged.
     case "union":
-      return kleeneAny(args.map((ct) => diagnoseIn(v, ct, env, pending, depth + 1)));
+      return kleeneAny(
+        args.length,
+        (i) => diagnoseIn(v, args[i]!, env, pending, depth + 1, path, at(pos, i + 1)),
+        path,
+        pos,
+      );
     case "and":
-      return kleeneAll(args.map((ct) => diagnoseIn(v, ct, env, pending, depth + 1)));
+      return kleeneAll(args.length, (i) =>
+        diagnoseIn(v, args[i]!, env, pending, depth + 1, path, at(pos, i + 1)),
+      );
     case "not": {
-      if (args.length !== 1) return MISMATCH;
-      return kleeneNot(diagnoseIn(v, args[0]!, env, pending, depth + 1));
+      if (args.length !== 1) return refused();
+      return kleeneNot(
+        diagnoseIn(v, args[0]!, env, pending, depth + 1, path, at(pos, 1)),
+        path,
+        pos,
+      );
     }
 
-    // Recursion — mirrors the recognizer's guard exactly.
+    // Recursion — mirrors the recognizer's guard exactly, and is transparent to locations.
     case "rec": {
-      if (args.length !== 2) return MISMATCH;
+      if (args.length !== 2) return refused();
       const name = atomStringOf(args[0]!);
-      if (name === undefined) return MISMATCH;
+      if (name === undefined) return refused();
       const body = args[1]!;
-      return diagnoseIn(v, body, [...env, { name, body }], [...pending, name], depth + 1);
+      const bodyAt = at(pos, 2);
+      return diagnoseIn(
+        v,
+        body,
+        [...env, { name, body, at: bodyAt }],
+        [...pending, name],
+        depth + 1,
+        path,
+        bodyAt,
+      );
     }
     case "ref": {
-      if (args.length !== 1) return MISMATCH;
+      if (args.length !== 1) return refused();
       const name = atomStringOf(args[0]!);
-      if (name === undefined) return MISMATCH;
-      if (pending.includes(name)) return MISMATCH; // unguarded — the recognizer's false
+      if (name === undefined) return refused();
+      if (pending.includes(name)) return refused(); // unguarded — the recognizer's false
       for (let i = env.length - 1; i >= 0; i -= 1) {
-        if (env[i]!.name === name) {
-          return diagnoseIn(v, env[i]!.body, env, [...pending, name], depth + 1);
+        const b = env[i]!;
+        if (b.name === name) {
+          return diagnoseIn(v, b.body, env, [...pending, name], depth + 1, path, b.at);
         }
       }
-      return MISMATCH; // unbound
+      return refused(); // unbound
     }
   }
 
   // Structural arms: the gate is decisive, and a descent into a CHILD VALUE clears pending.
-  const children = structuralChildren(v, ctor, args);
-  if (children === undefined) return MISMATCH;
-  return kleeneAll(children.map(([cv, ct]) => diagnoseIn(cv, ct, env, [], depth + 1)));
+  const gate = structuralChildren(v, ctor, args, path, pos);
+  if (!Array.isArray(gate)) return mismatch(gate as Fault);
+  const children = gate as readonly Child[];
+  return kleeneAll(children.length, (i) => {
+    const c = children[i]!;
+    return diagnoseIn(c.v, c.t, env, [], depth + 1, stepInto(path, c.step), c.at);
+  });
 }
 
 /**
  * The structural gate plus the ordered child sub-judgments, for the arms that descend into a
- * child VALUE. Mirrors the recognizer's recursive arms; `undefined` means the gate failed, so
- * `v` cannot conform regardless of any child.
+ * child VALUE. Mirrors the recognizer's recursive arms; a {@link Fault} means the gate failed,
+ * so `v` cannot conform regardless of any child.
  */
 function structuralChildren(
   v: Value,
   ctor: string,
   args: readonly Value[],
-): [Value, Value][] | undefined {
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): readonly Child[] | Fault {
+  const refused: Fault = { path, at: pos, reason: "refused" };
   switch (ctor) {
     case "tuple": {
-      if (v.kind !== "tuple") return undefined;
+      if (v.kind !== "tuple") return refused;
       const items = v.items();
-      if (items.length !== args.length) return undefined;
-      return items.map((c, i) => [c, args[i]!] as [Value, Value]);
+      if (items.length !== args.length) return refused;
+      return items.map((c, i) => ({
+        v: c,
+        t: args[i]!,
+        step: { kind: "item", index: i },
+        at: at(pos, i + 1),
+      }));
     }
     case "seq": {
-      if (args.length !== 1 || v.kind !== "tuple") return undefined;
-      return v.items().map((c) => [c, args[0]!] as [Value, Value]);
+      if (args.length !== 1 || v.kind !== "tuple") return refused;
+      const childAt = at(pos, 1);
+      return v.items().map((c, i) => ({
+        v: c,
+        t: args[0]!,
+        step: { kind: "item", index: i },
+        at: childAt,
+      }));
     }
     case "compound": {
-      if (args.length < 1 || v.kind !== "tuple") return undefined;
+      if (args.length < 1 || v.kind !== "tuple") return refused;
       const label = atomBytesOf(args[0]!);
       const items = v.items();
-      if (label === undefined || items.length !== args.length) return undefined;
+      if (label === undefined || items.length !== args.length) return refused;
       const got = atomBytesOf(items[0]!);
       if (
         got === undefined ||
         got.length !== label.length ||
         got.some((b, i) => b !== label[i])
       )
-        return undefined;
-      return args.slice(1).map((ct, i) => [items[i + 1]!, ct] as [Value, Value]);
+        return refused;
+      // Value item j (j >= 1) is checked by descriptor argument j, at item index j + 1.
+      return args.slice(1).map((ct, i) => ({
+        v: items[i + 1]!,
+        t: ct,
+        step: { kind: "item", index: i + 1 },
+        at: at(pos, i + 2),
+      }));
     }
     case "list-of":
     case "set-of": {
-      if (args.length !== 1) return undefined;
+      if (args.length !== 1) return refused;
+      let elems: Value[];
       try {
-        const elems = ctor === "list-of" ? readList(v) : readSet(v);
-        return elems.map((e) => [e, args[0]!] as [Value, Value]);
+        elems = ctor === "list-of" ? readList(v) : readSet(v);
       } catch {
-        return undefined;
+        return refused;
       }
+      const childAt = at(pos, 1);
+      return elems.map((e, i) => ({
+        v: e,
+        t: args[0]!,
+        step: { kind: "elem", index: i },
+        at: childAt,
+      }));
     }
     case "map-of": {
-      if (args.length !== 2) return undefined;
+      if (args.length !== 2) return refused;
+      let entries: readonly (readonly [Value, Value])[];
       try {
-        const out: [Value, Value][] = [];
-        for (const [k, val] of readMap(v)) {
-          out.push([k, args[0]!], [val, args[1]!]);
-        }
-        return out;
+        entries = readMap(v);
       } catch {
-        return undefined;
+        return refused;
       }
+      const keyAt = at(pos, 1);
+      const valueAt = at(pos, 2);
+      const out: Child[] = [];
+      entries.forEach(([k, val], i) => {
+        out.push(
+          { v: k, t: args[0]!, step: { kind: "key", index: i }, at: keyAt },
+          { v: val, t: args[1]!, step: { kind: "value", index: i }, at: valueAt },
+        );
+      });
+      return out;
     }
     case "record":
-      return args.length < 1 ? undefined : recordChildren(v, args[0]!, args.slice(1));
+      return args.length < 1
+        ? refused
+        : recordChildren(v, args[0]!, args.slice(1), path, pos);
   }
-  return undefined;
+  return refused;
 }
 
-/** Mirrors the recognizer's record gate and present-field worklist. */
+/**
+ * Mirrors the recognizer's record gate and present-field worklist, in the fixed order of
+ * ADR 0009: a canonical map, text keys, missing required fields in descriptor order, extra
+ * fields of a closed record in canonical key order, then the present declared fields.
+ */
 function recordChildren(
   v: Value,
   mode: Value,
   fields: readonly Value[],
-): [Value, Value][] | undefined {
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): readonly Child[] | Fault {
+  const refused: Fault = { path, at: pos, reason: "refused" };
   const m = atomStringOf(mode);
-  if (m !== "open" && m !== "closed") return undefined;
-  const closed = m === "closed";
+  if (m !== "open" && m !== "closed") return refused;
   let entries: readonly (readonly [Value, Value])[];
   try {
     entries = readMap(v);
   } catch {
-    return undefined;
+    return refused;
   }
   const keyed = new Map<string, Value>();
-  for (const [k, val] of entries) {
+  for (let i = 0; i < entries.length; i += 1) {
+    const [k, val] = entries[i]!;
     try {
       keyed.set(readText(k), val);
     } catch {
-      return undefined;
+      return {
+        path: stepInto(path, { kind: "key", index: i }),
+        at: pos,
+        reason: "refused",
+      };
     }
   }
-  const out: [Value, Value][] = [];
+  const out: Child[] = [];
   const declared = new Set<string>();
-  for (const f of fields) {
-    const fd = readFieldDescriptor(f);
-    if (fd === undefined) return undefined;
+  for (let j = 0; j < fields.length; j += 1) {
+    const fd = readFieldDescriptor(fields[j]!);
+    if (fd === undefined) return refused;
     declared.add(fd.name);
     const val = keyed.get(fd.name);
     if (val === undefined) {
-      if (fd.required) return undefined; // a missing required field is decisive
+      if (fd.required) return { path, at: pos, reason: "missing-field", field: fd.name };
       continue;
     }
-    out.push([val, fd.ty]);
+    // Field j is descriptor item j + 2; its type is item 3 of the field form.
+    out.push({
+      v: val,
+      t: fd.ty,
+      step: { kind: "field", name: fd.name },
+      at: at(at(pos, j + 2), 3),
+    });
   }
-  if (closed) {
+  if (m === "closed") {
     for (const k of keyed.keys()) {
-      if (!declared.has(k)) return undefined; // an extra key in a closed record is decisive
+      if (!declared.has(k)) return { path, at: pos, reason: "extra-field", field: k };
     }
   }
   return out;
+}
+
+/** In-range check of an `atom-len`/`text-len` bound: the signed 128-bit cap. */
+function boundInRange(n: bigint): boolean {
+  return n >= ATOM_LEN_BOUND_MIN && n <= ATOM_LEN_BOUND_MAX;
+}
+
+/**
+ * The leaf constructors' own-form check, in the fixed order of ADR 0009: arity, then each
+ * argument in item order against the arguments before it. `undefined` is well formed;
+ * otherwise the reason and, for an argument, its item index. Mirrors the recognizer's
+ * `wfIn` leaf arms, which decide the same set.
+ */
+function leafWfFault(
+  ctor: string,
+  args: readonly Value[],
+): { readonly reason: Reason; readonly arg?: number } | undefined {
+  const arity = (n: number) =>
+    args.length === n ? undefined : { reason: "arity" as const };
+  const argument = (i: number) => ({ reason: "argument" as const, arg: i });
+  switch (ctor) {
+    case "any":
+    case "atom":
+    case "key-grammar":
+    case "text-non-blank":
+    case "lowercase-uuid":
+      return arity(0);
+    case "exact":
+      return arity(1);
+    case "atom-exact":
+      return arity(1) ?? (atomBytesOf(args[0]!) === undefined ? argument(1) : undefined);
+    case "atom-len":
+    case "text-len": {
+      const a = arity(2);
+      if (a !== undefined) return a;
+      let lo: bigint;
+      try {
+        lo = readInt(args[0]!);
+      } catch {
+        return argument(1);
+      }
+      if (!boundInRange(lo) || lo < 0n) return argument(1);
+      let hi: bigint;
+      try {
+        hi = readInt(args[1]!);
+      } catch {
+        return argument(2);
+      }
+      return !boundInRange(hi) || hi < lo ? argument(2) : undefined;
+    }
+    case "atom-in": {
+      const a = arity(1);
+      if (a !== undefined) return a;
+      let elems: Value[];
+      try {
+        elems = readSet(args[0]!);
+      } catch {
+        return argument(1);
+      }
+      return elems.every((e) => e.kind === "atom") ? undefined : argument(1);
+    }
+    case "scalar": {
+      const a = arity(1);
+      if (a !== undefined) return a;
+      const kind = atomStringOf(args[0]!);
+      return kind === "int" || kind === "utf8-text" || kind === "bool"
+        ? undefined
+        : argument(1);
+    }
+  }
+  return { reason: "unknown-constructor" };
 }
 
 function diagnoseWfIn(
@@ -374,67 +684,90 @@ function diagnoseWfIn(
   bound: readonly string[],
   pending: readonly string[],
   depth: number,
-): Diagnosis {
-  if (depth > MAX_RECURSION_DEPTH) return exhausted("recursion_depth");
+  pos: PosNode | undefined,
+): Outcome {
+  if (depth > MAX_RECURSION_DEPTH) return exhausted(undefined, pos);
+  const fault = (reason: Reason, arg?: number): Outcome =>
+    notWf(
+      arg === undefined
+        ? { path: undefined, at: pos, reason }
+        : { path: undefined, at: pos, reason, arg },
+    );
   const h = head(t);
-  if (h === undefined) return NOT_WF;
+  if (h === undefined) return fault("not-descriptor");
   const { ctor, args } = h;
-  if (isLeafCtor(ctor)) return leafWellFormed(t) ? CONFORMS : NOT_WF;
+  if (isLeafCtor(ctor)) {
+    const f = leafWfFault(ctor, args);
+    return f === undefined ? CONFORMS : fault(f.reason, f.arg);
+  }
 
-  const wfAll = (ts: readonly Value[], p: readonly string[]): Diagnosis =>
-    kleeneAll(ts.map((ct) => diagnoseWfIn(ct, bound, p, depth + 1)));
+  // Child descriptors at the given item indices, in order, after the own form is accepted.
+  const wfChildren = (items: readonly number[], p: readonly string[]): Outcome =>
+    kleeneAll(items.length, (i) =>
+      diagnoseWfIn(args[items[i]! - 1]!, bound, p, depth + 1, at(pos, items[i]!)),
+    );
+  const all = (from: number): number[] => {
+    const out: number[] = [];
+    for (let i = from; i <= args.length; i += 1) out.push(i);
+    return out;
+  };
 
   switch (ctor) {
     case "tuple":
-      return wfAll(args, []);
+      return wfChildren(all(1), []);
     case "seq":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, [], depth + 1);
-    case "compound":
-      if (args.length < 1 || atomBytesOf(args[0]!) === undefined) return NOT_WF;
-      return wfAll(args.slice(1), []);
     case "list-of":
     case "set-of":
-      return args.length !== 1 ? NOT_WF : diagnoseWfIn(args[0]!, bound, [], depth + 1);
+      return args.length !== 1 ? fault("arity") : wfChildren([1], []);
+    case "compound":
+      if (args.length < 1) return fault("arity");
+      if (atomBytesOf(args[0]!) === undefined) return fault("argument", 1);
+      return wfChildren(all(2), []);
     case "map-of":
-      if (args.length !== 2) return NOT_WF;
-      return kleeneAll([
-        diagnoseWfIn(args[0]!, bound, [], depth + 1),
-        diagnoseWfIn(args[1]!, bound, [], depth + 1),
-      ]);
+      return args.length !== 2 ? fault("arity") : wfChildren([1, 2], []);
     case "union":
     case "and":
-      return wfAll(args, pending);
+      return wfChildren(all(1), pending);
     case "not":
-      return args.length !== 1
-        ? NOT_WF
-        : diagnoseWfIn(args[0]!, bound, pending, depth + 1);
+      return args.length !== 1 ? fault("arity") : wfChildren([1], pending);
     case "rec": {
-      if (args.length !== 2) return NOT_WF;
+      if (args.length !== 2) return fault("arity");
       const name = atomStringOf(args[0]!);
-      if (name === undefined) return NOT_WF;
-      return diagnoseWfIn(args[1]!, [...bound, name], [...pending, name], depth + 1);
+      if (name === undefined) return fault("argument", 1);
+      return diagnoseWfIn(
+        args[1]!,
+        [...bound, name],
+        [...pending, name],
+        depth + 1,
+        at(pos, 2),
+      );
     }
     case "ref": {
-      if (args.length !== 1) return NOT_WF;
+      if (args.length !== 1) return fault("arity");
       const name = atomStringOf(args[0]!);
-      return name !== undefined && bound.includes(name) && !pending.includes(name)
-        ? CONFORMS
-        : NOT_WF;
+      if (name === undefined) return fault("argument", 1);
+      if (!bound.includes(name)) return fault("unbound-ref", 1);
+      if (pending.includes(name)) return fault("unguarded-ref", 1);
+      return CONFORMS;
     }
     case "record": {
-      if (args.length < 1) return NOT_WF;
+      if (args.length < 1) return fault("arity");
       const mode = atomStringOf(args[0]!);
-      if (mode !== "open" && mode !== "closed") return NOT_WF;
+      if (mode !== "open" && mode !== "closed") return fault("argument", 1);
       const names = new Set<string>();
-      const outcomes: Diagnosis[] = [];
-      for (const field of args.slice(1)) {
-        const fd = readFieldDescriptor(field);
-        if (fd === undefined || names.has(fd.name)) return NOT_WF;
+      const types: Value[] = [];
+      for (let k = 2; k <= args.length; k += 1) {
+        const fd = readFieldDescriptor(args[k - 1]!);
+        if (fd === undefined) return fault("argument", k);
+        if (names.has(fd.name)) return fault("duplicate-field", k);
         names.add(fd.name);
-        outcomes.push(diagnoseWfIn(fd.ty, bound, [], depth + 1));
+        types.push(fd.ty);
       }
-      return kleeneAll(outcomes);
+      // Field k's type is item 3 of the field form at item k.
+      return kleeneAll(types.length, (i) =>
+        diagnoseWfIn(types[i]!, bound, [], depth + 1, at(at(pos, i + 2), 3)),
+      );
     }
   }
-  return NOT_WF;
+  return fault("unknown-constructor");
 }

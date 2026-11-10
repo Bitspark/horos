@@ -702,13 +702,6 @@ export function leafClassifies(v: Value, t: Value): boolean {
   return conformsIn(v, t, undefined, undefined, 0);
 }
 
-/** Decide whether a LEAF descriptor `t` is well-formed (the `horos/wf-leaf(T)` builtin). */
-export function leafWellFormed(t: Value): boolean {
-  const h = head(t);
-  if (h === undefined || !isLeafCtor(h.ctor)) return false;
-  return wfIn(t, undefined, undefined, 0);
-}
-
 /** Read a field descriptor for diagnostics. */
 export function readFieldDescriptor(
   f: Value,

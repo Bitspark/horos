@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-/** Evaluate wf/conforms over ontos-codec-v1 hex. */
+/** Evaluate wf/conforms, and their diagnoses as JSON, over ontos-codec-v1 hex. */
 import { decode } from "@bitspark/ontos-codec";
+import { diagnose, diagnoseWf } from "./diagnose.js";
 import { conforms, wf } from "./index.js";
 
 function value(hex: string) {
@@ -14,9 +15,13 @@ try {
     console.log(wf(value(args[1]!)));
   } else if (args[0] === "conforms" && args.length === 3) {
     console.log(conforms(value(args[2]!), value(args[1]!)));
+  } else if (args[0] === "diagnose-wf" && args.length === 2) {
+    console.log(JSON.stringify(diagnoseWf(value(args[1]!))));
+  } else if (args[0] === "diagnose" && args.length === 3) {
+    console.log(JSON.stringify(diagnose(value(args[2]!), value(args[1]!))));
   } else {
     throw new Error(
-      "usage: horos-conform wf <descriptor> | conforms <descriptor> <value>",
+      "usage: horos-conform wf <descriptor> | conforms <descriptor> <value> | diagnose-wf <descriptor> | diagnose <descriptor> <value>",
     );
   }
 } catch (error) {
