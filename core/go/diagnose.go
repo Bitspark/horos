@@ -508,7 +508,8 @@ func isDescriptorCtor(ctor string) bool {
 // arity, then each argument in item order against the arguments before it.
 func leafFault(ctor string, args []Value) (Reason, int) {
 	arity := map[string]int{"any": 0, "atom": 0, "key-grammar": 0, "text-non-blank": 0, "lowercase-uuid": 0,
-		"atom-exact": 1, "atom-in": 1, "scalar": 1, "exact": 1, "atom-len": 2, "text-len": 2}[ctor]
+		"atom-exact": 1, "atom-in": 1, "scalar": 1, "exact": 1, "int-min": 1, "int-max": 1,
+		"atom-len": 2, "text-len": 2}[ctor]
 	if len(args) != arity {
 		return ReasonArity, 0
 	}
@@ -530,6 +531,10 @@ func leafFault(ctor string, args []Value) (Reason, int) {
 	case "scalar":
 		k, ok := atomBytes(args[0])
 		if !ok || (string(k) != "int" && string(k) != "utf8-text" && string(k) != "bool") {
+			return ReasonArgument, 1
+		}
+	case "int-min", "int-max":
+		if bound, err := data.ReadInt(args[0]); err != nil || !atomLenBoundInRange(bound) {
 			return ReasonArgument, 1
 		}
 	case "atom-len", "text-len":

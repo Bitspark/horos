@@ -31,7 +31,11 @@ interface VectorDoc {
 // `npm test` runs with cwd = core/ts; the repo-root vectors/ is two levels up
 // (mirroring the Rust core's CARGO_MANIFEST_DIR/../../vectors and the Go core's
 // ../../vectors from core/go).
-const VEC_PATH = resolve(process.cwd(), "../../vectors/conformance.json");
+// integer-bounds.json is the hand-authored oracle for int-min/int-max (ADR 0010); the
+// original oracle is pinned byte for byte.
+const VEC_PATHS = ["conformance.json", "integer-bounds.json"].map((f) =>
+  resolve(process.cwd(), "../../vectors", f),
+);
 
 function hexToBytes(h: string): Uint8Array {
   const out = new Uint8Array(h.length / 2);
@@ -46,14 +50,16 @@ function decodeHex(h: string): Value {
 }
 
 test("vectors replay (TS == oracle == Rust == Go)", () => {
-  const doc = JSON.parse(readFileSync(VEC_PATH, "utf8")) as VectorDoc;
-  assert.ok(doc.cases.length > 0, "vectors/conformance.json has no cases");
-  for (const c of doc.cases) {
-    const desc = decodeHex(c.descriptor);
-    assert.equal(wf(desc), c.wf, `wf(${c.name})`);
-    for (const v of c.values) {
-      const val = decodeHex(v.value);
-      assert.equal(conforms(val, desc), v.conforms, `${c.name} / ${v.note ?? ""}`);
+  for (const path of VEC_PATHS) {
+    const doc = JSON.parse(readFileSync(path, "utf8")) as VectorDoc;
+    assert.ok(doc.cases.length > 0, `${path} has no cases`);
+    for (const c of doc.cases) {
+      const desc = decodeHex(c.descriptor);
+      assert.equal(wf(desc), c.wf, `wf(${c.name})`);
+      for (const v of c.values) {
+        const val = decodeHex(v.value);
+        assert.equal(conforms(val, desc), v.conforms, `${c.name} / ${v.note ?? ""}`);
+      }
     }
   }
 });

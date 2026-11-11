@@ -1721,27 +1721,31 @@ fn emit(cases: &[Case]) {
         .expect("write vectors/conformance.json");
 }
 
-/// Replay the committed `vectors/conformance.json` — decode each descriptor/value from
-/// `ontos-codec-v1` hex and re-check `wf`/`conforms`. This is the exact replay the Go
-/// and TS cores run, so the three agree on one oracle.
+/// Replay the committed `vectors/conformance.json` and `vectors/integer-bounds.json`
+/// (ADR 0010) — decode each descriptor/value from `ontos-codec-v1` hex and re-check
+/// `wf`/`conforms`. This is the exact replay the Go, TS and Python lanes run, so the
+/// cores agree on one set of oracles.
 #[test]
 fn vectors_replay() {
-    let path = format!("{}/testdata/conformance.json", env!("CARGO_MANIFEST_DIR"));
-    let txt = std::fs::read_to_string(&path)
-        .expect("vectors/conformance.json missing — run with HOROS_EMIT_VECTORS=1 first");
-    let doc: serde_json::Value = serde_json::from_str(&txt).unwrap();
-    for c in doc["cases"].as_array().unwrap() {
-        let name = c["name"].as_str().unwrap();
-        let desc = decode(&from_hex(c["descriptor"].as_str().unwrap())).unwrap();
-        assert_eq!(wf(&desc), c["wf"].as_bool().unwrap(), "wf {name}");
-        for v in c["values"].as_array().unwrap() {
-            let val = decode(&from_hex(v["value"].as_str().unwrap())).unwrap();
-            assert_eq!(
-                conforms(&val, &desc),
-                v["conforms"].as_bool().unwrap(),
-                "{name} / {}",
-                v["note"].as_str().unwrap_or("")
-            );
+    for file in ["conformance.json", "integer-bounds.json"] {
+        let path = format!("{}/testdata/{file}", env!("CARGO_MANIFEST_DIR"));
+        let txt = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let doc: serde_json::Value = serde_json::from_str(&txt).unwrap();
+        let cases = doc["cases"].as_array().unwrap();
+        assert!(!cases.is_empty(), "{file} has no cases");
+        for c in cases {
+            let name = c["name"].as_str().unwrap();
+            let desc = decode(&from_hex(c["descriptor"].as_str().unwrap())).unwrap();
+            assert_eq!(wf(&desc), c["wf"].as_bool().unwrap(), "wf {file} {name}");
+            for v in c["values"].as_array().unwrap() {
+                let val = decode(&from_hex(v["value"].as_str().unwrap())).unwrap();
+                assert_eq!(
+                    conforms(&val, &desc),
+                    v["conforms"].as_bool().unwrap(),
+                    "{file} {name} / {}",
+                    v["note"].as_str().unwrap_or("")
+                );
+            }
         }
     }
 }

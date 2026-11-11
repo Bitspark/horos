@@ -35,6 +35,8 @@ flags marked `Atom` are raw atoms, and `T`, `K`, `V` are child descriptors.
 | `atom-len(int(lo),int(hi))` | Atom byte length between inclusive bounds |
 | `atom-in(set(Atom(a),...))` | Atom equals a member of the canonical set |
 | `scalar(Atom(kind))` | Canonical `int`, `utf8-text` or `bool`, delegated to ontos/data |
+| `int-min(int(lo))` | Canonical `int` greater than or equal to `lo` |
+| `int-max(int(hi))` | Canonical `int` less than or equal to `hi` |
 | `tuple(T0,...,Tn)` | Bare tuple with exactly this arity and matching children |
 | `seq(T)` | Bare tuple of any arity, all children matching T |
 | `compound(Atom(label),T0,...)` | Tuple beginning with that exact atom label, followed by exactly the matching children |
@@ -74,6 +76,16 @@ and conform. An optional field may be absent; if present, it must conform. An
 absent map entry and an entry containing null are different values. Duplicate
 field names are rejected. The record always requires canonical map ordering and
 text keys, including the keys of extra fields in open mode.
+
+## Integer refinements
+
+`int-min` and `int-max` each first recognize a canonical `int`, exactly as
+`scalar(int)` does, and refuse any other value. The bound is inclusive. A closed
+range is `and(int-min(int(lo)), int-max(int(hi)))`; the empty intersection is
+well formed and matches nothing. Values have no width bound: the comparison is
+exact for every canonical integer. A bound must be a canonical integer in the
+signed 128-bit range, like `atom-len` bounds, but it may be negative. See the
+[integer bounds decision](../architecture/decisions/0010-integer-bounds.md).
 
 ## Text refinements
 

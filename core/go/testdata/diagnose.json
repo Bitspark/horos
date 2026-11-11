@@ -873,6 +873,121 @@
       }
     },
     {
+      "descriptor": "0103000c686f726f732f7265636f72640006636c6f7365640104000b686f726f732f6669656c6401020009757466382d746578740005636f756e7400037265710102000d686f726f732f696e742d6d696e01020003696e74000100",
+      "name": "int-bounds-in-a-record",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                3
+              ],
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "count"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "count -1",
+          "value": "010200036d6170010201020009757466382d746578740005636f756e7401020003696e7400020101"
+        },
+        {
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "count 2^200",
+          "value": "010200036d6170010201020009757466382d746578740005636f756e7401020003696e74001b000100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640102000d686f726f732f696e742d6d696e01020003696e740001000102000d686f726f732f696e742d6d617801020003696e7400020009",
+      "name": "int-bounds-closed-range",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "2^200 is above the range",
+          "value": "01020003696e74001b000100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "-2^200 is below the range",
+          "value": "01020003696e74001b010100000000000000000000000000000000000000000000000000"
+        },
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "text is refused by the first bound",
+          "value": "01020009757466382d74657874000135"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f6c6973742d6f660102000d686f726f732f696e742d6d617801020003696e74000200ff",
+      "name": "int-bounds-list-element",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "the second element is above",
+          "value": "010300046c69737401020003696e740002000101020003696e74001b000100000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "wf": {
+        "verdict": "conforms"
+      }
+    },
+    {
       "descriptor": "01030009686f726f732f72656300014c0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400025b5d0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600014c",
       "name": "exhausted-cons-list",
       "values": [
@@ -3025,6 +3140,146 @@
       ],
       "wf": {
         "verdict": "conforms"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d696e01020003696e7400110080000000000000000000000000000000",
+      "name": "wf-int-min-bound-past-i128",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0102000d686f726f732f696e742d6d617801020009757466382d74657874000139",
+      "name": "wf-int-max-text-bound",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0101000d686f726f732f696e742d6d696e",
+      "name": "wf-int-min-arity",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "arity"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "arity"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "0103000d686f726f732f696e742d6d617801020003696e740002000101020003696e7400020002",
+      "name": "wf-int-max-arity",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "at": [],
+              "path": [],
+              "reason": "arity"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "at": [],
+          "path": [],
+          "reason": "arity"
+        },
+        "verdict": "not_well_formed"
+      }
+    },
+    {
+      "descriptor": "01030009686f726f732f616e640102000d686f726f732f696e742d6d696e01020003696e740001000102000d686f726f732f696e742d6d6178000139",
+      "name": "wf-int-bound-in-and",
+      "values": [
+        {
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                2
+              ],
+              "path": [],
+              "reason": "argument"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            2
+          ],
+          "path": [],
+          "reason": "argument"
+        },
+        "verdict": "not_well_formed"
       }
     },
     {

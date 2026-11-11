@@ -828,6 +828,13 @@ fn leaf_wf_fault(ctor: &str, args: &[Value]) -> Option<(Reason, Option<usize>)> 
             Ok(elems) if elems.iter().all(|e| e.as_atom().is_some()) => None,
             _ => argument(1),
         }),
+        "int-min" | "int-max" => arity(1).or_else(|| {
+            if read_int(&args[0]).is_ok() {
+                None
+            } else {
+                argument(1)
+            }
+        }),
         "atom-len" | "text-len" => arity(2).or_else(|| {
             let lo = match read_int(&args[0]) {
                 Ok(lo) if lo >= 0 => lo,

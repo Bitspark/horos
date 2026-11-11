@@ -8,7 +8,11 @@ mod diagnostic_regressions;
 use std::collections::HashMap;
 
 use ontos_core::Value;
-use ontos_data::{read_bool, read_int, read_list, read_map, read_set, read_text, recognize_int};
+use std::cmp::Ordering;
+
+use ontos_data::{
+    read_bool, read_int, read_int_bytes, read_list, read_map, read_set, read_text, recognize_int,
+};
 
 /// A persistent (cons-list) stack of scoped entries threaded through the recursion by
 /// reference. Each `rec`/`ref` frame pushes one node that **borrows** the parent chain
@@ -284,6 +288,17 @@ fn conforms_in<'a>(
             Err(_) => false,
         },
 
+        // Integer bounds (ADR 0010): a canonical int of any width, compared exactly with
+        // an inclusive bound that `read_int` materializes into the i128 range.
+        ("int-min", [b]) => read_int(b)
+            .ok()
+            .and_then(|b| compare_int(v, b))
+            .is_some_and(|o| o != Ordering::Less),
+        ("int-max", [b]) => read_int(b)
+            .ok()
+            .and_then(|b| compare_int(v, b))
+            .is_some_and(|o| o != Ordering::Greater),
+
         // Scalars — delegate to the frozen ontos/data recognizers.
         ("scalar", [k]) => match atom_bytes(k) {
             // Structural recognition — a canonical value beyond a binding's host integer
@@ -540,6 +555,7 @@ fn wf_in<'a>(
             _ => false,
         },
         ("key-grammar", []) | ("text-non-blank", []) | ("lowercase-uuid", []) => true,
+        ("int-min", [b]) | ("int-max", [b]) => read_int(b).is_ok(),
         ("scalar", [k]) => matches!(atom_bytes(k), Some(b"int" | b"utf8-text" | b"bool")),
         // Descent combinators clear `pending` (a value constructor is consumed).
         ("tuple", ts) => ts.iter().all(|ct| wf_in(ct, bound, None, depth + 1)),
@@ -605,6 +621,17 @@ fn wf_record<'a>(
 // ===========================================================================
 // ===========================================================================
 
+/// Compares a canonical `int` of any width with an i128 bound; `None` when `v` is not a
+/// canonical `int`. A value beyond i128 lies beyond every bound, so its sign decides.
+fn compare_int(v: &Value, bound: i128) -> Option<Ordering> {
+    let (negative, _) = read_int_bytes(v).ok()?;
+    Some(match read_int(v) {
+        Ok(n) => n.cmp(&bound),
+        Err(_) if negative => Ordering::Less,
+        Err(_) => Ordering::Greater,
+    })
+}
+
 /// Whether `t` is a **leaf** descriptor (a §4 leaf / §5 refinement / `exact`) — i.e. NOT a
 pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
     matches!(
@@ -614,6 +641,8 @@ pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
             | "atom-exact"
             | "atom-len"
             | "atom-in"
+            | "int-min"
+            | "int-max"
             | "text-len"
             | "key-grammar"
             | "text-non-blank"
