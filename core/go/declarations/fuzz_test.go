@@ -210,8 +210,8 @@ var queryPrograms = sync.OnceValues(func() (*decl.Program, []*decl.Program) {
 	return p, []*decl.Program{nodes, depth}
 })
 
-// querySeeds collects descriptors and kind expressions from the module seeds,
-// three items per seed, with the bundled prelude's kind bodies in its scope.
+// querySeeds collects the distinct declaration bodies and kinds of the module
+// seeds, three items per seed, with the bundled prelude's in its scope.
 func querySeeds(tb testing.TB) []struct {
 	encoded []byte
 	knobs   uint64
@@ -233,7 +233,7 @@ func querySeeds(tb testing.TB) []struct {
 			}{codec.Encode(core.NewTuple(group...)), k})
 		}
 	}
-	seen := map[string]bool{}
+	seen, seenItems := map[string]bool{}, map[string]bool{}
 	for _, encoded := range moduleSeeds(tb) {
 		modules, _ := decodeModuleSet(encoded)
 		for _, m := range modules {
@@ -256,7 +256,12 @@ func querySeeds(tb testing.TB) []struct {
 				if !ok || declaration.Len() != 4 {
 					continue
 				}
-				items = append(items, declaration.At(3), declaration.At(2))
+				for _, item := range []core.Value{declaration.At(3), declaration.At(2)} {
+					if key := string(codec.Encode(item)); !seenItems[key] {
+						seenItems[key] = true
+						items = append(items, item)
+					}
+				}
 			}
 			add(items, core.Equal(m, decl.Prelude()))
 		}

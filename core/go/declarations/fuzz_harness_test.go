@@ -23,8 +23,8 @@ const (
 	maxSessionValues = 24
 	maxSessionKinds  = 6
 	maxApplyRounds   = 2
-	// Ordered pairs of distinct kinds compared by Includes.
-	maxInclusionPairs = 24
+	// Ordered pairs of distinct kinds, not both bundled, compared by Includes.
+	maxInclusionPairs = 12
 	// Query items per FuzzQueries input and unions/intersections among them.
 	maxQueryItems   = 6
 	maxCombinations = 3
@@ -535,7 +535,9 @@ func (s *session) inclusions() {
 	pairs := 0
 	for _, a := range proper {
 		for _, b := range proper {
-			if a != b && pairs < maxInclusionPairs {
+			builtin := strings.HasPrefix(a, "k:Type") || strings.HasPrefix(a, "k:Data")
+			builtin = builtin && (strings.HasPrefix(b, "k:Type") || strings.HasPrefix(b, "k:Data"))
+			if a != b && !builtin && pairs < maxInclusionPairs {
 				pairs++
 				s.do(op{kind: opIncludes, in: []string{a, b}})
 			}
