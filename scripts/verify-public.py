@@ -41,6 +41,8 @@ expected = (ROOT / "vectors/conformance.sha256").read_text().strip()
 assert hashlib.sha256(oracle).hexdigest() == expected, "original oracle changed"
 for lane in ("go", "rs"):
     assert (ROOT / f"core/{lane}/testdata/conformance.json").read_bytes() == oracle
+# Mixed inhabitation has no checker in any core; only the Go form tests read its copy.
+assert (ROOT / "core/go/testdata/mixed-inhabitation.json").read_bytes() == (ROOT / "vectors/mixed-inhabitation.json").read_bytes()
 for corpus in ("diagnose.json", "integer-bounds.json", "recursion-scope.json"):
     authored = (ROOT / "vectors" / corpus).read_bytes()
     for lane in ("go", "rs"):

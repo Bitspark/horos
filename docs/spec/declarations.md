@@ -300,6 +300,8 @@ language. Ground-descriptor extraction additionally establishes membership in
 the bundled ordinary ground kind and applies the unchanged ground WF judgment.
 A type inclusion does not rewrite a descriptor into a different form. These
 operations create no endpoint, runtime value validator, codec or hydration.
+Which ontos/wire mixed values a materialized Descriptor describes is specified in
+[mixed inhabitation](mixed-inhabitation.md); Horos supplies no checker for it.
 
 The exact closed membership procedure, free-shape inclusion and incomplete
 constructor proof procedure have different guarantees. A failed free-shape

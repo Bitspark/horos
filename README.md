@@ -78,7 +78,10 @@ behavior, as shown by the [Wire type examples](docs/spec/wire-types.md). The
 declarations layer adds no native generator, runtime binding or live capability
 validator. The
 [data/hydration boundary](docs/spec/hydrated-types.md) preserves Ontos's value
-models and the existing Wire/runtime responsibilities.
+models and the existing Wire/runtime responsibilities. Horos specifies when a
+mixed value inhabits a materialized Descriptor, with a replayable corpus
+([mixed inhabitation](docs/spec/mixed-inhabitation.md)); binding backends
+implement that check.
 
 Use diagnostics when a caller must distinguish a completed mismatch from an
 exhausted check. Every non-conforming diagnosis also names where the check
