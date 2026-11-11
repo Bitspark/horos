@@ -1231,3 +1231,138 @@ fn main() {
         share(capture)
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn exact_d(s: &[u8]) -> Value {
+        desc("exact", vec![atom(s)])
+    }
+
+    /// ADR 0011's reproducer: L's free ref(M) is unfolded under the inner M.
+    fn reproducer() -> Value {
+        rec_d(
+            b"M",
+            desc(
+                "union",
+                vec![
+                    exact_d(b"a"),
+                    rec_d(
+                        b"L",
+                        desc(
+                            "tuple",
+                            vec![
+                                ref_d(b"M"),
+                                rec_d(
+                                    b"M",
+                                    desc(
+                                        "union",
+                                        vec![exact_d(b"b"), desc("tuple", vec![ref_d(b"L")])],
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        )
+    }
+
+    #[test]
+    fn the_reproducer_is_capture_prone() {
+        let facts = scope_facts(&reproducer());
+        assert!(facts.shadowing && facts.capture);
+    }
+
+    #[test]
+    fn renaming_the_inner_binding_removes_the_capture() {
+        // The corpus's reproducer-renamed: nothing shadows, so readings cannot differ.
+        let t = rec_d(
+            b"M",
+            desc(
+                "union",
+                vec![
+                    exact_d(b"a"),
+                    rec_d(
+                        b"L",
+                        desc(
+                            "tuple",
+                            vec![
+                                ref_d(b"M"),
+                                rec_d(
+                                    b"K",
+                                    desc(
+                                        "union",
+                                        vec![exact_d(b"b"), desc("tuple", vec![ref_d(b"L")])],
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        );
+        let facts = scope_facts(&t);
+        assert!(!facts.shadowing && !facts.capture);
+    }
+
+    #[test]
+    fn shadowing_without_a_free_ref_is_not_capture() {
+        // The pinned oracle's rec-nested-shadow: the inner body refers only to itself.
+        let inner = rec_d(
+            b"x",
+            desc(
+                "union",
+                vec![
+                    exact_d(b"inil"),
+                    desc(
+                        "tuple",
+                        vec![desc("scalar", vec![atom(b"int")]), ref_d(b"x")],
+                    ),
+                ],
+            ),
+        );
+        let t = rec_d(
+            b"x",
+            desc(
+                "union",
+                vec![exact_d(b"onil"), desc("tuple", vec![inner, ref_d(b"x")])],
+            ),
+        );
+        let facts = scope_facts(&t);
+        assert!(facts.shadowing && !facts.capture);
+    }
+
+    #[test]
+    fn a_cons_list_neither_shadows_nor_captures() {
+        let facts = scope_facts(&cons_list_descriptor());
+        assert!(!facts.shadowing && !facts.capture);
+    }
+
+    #[test]
+    fn literals_are_not_descriptors() {
+        // A rec/ref spelled inside an exact literal is data, not scope.
+        let t = desc("exact", vec![reproducer()]);
+        let facts = scope_facts(&t);
+        assert!(!facts.shadowing && !facts.capture);
+    }
+
+    #[test]
+    fn every_capture_skeleton_is_capture_prone() {
+        let mut rng = Rng::new(7);
+        for _ in 0..500 {
+            assert!(scope_facts(&capture_skeleton(&mut rng)).capture);
+        }
+    }
+
+    #[test]
+    fn a_seed_reproduces_its_pairs() {
+        let run = |seed| {
+            let mut rng = Rng::new(seed);
+            (0..200).map(|_| gen_pair(&mut rng)).collect::<Vec<_>>()
+        };
+        assert!(run(11) == run(11));
+        assert!(run(11) != run(12));
+    }
+}
