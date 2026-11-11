@@ -181,13 +181,12 @@ func Diagnose(v, t Value) Diagnosis {
 	if w := diagnoseWFIn(t, nil, nil, 0, nil); w.verdict != VerdictConforms {
 		return w.diagnosis()
 	}
-	return diagnoseIn(v, t, nil, nil, 0, nil, nil).diagnosis()
+	return diagnoseIn(v, t, nil, 0, nil, nil).diagnosis()
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
 
-// diagEnv is one rec binding. A pointer to it is the binding's identity, which the
-// pending set compares (ADR 0011).
+// diagEnv is one rec binding.
 type diagEnv struct {
 	name []byte
 	body Value
@@ -229,16 +228,7 @@ func lookupEnv(env []*diagEnv, name []byte) int {
 	return -1
 }
 
-func containsBinding(pending []*diagEnv, b *diagEnv) bool {
-	for _, p := range pending {
-		if p == b {
-			return true
-		}
-	}
-	return false
-}
-
-func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
+func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
 	if depth > MaxRecursionDepth {
 		return exhaustedAt(path, at)
 	}
@@ -257,14 +247,14 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 	}
 
 	switch ctor {
-	// Composition on the SAME v — pending threads through unchanged.
+	// Composition on the SAME v.
 	case "union":
 		// A conforming alternative is decisive; otherwise the first exhaustion. A mismatch
 		// reports the first alternative that descended furthest, else the union itself.
 		var exhausted *outcome
 		var deepest *fault
 		for i, ct := range args {
-			o := diagnoseIn(v, ct, env, pending, depth+1, path, at.push(i+1))
+			o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1))
 			switch o.verdict {
 			case VerdictConforms:
 				return conformsO
@@ -288,7 +278,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 	case "and":
 		var all allOf
 		for i, ct := range args {
-			if o := diagnoseIn(v, ct, env, pending, depth+1, path, at.push(i+1)); all.add(o) {
+			if o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1)); all.add(o) {
 				return o
 			}
 		}
@@ -297,7 +287,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 		if len(args) != 1 {
 			return refused()
 		}
-		switch o := diagnoseIn(v, args[0], env, pending, depth+1, path, at.push(1)); o.verdict {
+		switch o := diagnoseIn(v, args[0], env, depth+1, path, at.push(1)); o.verdict {
 		case VerdictConforms:
 			return failAt(VerdictMismatch, path, at, ReasonComplement)
 		case VerdictMismatch:
@@ -307,9 +297,10 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 			return o
 		}
 
-	// Recursion — mirrors the recognizer's guard exactly. A ref denotes the rec that
-	// lexically encloses it and continues in that binding's environment (ADR 0011), at its
-	// rec body's position, so a location is always a node of the written descriptor.
+	// Recursion — mirrors the recognizer. A ref denotes the rec that lexically encloses it
+	// and continues in that binding's environment (ADR 0011), at its rec body's position,
+	// so a location is always a node of the written descriptor. Each unfolding is a frame
+	// counted against the depth bound.
 	case "rec":
 		if len(args) != 2 {
 			return refused()
@@ -320,7 +311,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 		}
 		bodyAt := at.push(2)
 		b := &diagEnv{name: nb, body: args[1], at: bodyAt}
-		return diagnoseIn(v, args[1], diagPushEnv(env, b), diagPushEnv(pending, b), depth+1, path, bodyAt)
+		return diagnoseIn(v, args[1], diagPushEnv(env, b), depth+1, path, bodyAt)
 	case "ref":
 		if len(args) != 1 {
 			return refused()
@@ -334,13 +325,10 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 			return refused() // unbound
 		}
 		b := env[i]
-		if containsBinding(pending, b) {
-			return refused() // unguarded — the recognizer's false
-		}
-		return diagnoseIn(v, b.body, env[:i+1], diagPushEnv(pending, b), depth+1, path, b.at)
+		return diagnoseIn(v, b.body, env[:i+1], depth+1, path, b.at)
 	}
 
-	// Structural arms: the gate is decisive, and a descent into a CHILD VALUE clears pending.
+	// Structural arms: the gate is decisive, then each child value against its descriptor.
 	children, gate := structuralChildren(v, ctor, args)
 	if gate != nil {
 		f := &fault{path: path, at: at, reason: gate.reason, field: gate.field}
@@ -351,7 +339,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, pending []*diagEnv, depth int, path 
 	}
 	var all allOf
 	for _, c := range children {
-		if o := diagnoseIn(c.v, c.t, env, nil, depth+1, path.push(c.step), at.push(c.at...)); all.add(o) {
+		if o := diagnoseIn(c.v, c.t, env, depth+1, path.push(c.step), at.push(c.at...)); all.add(o) {
 			return o
 		}
 	}

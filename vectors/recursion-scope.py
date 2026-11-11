@@ -187,33 +187,58 @@ case(
     *REPRODUCER_VALUES,
 )
 
-# The guard against unguarded unfolding identifies bindings, not names. Lexically:
-# outer M = (m, L), L = outer M | (l, inner M), inner M = b | L. Checking a value against the
-# inner M enters the inner M, unfolds L at the same value, and reaches L's ref(M): the outer
-# M, which has not been entered at this value. A name-keyed guard refuses it, because a
-# binding named M has been. Positions: the outer M's body (a compound) is [2], L's body
-# (a union) is [2, 2, 2], the inner M's body (a union) is [2, 2, 2, 2, 2, 2].
-GUARD = rec(
+# A case a dynamic reading loops on. Lexically: outer M = (m, L), L = outer M | (l, inner M),
+# inner M = b | L. Checking a value against the inner M enters the inner M, unfolds L at the
+# same value, and reaches L's ref(M). Lexically that is the outer M, whose compound descends.
+# Read at the unfolding site it is the inner M again, at the same value with no descent, so a
+# dynamic reading cycles inner M -> L -> inner M forever; the old checkers' name-keyed guard
+# refused it instead, and a guard keyed by name also refuses the outer M here. Positions: the
+# outer M's body (a compound) is [2], L's body (a union) is [2, 2, 2], L's ref(M) is
+# [2, 2, 2, 1], the inner M's body (a union) is [2, 2, 2, 2, 2, 2].
+LOOP = rec(
     "M",
     d("compound", A("m"), rec("L", d("union", ref("M"), d("compound", A("l"), rec("M", d("union", exact("b"), ref("L"))))))),
 )
 m, lab = A("m"), A("l")
+
+
+def P(y, n=1):
+    """(m, (l, y)), n times: each level enters the inner M at (m, ...) and unfolds L there."""
+    for _ in range(n):
+        y = Tup(m, Tup(lab, y))
+    return y
+
+
+# Depths: the root rec is 0, so L's union checking (l, P^(n-1-k)(b)) is entered at 3 + 9k,
+# and L's union checking P^(n-1-k)(b), reached through the inner M and ref(L), at 8 + 9k.
+# With n = 57 the deepest frame is the last inner M's exact(b) at 9n - 2 = 511. With n = 58,
+# L's union at 8 + 9 * 56 = 512 checks P(b) at path [item(1)] * 114, and both of its
+# alternatives, ref(M) first, are entered at 513: exhausted at ref(M)'s own position. Every
+# unfolding is a counted frame, so the depth bound ends the check even where a reading
+# would recur.
 case(
-    "guard-identifies-bindings",
-    GUARD,
+    "dynamic-scope-would-loop",
+    LOOP,
     OK,
-    ("(m, (l, b)): the inner M is b", Tup(m, Tup(lab, b)), True, OK),
+    ("(m, (l, b)): the inner M is b", P(b), True, OK),
     (
         "(m, (l, (m, (l, b)))): the inner M is an L, which is the outer M at the same value",
-        Tup(m, Tup(lab, Tup(m, Tup(lab, b)))),
+        P(b, 2),
         True,
         OK,
     ),
     (
         "(m, (l, (m, (l, c)))): c is not the inner M's b, nor an L, four levels down",
-        Tup(m, Tup(lab, Tup(m, Tup(lab, A("c"))))),
+        P(A("c"), 2),
         False,
         MIS([item(1)] * 4, [2, 2, 2, 2, 2, 2], "no-alternative"),
+    ),
+    ("57 levels complete by depth 511", P(b, 57), True, OK),
+    (
+        "58 levels reach the bound at L's ref(M); the boolean is false",
+        P(b, 58),
+        False,
+        EXH([item(1)] * 114, [2, 2, 2, 1], "limit"),
     ),
 )
 

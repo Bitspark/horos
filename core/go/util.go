@@ -76,7 +76,7 @@ func nameScopeContains(s *nameScope, name []byte) bool {
 //
 // A node is also a closure (ADR 0011): its tail is the environment in which its rec
 // was written, so a ref that resolves to the node continues with the node itself as
-// its environment. Each node is one rec binding; its pointer is the binding's identity.
+// its environment.
 type envScope struct {
 	name []byte
 	body Value
@@ -99,27 +99,6 @@ func lookupBinding(e *envScope, name []byte) *envScope {
 		}
 	}
 	return nil
-}
-
-// bindingScope is the conforms-side pending set: the rec bindings entered or unfolded at
-// the current value node without a descent since, compared by identity, not by name. An
-// inner rec that shadows a name does not make an outer binding of that name pending.
-type bindingScope struct {
-	binding *envScope
-	tail    *bindingScope
-}
-
-func pushBinding(s *bindingScope, b *envScope) *bindingScope {
-	return &bindingScope{binding: b, tail: s}
-}
-
-func bindingScopeContains(s *bindingScope, b *envScope) bool {
-	for n := s; n != nil; n = n.tail {
-		if n.binding == b {
-			return true
-		}
-	}
-	return false
 }
 
 // containsString reports whether xs contains s.

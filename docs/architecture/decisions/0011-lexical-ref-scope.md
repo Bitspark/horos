@@ -53,35 +53,45 @@ identifies bindings by name, which is only sound while one name means one bindin
    of a cons list (Go, Rust and TypeScript recognizers, Python, Rust diagnostics), or
    the prefix of the environment that ends with it (Go and TypeScript diagnostics).
    Restoring it needs no search beyond the lookup the `ref` already makes.
-3. **The guard identifies bindings.** The set of bindings entered or unfolded at the
-   current value since the last descent compares bindings by identity, not by name.
-   With lexical lookup, a name-keyed guard wrongly refuses an outer binding whenever an
-   inner `rec` of the same name has been entered at the same value; the corpus case
-   `guard-identifies-bindings` is such a descriptor. On a well-formed descriptor the
-   identity guard never refuses. Between two descents, each unfolding continues in the
-   body of a `rec` that strictly encloses every position checked since the last
-   descent, because well-formedness requires a descent between each `rec` and its
-   `ref`s. The guard stays, so termination does not rest on the well-formedness gate
-   alone.
-4. **Everything else stays.** The depth bound of 512 and its accounting (one count per
+3. **The unguarded-unfolding guard is removed.** The recognizers refused a `ref` whose
+   name had been bound or unfolded at the current value without a descent since, and
+   each diagnostic API mirrored that. Keyed by name, the guard is wrong under lexical
+   lookup: it refuses an outer binding whenever an inner `rec` of the same name has been
+   entered at the same value, as in the corpus case `dynamic-scope-would-loop`. Keyed by
+   binding, it never refuses on a well-formed descriptor. Between two descents, each
+   unfolding continues in the body of a `rec` that strictly encloses every descriptor
+   node checked since the last descent, because well-formedness requires a descent
+   between each `rec` and every `ref` that denotes it. So no binding is unfolded twice,
+   and no binding entered since the last descent is unfolded, before the value descends.
+   Every caller checks well-formedness first, so the guard and the set of pending
+   bindings it consulted are removed from every recognizer and diagnostic API.
+4. **The depth bound is the termination backstop.** Every unfolding is one checking
+   frame and counts against the depth bound of 512, in every implementation, as every
+   other descriptor node does. Should the argument in decision 3 ever have a gap, a
+   recurring unfolding runs into that bound: the worst case is an `exhausted` diagnosis,
+   and the boolean's documented bounded `false`, never a hang. The corpus case
+   `dynamic-scope-would-loop` pins this. A dynamic reading cycles on it without
+   descending, but the lexical one completes 57 levels and reports `exhausted` at the
+   bound on 58.
+5. **Everything else stays.** The depth bound of 512 and its accounting (one count per
    checked descriptor node, each unfolding included), the verdict rules of
    [ADR 0008](0008-diagnostic-outcomes-kleene.md), the location rules of
    [ADR 0009](0009-diagnostic-locations.md), well-formedness, the boolean API and the
    profile are unchanged. A `ref` still continues at the position of its `rec`'s body
    (ADR 0009, decision 2). That `rec` is now the one that lexically encloses it, which is
    the reading ADR 0009 assumed, one `rec` per `ref`.
-5. **No compatibility path.** The old reading contradicts the contract, so no flag, mode
+6. **No compatibility path.** The old reading contradicts the contract, so no flag, mode
    or alternative entry point retains it.
-6. **Evidence.** The original oracle is pinned byte for byte, so the new judgments go
+7. **Evidence.** The original oracle is pinned byte for byte, so the new judgments go
    in a third hand-authored oracle, `vectors/recursion-scope.json`, in the same format,
    with each judgment's diagnosis beside its boolean. It is written from this record in
    `vectors/recursion-scope.py`, which only encodes the inputs. It covers the reported
-   reproducer, a false-positive twin, the binding-identity guard, shadowing three deep,
-   shadowing without capture, exhaustion through shadowed recursion and a lexically
-   unguarded `ref`. Go, Rust, TypeScript and Python replay its booleans, and Go, Rust,
-   TypeScript and the CLI harness replay its diagnoses. Go's checker before this change
-   disagrees with 10 of its 31 value judgments, booleans or diagnoses, and a Go build
-   with lexical lookup but a name-keyed guard disagrees with 2.
+   reproducer, a false-positive twin, a descriptor a dynamic reading loops on, shadowing
+   three deep, shadowing without capture, exhaustion through shadowed recursion and a
+   lexically unguarded `ref`. Go, Rust, TypeScript and Python replay its booleans, and
+   Go, Rust, TypeScript and the CLI harness replay its diagnoses. Go's checker before
+   this change disagrees with 12 of its 33 value judgments, booleans or diagnoses, and a
+   Go build with lexical lookup but a name-keyed guard disagrees with 4.
 
 ## The verdict change
 

@@ -17,19 +17,15 @@
  *
  * rec/ref guarded recursion
  * -------------------------
- * `rec` binds a recursion name to its body descriptor; `ref` unfolds it, but only
- * when guarded — every unfolding must have descended into a strict substructure of v
- * since the binding. A `ref` denotes the `rec` that lexically encloses it in the
- * written descriptor (ADR 0011): each binding closes over the environment it was
- * written in, and a `ref` continues in its binding's environment, never the unfolding
- * site's. `env` binds each in-scope rec name to its body; `pending` holds the
- * bindings entered or unfolded at the current v-node WITHOUT a descent since, by
- * identity, so a `ref` to a pending binding is unguarded (it would loop) and yields
- * false. Descending
- * into a child value clears `pending` (a constructor of v was consumed); same-v
- * combinators (union/and/not) thread it unchanged. Termination: between two
- * unfoldings of the same `ref` there must be a descent, and each descent strictly
- * shrinks the finite v — so unfoldings are bounded by |v|.
+ * `rec` binds a recursion name to its body descriptor; `ref` unfolds it. A `ref`
+ * denotes the `rec` that lexically encloses it in the written descriptor (ADR 0011):
+ * each binding closes over the environment it was written in, and a `ref` continues in
+ * its binding's environment, never the unfolding site's. `wf` requires a descent into
+ * a strict substructure of v between every `rec` and each `ref` that denotes it, so
+ * between two descents each unfolding reaches a `rec` strictly above every descriptor
+ * node checked since the last descent: a `ref` never unfolds a binding twice at one
+ * v-node. Termination: unfoldings are bounded by |v| times the descriptor's nesting,
+ * and every frame counts against MAX_RECURSION_DEPTH.
  */
 
 import { Atom, Tuple, bytesEqual, type Value } from "@bitspark/ontos-core";
@@ -79,7 +75,7 @@ function atomLenBoundInRange(n: bigint): boolean {
 /**
  * The shared recursion-depth guard (horos-internal#37) — the SAME constant in all three cores (Rust
  * `MAX_RECURSION_DEPTH`, Go `MaxRecursionDepth`). `conformsIn`/`wfIn` recurse on the
- * native stack; termination is bounded by `|v|` (the `pending` guard) but there is no
+ * native stack; termination is bounded by `|v|` (`wf`'s guardedness) but there is no
  * stack bound, so an adversarial-but-finite value (e.g. a tuple nested hundreds of
  * thousands deep) could overflow the stack — a `RangeError: Maximum call stack size
  * exceeded` — at a core-dependent depth, breaking the total/never-throws contract.
@@ -128,10 +124,7 @@ function consContainsName(s: Cons<Uint8Array> | undefined, name: Uint8Array): bo
   return false;
 }
 
-/**
- * An in-scope `rec` binding: the name (atom bytes) and its body descriptor. Each `rec`
- * frame creates its own object, so object identity is binding identity.
- */
+/** An in-scope `rec` binding: the name (atom bytes) and its body descriptor. */
 interface Binding {
   readonly name: Uint8Array;
   readonly body: Value;
@@ -281,25 +274,19 @@ export function conforms(v: Value, t: Value): boolean {
   // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
   // not well-formed admits no values, even where an individual arm would otherwise
   // match — so check `wf` once at the entry and never arm-by-arm below.
-  return wf(t) && conformsIn(v, t, undefined, undefined, 0);
+  return wf(t) && conformsIn(v, t, undefined, 0);
 }
 
 /**
- * `conforms` with the recursion environment threaded through:
- *
- *   - `env` binds each `rec` name that lexically encloses `t` to its body descriptor;
- *     each node's tail is the environment its `rec` was written in, so the node is the
- *     binding's closure.
- *   - `pending` holds the bindings entered or unfolded at the current v-node without a
- *     descent since, by identity — a `ref` to a pending binding is unguarded (it would
- *     loop) and yields `false`. Descending into a child value clears `pending`; same-v
- *     combinators (union/and/not) thread it unchanged.
+ * `conforms` with the recursion environment threaded through: `env` binds each `rec` name
+ * that lexically encloses `t` to its body descriptor; each node's tail is the environment
+ * its `rec` was written in, so the node is the binding's closure. Callers check `wf(t)`
+ * first; `conformsIn` relies on its guardedness (see the module comment).
  */
 function conformsIn(
   v: Value,
   t: Value,
   env: Cons<Binding> | undefined,
-  pending: Cons<Binding> | undefined,
   depth: number,
 ): boolean {
   // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a deterministic
@@ -453,14 +440,13 @@ function conformsIn(
       }
     }
 
-    // Tuples & compounds. Each child descriptor types a child VALUE — a descent, so
-    // the guard (pending) is cleared.
+    // Tuples & compounds. Each child descriptor types a child VALUE — a descent.
     case "tuple": {
       if (!(v instanceof Tuple)) return false;
       const items = v.items();
       if (items.length !== args.length) return false;
       for (let i = 0; i < items.length; i += 1) {
-        if (!conformsIn(items[i]!, args[i]!, env, undefined, depth + 1)) return false;
+        if (!conformsIn(items[i]!, args[i]!, env, depth + 1)) return false;
       }
       return true;
     }
@@ -468,7 +454,7 @@ function conformsIn(
       if (args.length !== 1) return false;
       if (!(v instanceof Tuple)) return false;
       for (const c of v.items()) {
-        if (!conformsIn(c, args[0]!, env, undefined, depth + 1)) return false;
+        if (!conformsIn(c, args[0]!, env, depth + 1)) return false;
       }
       return true;
     }
@@ -484,7 +470,7 @@ function conformsIn(
       const head0 = atomBytes(items[0]!);
       if (head0 === undefined || !bytesEqual(head0, lb)) return false;
       for (let i = 0; i < ts.length; i += 1) {
-        if (!conformsIn(items[i + 1]!, ts[i]!, env, undefined, depth + 1)) return false;
+        if (!conformsIn(items[i + 1]!, ts[i]!, env, depth + 1)) return false;
       }
       return true;
     }
@@ -500,7 +486,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, undefined, depth + 1)) return false;
+        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
       }
       return true;
     }
@@ -513,7 +499,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, undefined, depth + 1)) return false;
+        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
       }
       return true;
     }
@@ -527,8 +513,8 @@ function conformsIn(
       }
       for (const [k, val] of entries) {
         if (
-          !conformsIn(k, args[0]!, env, undefined, depth + 1) ||
-          !conformsIn(val, args[1]!, env, undefined, depth + 1)
+          !conformsIn(k, args[0]!, env, depth + 1) ||
+          !conformsIn(val, args[1]!, env, depth + 1)
         ) {
           return false;
         }
@@ -543,22 +529,22 @@ function conformsIn(
       return conformsRecord(v, args[0]!, args.slice(1), env, depth);
     }
 
-    // Composition — recurse on the SAME v, so the guard threads through unchanged.
+    // Composition — recurse on the SAME v.
     case "union": {
       for (const ct of args) {
-        if (conformsIn(v, ct, env, pending, depth + 1)) return true;
+        if (conformsIn(v, ct, env, depth + 1)) return true;
       }
       return false;
     }
     case "and": {
       for (const ct of args) {
-        if (!conformsIn(v, ct, env, pending, depth + 1)) return false;
+        if (!conformsIn(v, ct, env, depth + 1)) return false;
       }
       return true;
     }
     case "not": {
       if (args.length !== 1) return false;
-      return !conformsIn(v, args[0]!, env, pending, depth + 1);
+      return !conformsIn(v, args[0]!, env, depth + 1);
     }
 
     // Singleton — membership by ontos structural identity (defines no new equality).
@@ -567,17 +553,17 @@ function conformsIn(
       return exactEqual(v, args[0]!);
     }
 
-    // Recursion. rec binds the name; ref unfolds it, but only when guarded.
+    // Recursion. rec binds the name; ref unfolds the binding that lexically encloses it.
+    // Each unfolding is one counted frame, so the depth bound is the backstop (ADR 0011).
     case "rec": {
       if (args.length !== 2) return false;
       const nm = args[0]!;
       if (!(nm instanceof Atom)) return false;
       const nb = nm.bytes();
       const body = args[1]!;
-      // Push one shared node onto each chain (no per-frame spread copy); the child
-      // frame sees this binding innermost-first. The node closes over `env`.
-      const binding: Binding = { name: nb, body };
-      return conformsIn(v, body, cons(binding, env), cons(binding, pending), depth + 1);
+      // Push one shared node (no per-frame spread copy); the child frame sees this
+      // binding innermost-first. The node closes over `env`.
+      return conformsIn(v, body, cons<Binding>({ name: nb, body }, env), depth + 1);
     }
     case "ref": {
       if (args.length !== 1) return false;
@@ -587,10 +573,9 @@ function conformsIn(
       // the bindings that lexically enclose this `ref` (ADR 0011).
       const node = lookupBinding(env, nm.bytes());
       if (node === undefined) return false; // unbound reference
-      if (consContains(pending, node.head)) return false; // unguarded at this node — would not terminate
       // Unfold in the binding's own environment, so the body's free refs keep the
       // bindings they were written under.
-      return conformsIn(v, node.head.body, node, cons(node.head, pending), depth + 1);
+      return conformsIn(v, node.head.body, node, depth + 1);
     }
 
     // Unknown ctor or wrong arity → not a recognized descriptor.
@@ -681,7 +666,7 @@ function conformsRecord(
     const val = present.get(fld.name);
     if (val !== undefined) {
       covered += 1;
-      if (!conformsIn(val, fld.ty, env, undefined, depth + 1)) return false;
+      if (!conformsIn(val, fld.ty, env, depth + 1)) return false;
     } else if (fld.required) {
       return false;
     }
@@ -729,7 +714,7 @@ export function isLeafCtor(ctor: string): boolean {
 export function leafClassifies(v: Value, t: Value): boolean {
   const h = head(t);
   if (h === undefined || !isLeafCtor(h.ctor)) return false;
-  return conformsIn(v, t, undefined, undefined, 0);
+  return conformsIn(v, t, undefined, 0);
 }
 
 /** Decide whether a LEAF descriptor `t` is well-formed (the `horos/wf-leaf(T)` builtin). */
@@ -957,14 +942,6 @@ function lookupBinding(
     if (bytesEqual(n.head.name, name)) return n;
   }
   return undefined;
-}
-
-/** Whether the chain holds `binding` itself (by identity, not by name). */
-function consContains(s: Cons<Binding> | undefined, binding: Binding): boolean {
-  for (let n = s; n !== undefined; n = n.tail) {
-    if (n.head === binding) return true;
-  }
-  return false;
 }
 
 /**

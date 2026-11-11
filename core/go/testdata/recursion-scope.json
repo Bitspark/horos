@@ -193,7 +193,7 @@
       "diagnose_wf": {
         "verdict": "conforms"
       },
-      "name": "guard-identifies-bindings",
+      "name": "dynamic-scope-would-loop",
       "values": [
         {
           "conforms": true,
@@ -247,6 +247,490 @@
           },
           "note": "(m, (l, (m, (l, c)))): c is not the inner M's b, nor an L, four levels down",
           "value": "010200016d010200016c010200016d010200016c000163"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "57 levels complete by depth 511",
+          "value": "010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                2,
+                2,
+                2,
+                1
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "58 levels reach the bound at L's ref(M); the boolean is false",
+          "value": "010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c010200016d010200016c000162"
         }
       ],
       "wf": true

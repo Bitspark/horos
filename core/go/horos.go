@@ -14,18 +14,15 @@
 //
 // # rec/ref guarded recursion
 //
-// rec binds a recursion name to its body descriptor; ref unfolds it, but only when
-// guarded — every unfolding must have descended into a strict substructure of v
-// since the binding. A ref denotes the rec that lexically encloses it in the written
-// descriptor (ADR 0011): each rec binding closes over the environment it was written
-// in, and a ref continues in its binding's environment, never the unfolding site's.
-// The env binds each in-scope rec name to its body; pending holds the bindings
-// entered or unfolded at the current v-node WITHOUT a descent since, by identity, so
-// a ref to a pending binding is unguarded (it would loop) and yields false.
-// Descending into a child value clears pending (a constructor of v was consumed);
-// same-v combinators (union/and/not) thread it unchanged. Termination: between two
-// unfoldings of the same ref there must be a descent, and each descent strictly
-// shrinks the finite v — so unfoldings are bounded by |v|.
+// rec binds a recursion name to its body descriptor; ref unfolds it. A ref denotes
+// the rec that lexically encloses it in the written descriptor (ADR 0011): each rec
+// binding closes over the environment it was written in, and a ref continues in its
+// binding's environment, never the unfolding site's. WF requires a descent into a
+// strict substructure of v between every rec and each ref that denotes it, so between
+// two descents each unfolding reaches a rec strictly above every descriptor node
+// checked since the last descent: a ref never unfolds a binding twice at one v-node.
+// Termination: unfoldings are bounded by |v| times the descriptor's nesting, and
+// every frame counts against MaxRecursionDepth.
 package horos
 
 import (
@@ -48,7 +45,7 @@ const namespace = "horos/"
 
 // MaxRecursionDepth is the shared recursion-depth guard (horos-internal#37) — the SAME constant in
 // all three cores (Rust MAX_RECURSION_DEPTH, TS MAX_RECURSION_DEPTH). conformsIn/wfIn
-// recurse on the native stack; termination is bounded by |v| (the pending guard) but
+// recurse on the native stack; termination is bounded by |v| (WF's guardedness) but
 // there is no stack bound, so an adversarial-but-finite value (e.g. a tuple nested
 // hundreds of thousands deep) could overflow the stack — a fatal "goroutine stack
 // exceeds" — at a core-dependent depth, breaking the total/never-panics contract.
@@ -119,18 +116,14 @@ func Conforms(v, t Value) bool {
 	// Soundness gate (spec §3 MUST): v : T presupposes wf(T). A descriptor that is
 	// not well-formed admits no values, even where an individual arm would otherwise
 	// match — so check WF once at the entry and never arm-by-arm below.
-	return WF(t) && conformsIn(v, t, nil, nil, 0)
+	return WF(t) && conformsIn(v, t, nil, 0)
 }
 
-// conformsIn is Conforms with the recursion environment threaded through:
-//
-//   - env binds each rec name that lexically encloses t to its body descriptor (an
-//     envScope cons list whose nodes are closures).
-//   - pending holds the bindings entered or unfolded at the current v-node without a
-//     descent since (a bindingScope cons list, by identity) — a ref to a pending
-//     binding is unguarded (it would loop) and yields false. Descending into a child
-//     value clears pending; same-v combinators (union/and/not) thread it unchanged.
-func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) bool {
+// conformsIn is Conforms with the recursion environment threaded through: env binds
+// each rec name that lexically encloses t to its body descriptor (an envScope cons list
+// whose nodes are closures). Callers check WF(t) first; conformsIn relies on its
+// guardedness (see the package comment).
+func conformsIn(v, t Value, env *envScope, depth int) bool {
 	// Recursion-depth guard (horos-internal#37): past MaxRecursionDepth frames, return a deterministic
 	// false rather than risk a native-stack overflow. Counted at the same point in all
 	// three cores so the trip depth is byte-identical.
@@ -281,8 +274,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 
-	// Tuples & compounds. Each child descriptor types a child VALUE — a descent,
-	// so the guard (pending) is cleared.
+	// Tuples & compounds. Each child descriptor types a child VALUE — a descent.
 	case "tuple":
 		tup, isTup := v.(core.Tuple)
 		if !isTup {
@@ -293,7 +285,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for i := range items {
-			if !conformsIn(items[i], args[i], env, nil, depth+1) {
+			if !conformsIn(items[i], args[i], env, depth+1) {
 				return false
 			}
 		}
@@ -307,7 +299,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for _, c := range tup.Items() {
-			if !conformsIn(c, args[0], env, nil, depth+1) {
+			if !conformsIn(c, args[0], env, depth+1) {
 				return false
 			}
 		}
@@ -332,7 +324,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for i := range ts {
-			if !conformsIn(items[i+1], ts[i], env, nil, depth+1) {
+			if !conformsIn(items[i+1], ts[i], env, depth+1) {
 				return false
 			}
 		}
@@ -349,7 +341,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for _, e := range elems {
-			if !conformsIn(e, args[0], env, nil, depth+1) {
+			if !conformsIn(e, args[0], env, depth+1) {
 				return false
 			}
 		}
@@ -363,7 +355,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for _, e := range elems {
-			if !conformsIn(e, args[0], env, nil, depth+1) {
+			if !conformsIn(e, args[0], env, depth+1) {
 				return false
 			}
 		}
@@ -377,7 +369,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 			return false
 		}
 		for _, kv := range entries {
-			if !conformsIn(kv[0], args[0], env, nil, depth+1) || !conformsIn(kv[1], args[1], env, nil, depth+1) {
+			if !conformsIn(kv[0], args[0], env, depth+1) || !conformsIn(kv[1], args[1], env, depth+1) {
 				return false
 			}
 		}
@@ -391,17 +383,17 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 		}
 		return conformsRecord(v, args[0], args[1:], env, depth)
 
-	// Composition — recurse on the SAME v, so the guard threads through unchanged.
+	// Composition — recurse on the SAME v.
 	case "union":
 		for _, ct := range args {
-			if conformsIn(v, ct, env, pending, depth+1) {
+			if conformsIn(v, ct, env, depth+1) {
 				return true
 			}
 		}
 		return false
 	case "and":
 		for _, ct := range args {
-			if !conformsIn(v, ct, env, pending, depth+1) {
+			if !conformsIn(v, ct, env, depth+1) {
 				return false
 			}
 		}
@@ -410,7 +402,7 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 		if len(args) != 1 {
 			return false
 		}
-		return !conformsIn(v, args[0], env, pending, depth+1)
+		return !conformsIn(v, args[0], env, depth+1)
 
 	// Singleton — membership by ontos structural identity (defines no new
 	// equality).
@@ -420,7 +412,9 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 		}
 		return exactEqual(v, args[0])
 
-	// Recursion. rec binds the name; ref unfolds it, but only when guarded.
+	// Recursion. rec binds the name; ref unfolds the binding that lexically encloses it.
+	// Every unfolding is one frame, so it counts against MaxRecursionDepth: that bound,
+	// not a guard here, is the backstop should an unfolding ever recur (ADR 0011).
 	case "rec":
 		if len(args) != 2 {
 			return false
@@ -431,11 +425,9 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 		}
 		nb := nm.Bytes()
 		body := args[1]
-		// Push one shared node onto each chain (no per-frame slice copy); the child
-		// frame sees this binding innermost-first. The node closes over env.
-		e := pushEnv(env, nb, body)
-		p := pushBinding(pending, e)
-		return conformsIn(v, body, e, p, depth+1)
+		// Push one shared node (no per-frame slice copy); the child frame sees this
+		// binding innermost-first. The node closes over env.
+		return conformsIn(v, body, pushEnv(env, nb, body), depth+1)
 	case "ref":
 		if len(args) != 1 {
 			return false
@@ -450,12 +442,9 @@ func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) boo
 		if b == nil {
 			return false // unbound reference
 		}
-		if bindingScopeContains(pending, b) {
-			return false // unguarded at this node — would not terminate
-		}
 		// Unfold in the binding's own environment, never the unfolding site's, so the
 		// body's free refs keep the bindings they were written under.
-		return conformsIn(v, b.body, b, pushBinding(pending, b), depth+1)
+		return conformsIn(v, b.body, b, depth+1)
 
 	// Unknown ctor or wrong arity → not a recognized descriptor.
 	default:
@@ -540,7 +529,7 @@ func conformsRecord(v, mode Value, fields []Value, env *envScope, depth int) boo
 		}
 		if val, found := present[name]; found {
 			covered++
-			if !conformsIn(val, ty, env, nil, depth+1) {
+			if !conformsIn(val, ty, env, depth+1) {
 				return false
 			}
 		} else if required {
@@ -771,7 +760,7 @@ func leafClassifies(v, t Value) bool {
 	if !ok || !isLeafCtor(ctor) {
 		return false
 	}
-	return conformsIn(v, t, nil, nil, 0)
+	return conformsIn(v, t, nil, 0)
 }
 
 // leafWellFormed decides whether a LEAF descriptor t is well-formed (the horos/wf-leaf(T)

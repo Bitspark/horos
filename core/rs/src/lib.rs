@@ -15,7 +15,7 @@ use ontos_data::{
 };
 
 /// A persistent (cons-list) stack of scoped entries threaded through the recursion by
-/// reference. Each `rec`/`ref` frame pushes one node that **borrows** the parent chain
+/// reference. Each `rec` frame pushes one node that **borrows** the parent chain
 /// instead of cloning it (the old `env.to_vec()` / `pending.to_vec()` per frame), so a
 /// descent costs O(1) and allocates nothing on the native stack the recursion already
 /// uses. Lookups walk head→tail, i.e. **innermost-first**: the innermost binding of a
@@ -99,7 +99,7 @@ pub const ATOM_LEN_BOUND_MAX: i128 = i128::MAX; // 2^127 - 1
 pub const ATOM_LEN_BOUND_MIN: i128 = i128::MIN; // -2^127
 
 /// The shared recursion-depth guard (horos-internal#37). `conforms`/`wf` recurse on the native call
-/// stack; termination is bounded by `|v|` (the `pending` guard) but there is no *stack*
+/// stack; termination is bounded by `|v|` (`wf`'s guardedness) but there is no *stack*
 /// bound, so an adversarial-but-finite value (e.g. a tuple nested hundreds of thousands
 /// deep) could overflow the native stack — a panic / `fatal` / `RangeError` — at a
 /// core-dependent depth, breaking the "total, never-panics, decides identically" contract.
@@ -226,36 +226,28 @@ pub fn conforms(v: &Value, t: &Value) -> bool {
     // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
     // not well-formed admits no values, even where an individual arm would otherwise
     // match — so check `wf` once at the entry and never arm-by-arm below.
-    wf(t) && conforms_in(v, t, None, None, 0)
+    wf(t) && conforms_in(v, t, None, 0)
 }
 
 /// An in-scope `rec` binding: the name (atom bytes) and its body descriptor.
 type EnvEntry<'a> = (&'a [u8], &'a Value);
 
 /// One `rec` binding as an environment node. Its tail is the environment the `rec` was
-/// written in, so the node is the binding's closure, and its address is its identity.
+/// written in, so the node is the binding's closure.
 type EnvNode<'s, 'a> = Scope<'s, EnvEntry<'a>>;
 
 /// `conforms` with the recursion environment threaded through:
 ///
-/// - `env` binds each `rec` name that lexically encloses `t` to its body descriptor. A
-///   `ref` denotes its nearest enclosing binding in the written descriptor and continues
-///   in that binding's own environment, never the unfolding site's (ADR 0011).
-/// - `pending` holds the bindings entered or unfolded **at the current `v`-node without a
-///   descent since**, by identity — a `ref` to a pending binding is *unguarded* (it would
-///   loop) and yields `false`. Descending into a child value clears `pending` (a
-///   constructor of `v` was consumed); same-`v` combinators (`union`/`and`/`not`) thread
-///   it unchanged.
+/// `env` binds each `rec` name that lexically encloses `t` to its body descriptor. A `ref`
+/// denotes its nearest enclosing binding in the written descriptor and continues in that
+/// binding's own environment, never the unfolding site's (ADR 0011).
 ///
-/// Termination: between two unfoldings of the same `ref` there must be a descent, and
-/// each descent strictly shrinks the finite `v` — so unfoldings are bounded by `|v|`.
-fn conforms_in<'a>(
-    v: &Value,
-    t: &'a Value,
-    env: Option<&EnvNode<'_, 'a>>,
-    pending: Option<&Scope<'_, &EnvNode<'_, 'a>>>,
-    depth: usize,
-) -> bool {
+/// Termination: callers check `wf(t)` first, and `wf` requires a descent between every
+/// `rec` and each `ref` that denotes it. So between two descents each unfolding reaches a
+/// `rec` strictly above every descriptor node checked since the last descent, and each
+/// descent strictly shrinks the finite `v`. Every unfolding is also one counted frame, so
+/// `MAX_RECURSION_DEPTH` is the backstop.
+fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth: usize) -> bool {
     // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a
     // deterministic `false` rather than risk a native-stack overflow. Counted at the
     // same point in all three cores so the trip depth is byte-identical.
@@ -332,8 +324,7 @@ fn conforms_in<'a>(
             _ => false,
         },
 
-        // Tuples & compounds. Each child descriptor types a child VALUE — a descent, so
-        // the guard (`pending`) is cleared.
+        // Tuples & compounds. Each child descriptor types a child VALUE — a descent.
         ("tuple", ts) => match v.as_tuple() {
             Some(tup) => {
                 let items = tup.items();
@@ -341,7 +332,7 @@ fn conforms_in<'a>(
                     && items
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, None, depth + 1))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1))
             }
             None => false,
         },
@@ -349,7 +340,7 @@ fn conforms_in<'a>(
             Some(tup) => tup
                 .items()
                 .iter()
-                .all(|c| conforms_in(c, te, env, None, depth + 1)),
+                .all(|c| conforms_in(c, te, env, depth + 1)),
             None => false,
         },
         ("compound", [label, ts @ ..]) => match (v.as_tuple(), atom_bytes(label)) {
@@ -360,7 +351,7 @@ fn conforms_in<'a>(
                     && items[1..]
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, None, depth + 1))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1))
             }
             _ => false,
         },
@@ -368,21 +359,16 @@ fn conforms_in<'a>(
         // Structural collections — well-formedness delegates to ontos/data; the element
         // descriptors add the per-element checks (descents).
         ("list-of", [te]) => match read_list(v) {
-            Ok(elems) => elems
-                .iter()
-                .all(|e| conforms_in(e, te, env, None, depth + 1)),
+            Ok(elems) => elems.iter().all(|e| conforms_in(e, te, env, depth + 1)),
             Err(_) => false,
         },
         ("set-of", [te]) => match read_set(v) {
-            Ok(elems) => elems
-                .iter()
-                .all(|e| conforms_in(e, te, env, None, depth + 1)),
+            Ok(elems) => elems.iter().all(|e| conforms_in(e, te, env, depth + 1)),
             Err(_) => false,
         },
         ("map-of", [tk, tv]) => match read_map(v) {
             Ok(entries) => entries.iter().all(|(k, val)| {
-                conforms_in(k, tk, env, None, depth + 1)
-                    && conforms_in(val, tv, env, None, depth + 1)
+                conforms_in(k, tk, env, depth + 1) && conforms_in(val, tv, env, depth + 1)
             }),
             Err(_) => false,
         },
@@ -391,28 +377,22 @@ fn conforms_in<'a>(
         // and a mandatory open/closed flag.
         ("record", [mode, fields @ ..]) => conforms_record(v, mode, fields, env, depth),
 
-        // Composition — recurse on the SAME `v`, so the guard threads through unchanged.
-        ("union", ts) => ts
-            .iter()
-            .any(|ct| conforms_in(v, ct, env, pending, depth + 1)),
-        ("and", ts) => ts
-            .iter()
-            .all(|ct| conforms_in(v, ct, env, pending, depth + 1)),
-        ("not", [t1]) => !conforms_in(v, t1, env, pending, depth + 1),
+        // Composition — recurse on the SAME `v`.
+        ("union", ts) => ts.iter().any(|ct| conforms_in(v, ct, env, depth + 1)),
+        ("and", ts) => ts.iter().all(|ct| conforms_in(v, ct, env, depth + 1)),
+        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1),
 
         // Singleton — membership by ontos structural identity (defines no new equality).
         ("exact", [v0]) => v == v0,
 
-        // Recursion. `rec` binds the name; `ref` unfolds it, but only when guarded.
+        // Recursion. `rec` binds the name; `ref` unfolds the binding that lexically
+        // encloses it. Each unfolding is one counted frame (ADR 0011).
         ("rec", [name, body]) => match name.as_atom() {
             Some(nm) => {
-                let nb = nm.bytes();
-                // Push one borrowed node onto each chain (no per-frame copy); the
-                // child frame sees this binding innermost-first. The node closes over
-                // `env`.
-                let e = Scope::push((nb, body), env);
-                let p = Scope::push(&e, pending);
-                conforms_in(v, body, Some(&e), Some(&p), depth + 1)
+                // Push one borrowed node (no per-frame copy); the child frame sees this
+                // binding innermost-first. The node closes over `env`.
+                let e = Scope::push((nm.bytes(), body), env);
+                conforms_in(v, body, Some(&e), depth + 1)
             }
             None => false,
         },
@@ -424,13 +404,9 @@ fn conforms_in<'a>(
                 let Some(b) = scope_find(env, |(k, _)| *k == nb) else {
                     return false; // unbound reference
                 };
-                if scope_iter(pending).any(|p| std::ptr::eq(*p, b)) {
-                    return false; // unguarded at this node — would not terminate
-                }
                 // Unfold in the binding's own environment, so the body's free refs keep
                 // the bindings they were written under.
-                let p = Scope::push(b, pending);
-                conforms_in(v, b.head.1, Some(b), Some(&p), depth + 1)
+                conforms_in(v, b.head.1, Some(b), depth + 1)
             }
             None => false,
         },
@@ -502,7 +478,7 @@ fn conforms_record<'a>(
         match present.get(name.as_str()) {
             Some(val) => {
                 covered += 1;
-                if !conforms_in(val, ty, env, None, depth + 1) {
+                if !conforms_in(val, ty, env, depth + 1) {
                     return false;
                 }
             }
@@ -681,7 +657,7 @@ pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
 /// inert and the result is exactly the recognizer's leaf verdict.
 pub(crate) fn leaf_classifies(v: &Value, t: &Value) -> bool {
     match head(t) {
-        Some((ctor, _)) if is_leaf_ctor(ctor) => conforms_in(v, t, None, None, 0),
+        Some((ctor, _)) if is_leaf_ctor(ctor) => conforms_in(v, t, None, 0),
         _ => false,
     }
 }

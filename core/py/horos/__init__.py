@@ -124,14 +124,12 @@ def _matches_lowercase_uuid(s: str) -> bool:
 # scope chains — cons-lists, innermost-first (the rs `Scope` semantics)
 # ---------------------------------------------------------------------------
 # env chain node:     _Binding(name_bytes, body_descriptor, parent_or_None)
-# pending chain node: (_Binding, parent_or_None), compared by identity
 # names chain node:   (name_bytes, parent_or_None), for wf's bound and pending names
 
 
 class _Binding:
     """One ``rec`` binding and its environment node. ``parent`` is the environment
-    the ``rec`` was written in, so the node is the binding's closure; each ``rec``
-    frame creates its own, so object identity is binding identity (ADR 0011)."""
+    the ``rec`` was written in, so the node is the binding's closure (ADR 0011)."""
 
     __slots__ = ("name", "body", "parent")
 
@@ -161,15 +159,6 @@ def _env_lookup(env: Optional[_Binding], name: bytes) -> Optional[_Binding]:
     return None
 
 
-def _pending_holds(pending, binding: _Binding) -> bool:
-    """Whether ``binding`` itself is pending (by identity, not by name)."""
-    node = pending
-    while node is not None:
-        if node[0] is binding:
-            return True
-        node = node[1]
-    return False
-
 
 # ---------------------------------------------------------------------------
 # conformance — `v : T`
@@ -180,10 +169,10 @@ def conforms(v: Value, t: Value) -> bool:
     """Decide ``v : T``. Total and search-free: a non-conforming value AND a
     non-well-formed ``T`` both yield False; never raises."""
     # Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`.
-    return wf(t) and _conforms_in(v, t, None, None, 0)
+    return wf(t) and _conforms_in(v, t, None, 0)
 
 
-def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
+def _conforms_in(v: Value, t: Value, env: Optional[_Binding], depth: int) -> bool:
     if depth > MAX_RECURSION_DEPTH:
         return False
     h = _head(t)
@@ -269,7 +258,7 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
             return False
         return False
 
-    # Tuples & compounds (descents: pending cleared).
+    # Tuples & compounds (descents).
     if ctor == "tuple":
         if not v.is_tuple:
             return False
@@ -277,12 +266,12 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
         if len(items) != n:
             return False
         return all(
-            _conforms_in(c, ct, env, None, depth + 1) for c, ct in zip(items, args)
+            _conforms_in(c, ct, env, depth + 1) for c, ct in zip(items, args)
         )
     if ctor == "seq" and n == 1:
         if not v.is_tuple:
             return False
-        return all(_conforms_in(c, args[0], env, None, depth + 1) for c in v.items())
+        return all(_conforms_in(c, args[0], env, depth + 1) for c in v.items())
     if ctor == "compound" and n >= 1:
         lb = _atom_bytes(args[0])
         if not v.is_tuple or lb is None:
@@ -292,7 +281,7 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
         if len(items) != len(ts) + 1 or _atom_bytes(items[0]) != lb:
             return False
         return all(
-            _conforms_in(c, ct, env, None, depth + 1) for c, ct in zip(items[1:], ts)
+            _conforms_in(c, ct, env, depth + 1) for c, ct in zip(items[1:], ts)
         )
 
     # Structural collections.
@@ -301,21 +290,21 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
             elems = read_list(v)
         except DataError:
             return False
-        return all(_conforms_in(e, args[0], env, None, depth + 1) for e in elems)
+        return all(_conforms_in(e, args[0], env, depth + 1) for e in elems)
     if ctor == "set-of" and n == 1:
         try:
             elems = read_set(v)
         except DataError:
             return False
-        return all(_conforms_in(e, args[0], env, None, depth + 1) for e in elems)
+        return all(_conforms_in(e, args[0], env, depth + 1) for e in elems)
     if ctor == "map-of" and n == 2:
         try:
             entries = read_map(v)
         except DataError:
             return False
         return all(
-            _conforms_in(k, args[0], env, None, depth + 1)
-            and _conforms_in(val, args[1], env, None, depth + 1)
+            _conforms_in(k, args[0], env, depth + 1)
+            and _conforms_in(val, args[1], env, depth + 1)
             for k, val in entries
         )
 
@@ -323,13 +312,13 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
     if ctor == "record" and n >= 1:
         return _conforms_record(v, args[0], args[1:], env, depth)
 
-    # Composition (same `v`: pending threads through).
+    # Composition (same `v`).
     if ctor == "union":
-        return any(_conforms_in(v, ct, env, pending, depth + 1) for ct in args)
+        return any(_conforms_in(v, ct, env, depth + 1) for ct in args)
     if ctor == "and":
-        return all(_conforms_in(v, ct, env, pending, depth + 1) for ct in args)
+        return all(_conforms_in(v, ct, env, depth + 1) for ct in args)
     if ctor == "not" and n == 1:
-        return not _conforms_in(v, args[0], env, pending, depth + 1)
+        return not _conforms_in(v, args[0], env, depth + 1)
 
     # Singleton — ontos structural identity (defines no new equality).
     if ctor == "exact" and n == 1:
@@ -337,12 +326,13 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
 
     # Recursion. A ``ref`` denotes the ``rec`` that lexically encloses it and
     # continues in that binding's environment, never the unfolding site's (ADR 0011).
+    # Each unfolding is one counted frame, so the depth bound is the backstop.
     if ctor == "rec" and n == 2:
         nb = _atom_bytes(args[0])
         if nb is None:
             return False
         binding = _Binding(nb, args[1], env)
-        return _conforms_in(v, args[1], binding, (binding, pending), depth + 1)
+        return _conforms_in(v, args[1], binding, depth + 1)
     if ctor == "ref" and n == 1:
         nb = _atom_bytes(args[0])
         if nb is None:
@@ -350,9 +340,7 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
         binding = _env_lookup(env, nb)
         if binding is None:
             return False  # unbound reference
-        if _pending_holds(pending, binding):
-            return False  # unguarded at this node — would not terminate
-        return _conforms_in(v, binding.body, binding, (binding, pending), depth + 1)
+        return _conforms_in(v, binding.body, binding, depth + 1)
 
     return False  # unknown ctor or wrong arity
 
@@ -404,7 +392,7 @@ def _conforms_record(v: Value, mode: Value, fields, env, depth: int) -> bool:
         name, required, ty = rf
         if name in present:
             covered += 1
-            if not _conforms_in(present[name], ty, env, None, depth + 1):
+            if not _conforms_in(present[name], ty, env, depth + 1):
                 return False
         elif required:
             return False
