@@ -19,8 +19,8 @@ never changes which verdict is reported. The boolean recognizer is unchanged.
 
 A location has a value path, a descriptor position and a reason, plus a field
 name or an argument where the reason calls for one. It is selected by a fixed
-order, so Go, Rust and TypeScript report the identical location for the same
-input. The exact encoding and order are in the
+order, so Go, Rust, TypeScript and Python report the identical location for the
+same input. The exact encoding and order are in the
 [form contract](../../spec/horos.md#diagnostic-locations); this record keeps the
 choices and their reasons.
 
@@ -73,12 +73,16 @@ choices and their reasons.
    fieldless variants that callers match on; giving them data would break every
    match. Rust therefore adds `diagnose_located` and `diagnose_wf_located`,
    returning the unchanged `Diagnosis` with its location, and `diagnose` keeps
-   its signature. The command-line tools print the JSON form from the contract,
-   which the shared corpus pins.
+   its signature. The source-only Python implementation has the module
+   `horos.diagnose`, with `diagnose`, `diagnose_wf` and a `Diagnosis` that
+   carries its location. The command-line tools print the JSON form from the
+   contract, which the shared corpus pins.
 9. **Evidence.** `vectors/diagnose.json` is a separate, hand-authored corpus of
    expected locations, written from this record. The original oracle stays
-   byte-for-byte unchanged. The Python source has no diagnostic API, so it does
-   not replay the location corpus.
+   byte-for-byte unchanged. Go, Rust and TypeScript replay the corpus. The
+   source-only Python implementation replays it too, as a fourth reading written
+   from this record and the contract rather than ported from another core
+   (added 11 November 2026).
 
 ## Consequences
 

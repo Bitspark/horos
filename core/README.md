@@ -2,7 +2,9 @@
 
 Go, Rust and TypeScript implement the same descriptor checker and diagnostic
 rules. Each replays the original [conformance corpus](../vectors/conformance.json).
-The source-only Python implementation supplies an additional oracle replay.
+The source-only Python implementation supplies an additional replay of the
+oracles and of the [diagnostic-location corpus](../vectors/diagnose.json), with
+its diagnostics in `horos.diagnose`.
 
 The public package surfaces are listed in [distribution](../docs/distribution.md).
 Go additionally implements the unified [declaration model](go/declarations/README.md)
