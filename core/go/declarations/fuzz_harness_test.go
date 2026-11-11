@@ -108,6 +108,7 @@ type session struct {
 	t         *testing.T
 	name      string
 	root      core.Value
+	limits    decl.Limits
 	program   *decl.Program
 	outcome   string // rendered Resolve outcome
 	code      decl.Code
@@ -123,19 +124,21 @@ type session struct {
 }
 
 func emptySession(t *testing.T, name string) *session {
-	return &session{t: t, name: name, values: map[string]decl.TypeValue{}, kinds: map[string]decl.KindHandle{}, results: map[string]core.Value{}}
+	return &session{t: t, name: name, limits: decl.DefaultLimits(), values: map[string]decl.TypeValue{}, kinds: map[string]decl.KindHandle{}, results: map[string]core.Value{}}
 }
 
 // programSession queries an already resolved Program.
 func programSession(t *testing.T, name string, p *decl.Program) *session {
 	s := emptySession(t, name)
 	s.program = p
+	s.limits = p.Limits()
 	return s
 }
 
 func newSession(t *testing.T, name string, root core.Value, deps []core.Value, limits decl.Limits) *session {
 	s := emptySession(t, name)
 	s.root = root
+	s.limits = limits
 	p, err := decl.ResolveWithLimits(root, deps, limits)
 	if err != nil {
 		if p != nil {
@@ -420,14 +423,14 @@ func (s *session) examine(label string) {
 	grounded := s.do(op{kind: opGround, in: []string{label}})
 	groundIndex := len(s.plan) - 1
 	s.do(op{kind: opSatisfies, in: []string{label, "k:Type"}, expect: expectProven})
-	data := s.do(op{kind: opSatisfies, in: []string{label, "k:Data"}})
+	expect := expectNothing
+	if closed {
+		expect = expectClosedVerdict
+	}
+	data := s.do(op{kind: opSatisfies, in: []string{label, "k:Data"}, expect: expect})
 	for _, kind := range s.korder {
 		if kind == "k:Type" || kind == "k:Data" || !s.kinds[kind].Sort().IsProper() {
 			continue
-		}
-		expect := expectNothing
-		if closed {
-			expect = expectClosedVerdict
 		}
 		s.do(op{kind: opSatisfies, in: []string{label, kind}, expect: expect})
 	}
@@ -657,7 +660,7 @@ func (s *session) replay(def *session) {
 		return
 	}
 	if s.outcome != def.outcome {
-		s.t.Fatalf("smaller limits %+v changed the Resolve outcome without exhaustion:\n%s\n---\ndefault:\n%s", s.program.Limits(), s.outcome, def.outcome)
+		s.t.Fatalf("smaller limits %+v changed the Resolve outcome without exhaustion:\n%s\n---\ndefault:\n%s", s.limits, s.outcome, def.outcome)
 	}
 	if s.program == nil {
 		return
@@ -668,7 +671,7 @@ func (s *session) replay(def *session) {
 			continue
 		}
 		if r != def.records[i] {
-			s.t.Fatalf("smaller limits %+v changed operation %d %s without exhaustion:\nsmall:   %+v\ndefault: %+v", s.program.Limits(), i, o, r, def.records[i])
+			s.t.Fatalf("smaller limits %+v changed operation %d %s without exhaustion:\nsmall:   %+v\ndefault: %+v", s.limits, i, o, r, def.records[i])
 		}
 	}
 }
