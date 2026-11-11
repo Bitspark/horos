@@ -25,12 +25,12 @@ for name in files:
                 assert runner.strip() == "ubuntu-latest", (name, runner)
 
 pkg = json.loads((ROOT / "core/ts/package.json").read_text())
-assert pkg["version"] == "0.10.0" and pkg["license"] == "Apache-2.0"
+assert pkg["version"] == "0.11.0" and pkg["license"] == "Apache-2.0"
 assert set(pkg["exports"]) == {".", "./diagnose", "./package.json"}
 assert pkg["dependencies"] == {"@bitspark/ontos-" + p: "0.17.0" for p in ("core", "codec", "data")}
 assert pkg["publishConfig"]["registry"] == "https://registry.npmjs.org/"
 crate = tomllib.loads((ROOT / "core/rs/Cargo.toml").read_text())
-assert crate["package"]["name"] == "bitspark-horos" and crate["package"]["version"] == "0.10.0"
+assert crate["package"]["name"] == "bitspark-horos" and crate["package"]["version"] == "0.11.0"
 assert crate["lib"]["name"] == "horos"
 assert all(d.get("version") == "=0.17.0" and "git" not in d for d in crate["dependencies"].values())
 assert "github.com/bitspark/ontos v0.17.0" in (ROOT / "core/go/go.mod").read_text()

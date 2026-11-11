@@ -67,7 +67,7 @@ def main():
             assert len(packed) == 1
             target = str(root / packed[0]["filename"])
         else:
-            target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.10.0.tgz")
+            target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / f"bitspark-horos-{VERSION}.tgz")
         print(BITWIRE_SUSPENDED, flush=True)
         run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target,
              *(f"@bitspark/ontos-{p}@{ONTOS}" for p in ("core", "codec", "data", "wire")),
@@ -121,10 +121,10 @@ conforms(mixed,value);
         dependency = f'bitspark-horos = "={VERSION}"'
         if args.mode == "candidate":
             extracted = root / "crate"
-            with tarfile.open(directory / "bitspark-horos-0.10.0.crate") as archive:
+            with tarfile.open(directory / f"bitspark-horos-{VERSION}.crate") as archive:
                 archive.extractall(extracted, filter="data")
-            run(["cargo", "test", "--locked"], extracted / "bitspark-horos-0.10.0", env)
-            dependency = 'bitspark-horos = { path = ' + json.dumps(str(extracted / "bitspark-horos-0.10.0")) + ' }'
+            run(["cargo", "test", "--locked"], extracted / f"bitspark-horos-{VERSION}", env)
+            dependency = 'bitspark-horos = { path = ' + json.dumps(str(extracted / f"bitspark-horos-{VERSION}")) + ' }'
         (rust / "Cargo.toml").write_text('[package]\nname="horos-consumer"\nversion="0.0.0"\nedition="2024"\n[dependencies]\n' + dependency + '\nontos-codec={package="bitspark-ontos-codec",version="=' + ONTOS + '"}\nserde_json="1"\n')
         (rust / "src/main.rs").write_text('''fn main() {
     std::thread::Builder::new().stack_size(64*1024*1024).spawn(|| {
@@ -152,14 +152,14 @@ conforms(mixed,value);
             go = root / "go"
             go.mkdir()
             (go / "go.mod").write_text("module consumer\n\ngo 1.25\n")
-            meta = json.loads(run(["go", "mod", "download", "-json", "github.com/Bitspark/horos/core/go@v0.10.0"], go, env, True))
+            meta = json.loads(run(["go", "mod", "download", "-json", f"github.com/Bitspark/horos/core/go@v{VERSION}"], go, env, True))
             assert not meta.get("Error"), meta
             go_origin = meta["Origin"]
             assert go_origin["Hash"] == accepted["source"], "Go proxy tag/source mismatch"
             # Tests ship inside the module, including its independently authored oracle.
             assert digest(Path(meta["Dir"]) / "testdata/conformance.json") == accepted["oracle_sha256"]
             run(["go", "test", "-mod=readonly", "-race", "-count=1", "./..."], Path(meta["Dir"]), env)
-            run(["go", "get", "github.com/Bitspark/horos/core/go@v0.10.0", f"github.com/bitspark/ontos@v{ONTOS}"], go, env)
+            run(["go", "get", f"github.com/Bitspark/horos/core/go@v{VERSION}", f"github.com/bitspark/ontos@v{ONTOS}"], go, env)
             selected = json.loads(run(["go", "list", "-m", "-json", "github.com/bitspark/ontos"], go, env))
             assert selected["Version"] == f"v{ONTOS}" and "Replace" not in selected
 

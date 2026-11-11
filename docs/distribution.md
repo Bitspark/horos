@@ -1,31 +1,31 @@
 # Distribution
 
-## Current Go declaration delivery
+## Current release: 0.11.0
 
-The general-kind change publishes only `core/go/v0.10.1` for the public Go
-module. Its declaration grammar is revision 4. npm and Cargo installations stay
-on their existing 0.9.0 releases; this change does not publish those packages or
-create a root v0.10.1 tag. See the [Go release notes](releases/v0.10.1.md).
+Version 0.11.0 publishes npm, crates.io and the Go module at one version again.
+Root `v0.11.0` and `core/go/v0.11.0` identify the same accepted source commit.
+npm and crates.io go from 0.9.0 to 0.11.0. They skip 0.10.0 because the Go module
+already used v0.10.0 (retracted), v0.10.1 and v0.10.2 for the Go-only declaration
+deliveries ([0.10.1](releases/v0.10.1.md), [0.10.2](releases/v0.10.2.md)).
+Existing tags and registry versions are never replaced. See the
+[release notes](releases/v0.11.0.md).
 
-For this Go-only path, land the source on main and publish the immutable nested
-module tag. Bittype then selects that public Go version. No archive-building,
-rehearsal, checksum, validation or provenance workflow is a prerequisite under
-the owner's 4 November rule. The broader hosted workflow described below is not
-invoked by this delivery. Existing tags and registry versions are never replaced.
+Publication uses the hosted release workflow described below, as 0.9.0 did:
+`rehearse` on the accepted main revision, the two tags on that revision, then
+`publish`, which runs `verify` and finalizes the GitHub release. The npm package
+already exists, so the first-publication bootstrap is unnecessary.
 
 Version 0.6.0 starts the public history. Earlier versions belong to the preserved
 private history and are not tags in this repository.
 
 | Surface | Distribution | Dependency |
 | --- | --- | --- |
-| TypeScript | npmjs `@bitspark/horos@0.9.0` | ontos core, codec and data 0.16.0 |
-| Rust | crates.io `bitspark-horos@0.9.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
-| Go | `github.com/Bitspark/horos/core/go@v0.10.1` | github.com/bitspark/ontos v0.16.0 |
+| TypeScript | npmjs `@bitspark/horos@0.11.0` | ontos core, codec and data 0.17.0 |
+| Rust | crates.io `bitspark-horos@0.11.0`, library `horos` | bitspark-ontos-core/codec/data 0.17.0 |
+| Go | `github.com/Bitspark/horos/core/go@v0.11.0` | github.com/bitspark/ontos v0.17.0 |
 | Python | Source-only validation lane | ontos v0.17.0 Python source |
 
-The published packages in this table use Ontos 0.16.0. The source on main
-requires Ontos 0.17.0 in every package and in the Python lane; the next release
-moves all packages to it together.
+Earlier releases (npm and Cargo 0.9.0, Go v0.10.2 and before) use Ontos 0.16.0.
 
 There are no private runtime dependencies, hidden registry routes or compatibility
 exports for the pre-public proof/witness APIs. Code-generation tools do not form
@@ -91,15 +91,14 @@ the tagged source. Never replace tags or archives or rewrite GitHub identity
 variables. Later publications use the trusted publisher in the hosted workflow;
 the first-publication bootstrap is unnecessary.
 
-The 0.10.1 Go module includes the unified revision-4 `declarations` package.
+The Go module includes the unified revision-4 `declarations` package, since 0.10.1.
 Ordinary structural kinds, constructor contracts and checked symbolic bodies
 express generic contracts in one language. Earlier revisions are no longer
 accepted; imports must be repinned after canonical module migration. The removed
 `wire` package and template-lifting facility remain absent.
 No corresponding Rust or TypeScript declaration APIs are claimed. All consumers
-must align to the one Ontos version their Horos release requires (0.16.0 for the
-releases above, 0.17.0 from the next); no compatibility shim, local replacement
-or duplicate value implementation bridges older versions. In TypeScript, a second installed
+must align to Ontos 0.17.0; no compatibility shim, local replacement or duplicate
+value implementation bridges older versions. In TypeScript, a second installed
 Ontos core means different Atom/Tuple constructors even if its bytes are unchanged.
 
 The installed-consumer gate explicitly installs Ontos core/codec/data/wire 0.17.0

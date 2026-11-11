@@ -27,19 +27,17 @@ and [distribution](docs/distribution.md).
 ## Install
 
 ```sh
-npm install @bitspark/horos@0.9.0
-cargo add bitspark-horos@0.9.0
-go get github.com/Bitspark/horos/core/go@v0.10.2
+npm install @bitspark/horos@0.11.0
+cargo add bitspark-horos@0.11.0
+go get github.com/Bitspark/horos/core/go@v0.11.0
 ```
 
-The Rust package's library name is `horos`. The releases above use public ontos
-0.16.0. The source on main requires public ontos 0.17.0 in all three packages and
-the Python lane; the next release moves every package together. Each dependency
-graph retains a single ontos value type. Consumers must upgrade their Ontos
-dependencies together; no old-version adapter or copied value implementation is
-provided. The [Go 0.10.2 release](docs/releases/v0.10.2.md)
-moves standard kind definitions into Horos source; it does not publish new npm
-or Cargo packages.
+The Rust package's library name is `horos`. All three packages use public ontos
+0.17.0, retaining a single ontos value type in each dependency graph. Consumers
+must upgrade their Ontos dependencies together; no old-version adapter or copied
+value implementation is provided. The [0.11.0 release](docs/releases/v0.11.0.md)
+publishes all three packages at one version again, after the Go-only 0.10.x
+releases.
 The TypeScript package exports its checker at `@bitspark/horos` and diagnostics at
 `@bitspark/horos/diagnose`.
 
