@@ -123,8 +123,22 @@ def _matches_lowercase_uuid(s: str) -> bool:
 # ---------------------------------------------------------------------------
 # scope chains — cons-lists, innermost-first (the rs `Scope` semantics)
 # ---------------------------------------------------------------------------
-# env chain node:     ((name_bytes, body_descriptor), parent_or_None)
-# pending chain node: (name_bytes, parent_or_None)
+# env chain node:     _Binding(name_bytes, body_descriptor, parent_or_None)
+# pending chain node: (_Binding, parent_or_None), compared by identity
+# names chain node:   (name_bytes, parent_or_None), for wf's bound and pending names
+
+
+class _Binding:
+    """One ``rec`` binding and its environment node. ``parent`` is the environment
+    the ``rec`` was written in, so the node is the binding's closure; each ``rec``
+    frame creates its own, so object identity is binding identity (ADR 0011)."""
+
+    __slots__ = ("name", "body", "parent")
+
+    def __init__(self, name: bytes, body: Value, parent: Optional["_Binding"]) -> None:
+        self.name = name
+        self.body = body
+        self.parent = parent
 
 
 def _pending_contains(pending, name: bytes) -> bool:
@@ -136,15 +150,25 @@ def _pending_contains(pending, name: bytes) -> bool:
     return False
 
 
-def _env_lookup(env, name: bytes) -> Optional[Value]:
-    """Innermost-first lookup (an inner ``rec`` shadows an outer binding)."""
+def _env_lookup(env: Optional[_Binding], name: bytes) -> Optional[_Binding]:
+    """Innermost-first lookup (an inner ``rec`` shadows an outer binding). ``env``
+    holds exactly the bindings that lexically enclose the ``ref``."""
     node = env
     while node is not None:
-        entry_name, body = node[0]
-        if entry_name == name:
-            return body
-        node = node[1]
+        if node.name == name:
+            return node
+        node = node.parent
     return None
+
+
+def _pending_holds(pending, binding: _Binding) -> bool:
+    """Whether ``binding`` itself is pending (by identity, not by name)."""
+    node = pending
+    while node is not None:
+        if node[0] is binding:
+            return True
+        node = node[1]
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -311,25 +335,24 @@ def _conforms_in(v: Value, t: Value, env, pending, depth: int) -> bool:
     if ctor == "exact" and n == 1:
         return v == args[0]
 
-    # Recursion.
+    # Recursion. A ``ref`` denotes the ``rec`` that lexically encloses it and
+    # continues in that binding's environment, never the unfolding site's (ADR 0011).
     if ctor == "rec" and n == 2:
         nb = _atom_bytes(args[0])
         if nb is None:
             return False
-        e = ((nb, args[1]), env)
-        p = (nb, pending)
-        return _conforms_in(v, args[1], e, p, depth + 1)
+        binding = _Binding(nb, args[1], env)
+        return _conforms_in(v, args[1], binding, (binding, pending), depth + 1)
     if ctor == "ref" and n == 1:
         nb = _atom_bytes(args[0])
         if nb is None:
             return False
-        if _pending_contains(pending, nb):
-            return False  # unguarded at this node — would not terminate
-        body = _env_lookup(env, nb)
-        if body is None:
+        binding = _env_lookup(env, nb)
+        if binding is None:
             return False  # unbound reference
-        p = (nb, pending)
-        return _conforms_in(v, body, env, p, depth + 1)
+        if _pending_holds(pending, binding):
+            return False  # unguarded at this node — would not terminate
+        return _conforms_in(v, binding.body, binding, (binding, pending), depth + 1)
 
     return False  # unknown ctor or wrong arity
 

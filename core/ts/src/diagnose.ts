@@ -324,6 +324,7 @@ export function diagnose(v: Value, t: Value): Diagnosis {
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
 
+/** One `rec` binding; each `rec` frame creates its own, so identity is binding identity. */
 interface Binding {
   readonly name: string;
   readonly body: Value;
@@ -371,7 +372,7 @@ function diagnoseIn(
   v: Value,
   t: Value,
   env: readonly Binding[],
-  pending: readonly string[],
+  pending: readonly Binding[],
   depth: number,
   path: PathNode | undefined,
   pos: PosNode | undefined,
@@ -408,17 +409,21 @@ function diagnoseIn(
     }
 
     // Recursion — mirrors the recognizer's guard exactly, and is transparent to locations.
+    // A ref denotes the rec that lexically encloses it and continues in that binding's
+    // environment (ADR 0011). `env` holds exactly the enclosing bindings, outermost first,
+    // so a binding's closure is the prefix of `env` that ends with it.
     case "rec": {
       if (args.length !== 2) return refused();
       const name = atomStringOf(args[0]!);
       if (name === undefined) return refused();
       const body = args[1]!;
       const bodyAt = at(pos, 2);
+      const binding: Binding = { name, body, at: bodyAt };
       return diagnoseIn(
         v,
         body,
-        [...env, { name, body, at: bodyAt }],
-        [...pending, name],
+        [...env, binding],
+        [...pending, binding],
         depth + 1,
         path,
         bodyAt,
@@ -428,11 +433,19 @@ function diagnoseIn(
       if (args.length !== 1) return refused();
       const name = atomStringOf(args[0]!);
       if (name === undefined) return refused();
-      if (pending.includes(name)) return refused(); // unguarded — the recognizer's false
       for (let i = env.length - 1; i >= 0; i -= 1) {
         const b = env[i]!;
         if (b.name === name) {
-          return diagnoseIn(v, b.body, env, [...pending, name], depth + 1, path, b.at);
+          if (pending.includes(b)) return refused(); // unguarded — the recognizer's false
+          return diagnoseIn(
+            v,
+            b.body,
+            env.slice(0, i + 1),
+            [...pending, b],
+            depth + 1,
+            path,
+            b.at,
+          );
         }
       }
       return refused(); // unbound

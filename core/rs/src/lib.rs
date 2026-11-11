@@ -59,6 +59,21 @@ fn scope_contains(s: Option<&Scope<'_, &[u8]>>, name: &[u8]) -> bool {
     scope_iter(s).any(|n| *n == name)
 }
 
+/// The innermost node of `s` whose head satisfies `hit`: the node, not only its head, so
+/// a `ref` can continue with a `rec` binding's own chain as its environment (ADR 0011).
+fn scope_find<'s, 'a, T>(
+    mut s: Option<&'s Scope<'a, T>>,
+    hit: impl Fn(&T) -> bool,
+) -> Option<&'s Scope<'a, T>> {
+    while let Some(node) = s {
+        if hit(&node.head) {
+            return Some(node);
+        }
+        s = node.tail;
+    }
+    None
+}
+
 /// The reserved descriptor-label namespace. Every descriptor combinator is a
 /// `Tuple(Atom("horos/<ctor>"), args...)`; a tuple whose first child is not an atom
 /// under this prefix is not a horos descriptor (per ontos-data §1.1 reservation).
@@ -217,21 +232,28 @@ pub fn conforms(v: &Value, t: &Value) -> bool {
 /// An in-scope `rec` binding: the name (atom bytes) and its body descriptor.
 type EnvEntry<'a> = (&'a [u8], &'a Value);
 
+/// One `rec` binding as an environment node. Its tail is the environment the `rec` was
+/// written in, so the node is the binding's closure, and its address is its identity.
+type EnvNode<'s, 'a> = Scope<'s, EnvEntry<'a>>;
+
 /// `conforms` with the recursion environment threaded through:
 ///
-/// - `env` binds each in-scope `rec` name to its body descriptor.
-/// - `pending` holds the names bound or unfolded **at the current `v`-node without a
-///   descent since** — a `ref` to a pending name is *unguarded* (it would loop) and
-///   yields `false`. Descending into a child value clears `pending` (a constructor of
-///   `v` was consumed); same-`v` combinators (`union`/`and`/`not`) thread it unchanged.
+/// - `env` binds each `rec` name that lexically encloses `t` to its body descriptor. A
+///   `ref` denotes its nearest enclosing binding in the written descriptor and continues
+///   in that binding's own environment, never the unfolding site's (ADR 0011).
+/// - `pending` holds the bindings entered or unfolded **at the current `v`-node without a
+///   descent since**, by identity — a `ref` to a pending binding is *unguarded* (it would
+///   loop) and yields `false`. Descending into a child value clears `pending` (a
+///   constructor of `v` was consumed); same-`v` combinators (`union`/`and`/`not`) thread
+///   it unchanged.
 ///
 /// Termination: between two unfoldings of the same `ref` there must be a descent, and
 /// each descent strictly shrinks the finite `v` — so unfoldings are bounded by `|v|`.
 fn conforms_in<'a>(
     v: &Value,
     t: &'a Value,
-    env: Option<&Scope<'_, EnvEntry<'a>>>,
-    pending: Option<&Scope<'_, &'a [u8]>>,
+    env: Option<&EnvNode<'_, 'a>>,
+    pending: Option<&Scope<'_, &EnvNode<'_, 'a>>>,
     depth: usize,
 ) -> bool {
     // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a
@@ -386,9 +408,10 @@ fn conforms_in<'a>(
             Some(nm) => {
                 let nb = nm.bytes();
                 // Push one borrowed node onto each chain (no per-frame copy); the
-                // child frame sees this binding innermost-first.
+                // child frame sees this binding innermost-first. The node closes over
+                // `env`.
                 let e = Scope::push((nb, body), env);
-                let p = Scope::push(nb, pending);
+                let p = Scope::push(&e, pending);
                 conforms_in(v, body, Some(&e), Some(&p), depth + 1)
             }
             None => false,
@@ -396,18 +419,18 @@ fn conforms_in<'a>(
         ("ref", [name]) => match name.as_atom() {
             Some(nm) => {
                 let nb = nm.bytes();
-                if scope_contains(pending, nb) {
+                // Innermost-first: an inner `rec` shadows an outer binding of the same
+                // name, and `env` holds only the bindings that enclose this `ref`.
+                let Some(b) = scope_find(env, |(k, _)| *k == nb) else {
+                    return false; // unbound reference
+                };
+                if scope_iter(pending).any(|p| std::ptr::eq(*p, b)) {
                     return false; // unguarded at this node — would not terminate
                 }
-                // Innermost-first scan reproduces `env.iter().rev().find_map(...)`:
-                // an inner `rec` shadows an outer binding of the same name.
-                match scope_iter(env).find_map(|(k, b)| (*k == nb).then_some(*b)) {
-                    Some(body) => {
-                        let p = Scope::push(nb, pending);
-                        conforms_in(v, body, env, Some(&p), depth + 1)
-                    }
-                    None => false, // unbound reference
-                }
+                // Unfold in the binding's own environment, so the body's free refs keep
+                // the bindings they were written under.
+                let p = Scope::push(b, pending);
+                conforms_in(v, b.head.1, Some(b), Some(&p), depth + 1)
             }
             None => false,
         },

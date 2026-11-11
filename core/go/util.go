@@ -73,6 +73,10 @@ func nameScopeContains(s *nameScope, name []byte) bool {
 
 // envScope is the conforms-side binding environment as a cons list: each in-scope rec
 // name paired with its body, threaded by pointer like nameScope (no cloneEnv per frame).
+//
+// A node is also a closure (ADR 0011): its tail is the environment in which its rec
+// was written, so a ref that resolves to the node continues with the node itself as
+// its environment. Each node is one rec binding; its pointer is the binding's identity.
 type envScope struct {
 	name []byte
 	body Value
@@ -85,16 +89,37 @@ func pushEnv(e *envScope, name []byte, body Value) *envScope {
 	return &envScope{name: name, body: body, tail: e}
 }
 
-// lookupLast finds the body bound to name, searching from the innermost (head) binding
-// outward — the Rust core does `scope_iter(env).find_map(...)` (i.e. `env.iter().rev()`),
-// so an inner rec shadows an outer binding of the same name.
-func lookupLast(e *envScope, name []byte) (Value, bool) {
+// lookupBinding finds the binding of name, searching from the innermost (head) binding
+// outward, so an inner rec shadows an outer binding of the same name. The returned node
+// is the closure the ref continues in.
+func lookupBinding(e *envScope, name []byte) *envScope {
 	for n := e; n != nil; n = n.tail {
 		if bytesEqual(n.name, name) {
-			return n.body, true
+			return n
 		}
 	}
-	return nil, false
+	return nil
+}
+
+// bindingScope is the conforms-side pending set: the rec bindings entered or unfolded at
+// the current value node without a descent since, compared by identity, not by name. An
+// inner rec that shadows a name does not make an outer binding of that name pending.
+type bindingScope struct {
+	binding *envScope
+	tail    *bindingScope
+}
+
+func pushBinding(s *bindingScope, b *envScope) *bindingScope {
+	return &bindingScope{binding: b, tail: s}
+}
+
+func bindingScopeContains(s *bindingScope, b *envScope) bool {
+	for n := s; n != nil; n = n.tail {
+		if n.binding == b {
+			return true
+		}
+	}
+	return false
 }
 
 // containsString reports whether xs contains s.

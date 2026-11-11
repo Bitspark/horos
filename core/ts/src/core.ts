@@ -19,9 +19,13 @@
  * -------------------------
  * `rec` binds a recursion name to its body descriptor; `ref` unfolds it, but only
  * when guarded — every unfolding must have descended into a strict substructure of v
- * since the binding. `env` binds each in-scope rec name to its body; `pending` holds
- * the names bound or unfolded at the current v-node WITHOUT a descent since, so a
- * `ref` to a pending name is unguarded (it would loop) and yields false. Descending
+ * since the binding. A `ref` denotes the `rec` that lexically encloses it in the
+ * written descriptor (ADR 0011): each binding closes over the environment it was
+ * written in, and a `ref` continues in its binding's environment, never the unfolding
+ * site's. `env` binds each in-scope rec name to its body; `pending` holds the
+ * bindings entered or unfolded at the current v-node WITHOUT a descent since, by
+ * identity, so a `ref` to a pending binding is unguarded (it would loop) and yields
+ * false. Descending
  * into a child value clears `pending` (a constructor of v was consumed); same-v
  * combinators (union/and/not) thread it unchanged. Termination: between two
  * unfoldings of the same `ref` there must be a descent, and each descent strictly
@@ -124,7 +128,10 @@ function consContainsName(s: Cons<Uint8Array> | undefined, name: Uint8Array): bo
   return false;
 }
 
-/** An in-scope `rec` binding: the name (atom bytes) and its body descriptor. */
+/**
+ * An in-scope `rec` binding: the name (atom bytes) and its body descriptor. Each `rec`
+ * frame creates its own object, so object identity is binding identity.
+ */
 interface Binding {
   readonly name: Uint8Array;
   readonly body: Value;
@@ -280,17 +287,19 @@ export function conforms(v: Value, t: Value): boolean {
 /**
  * `conforms` with the recursion environment threaded through:
  *
- *   - `env` binds each in-scope `rec` name to its body descriptor.
- *   - `pending` holds the names bound or unfolded at the current v-node without a
- *     descent since — a `ref` to a pending name is unguarded (it would loop) and
- *     yields `false`. Descending into a child value clears `pending`; same-v
+ *   - `env` binds each `rec` name that lexically encloses `t` to its body descriptor;
+ *     each node's tail is the environment its `rec` was written in, so the node is the
+ *     binding's closure.
+ *   - `pending` holds the bindings entered or unfolded at the current v-node without a
+ *     descent since, by identity — a `ref` to a pending binding is unguarded (it would
+ *     loop) and yields `false`. Descending into a child value clears `pending`; same-v
  *     combinators (union/and/not) thread it unchanged.
  */
 function conformsIn(
   v: Value,
   t: Value,
   env: Cons<Binding> | undefined,
-  pending: Cons<Uint8Array> | undefined,
+  pending: Cons<Binding> | undefined,
   depth: number,
 ): boolean {
   // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a deterministic
@@ -566,23 +575,22 @@ function conformsIn(
       const nb = nm.bytes();
       const body = args[1]!;
       // Push one shared node onto each chain (no per-frame spread copy); the child
-      // frame sees this binding innermost-first.
-      const e = cons<Binding>({ name: nb, body }, env);
-      const p = cons(nb, pending);
-      return conformsIn(v, body, e, p, depth + 1);
+      // frame sees this binding innermost-first. The node closes over `env`.
+      const binding: Binding = { name: nb, body };
+      return conformsIn(v, body, cons(binding, env), cons(binding, pending), depth + 1);
     }
     case "ref": {
       if (args.length !== 1) return false;
       const nm = args[0]!;
       if (!(nm instanceof Atom)) return false;
-      const nb = nm.bytes();
-      if (consContainsName(pending, nb)) return false; // unguarded at this node — would not terminate
-      // Innermost-first scan reproduces env.iter().rev(): an inner rec shadows an
-      // outer binding of the same name.
-      const body = lookupLast(env, nb);
-      if (body === undefined) return false; // unbound reference
-      const p = cons(nb, pending);
-      return conformsIn(v, body, env, p, depth + 1);
+      // The nearest enclosing binding in the written descriptor: `env` holds exactly
+      // the bindings that lexically enclose this `ref` (ADR 0011).
+      const node = lookupBinding(env, nm.bytes());
+      if (node === undefined) return false; // unbound reference
+      if (consContains(pending, node.head)) return false; // unguarded at this node — would not terminate
+      // Unfold in the binding's own environment, so the body's free refs keep the
+      // bindings they were written under.
+      return conformsIn(v, node.head.body, node, cons(node.head, pending), depth + 1);
     }
 
     // Unknown ctor or wrong arity → not a recognized descriptor.
@@ -937,15 +945,26 @@ function exactEqual(left: Value, right: Value): boolean {
 }
 
 /**
- * Find the body bound to `name`, searching from the innermost (head) binding outward —
- * the Rust core does `scope_iter(env).find_map(...)` (i.e. `env.iter().rev()`), so an
- * inner `rec` shadows an outer binding of the same name. Returns `undefined` if unbound.
+ * Find the binding of `name`, searching from the innermost (head) binding outward, so an
+ * inner `rec` shadows an outer binding of the same name. Returns the environment node,
+ * which is the binding's closure, or `undefined` if unbound.
  */
-function lookupLast(env: Cons<Binding> | undefined, name: Uint8Array): Value | undefined {
+function lookupBinding(
+  env: Cons<Binding> | undefined,
+  name: Uint8Array,
+): Cons<Binding> | undefined {
   for (let n = env; n !== undefined; n = n.tail) {
-    if (bytesEqual(n.head.name, name)) return n.head.body;
+    if (bytesEqual(n.head.name, name)) return n;
   }
   return undefined;
+}
+
+/** Whether the chain holds `binding` itself (by identity, not by name). */
+function consContains(s: Cons<Binding> | undefined, binding: Binding): boolean {
+  for (let n = s; n !== undefined; n = n.tail) {
+    if (n.head === binding) return true;
+  }
+  return false;
 }
 
 /**

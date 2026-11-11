@@ -16,9 +16,12 @@
 //
 // rec binds a recursion name to its body descriptor; ref unfolds it, but only when
 // guarded — every unfolding must have descended into a strict substructure of v
-// since the binding. The env binds each in-scope rec name to its body; pending
-// holds the names bound or unfolded at the current v-node WITHOUT a descent since,
-// so a ref to a pending name is unguarded (it would loop) and yields false.
+// since the binding. A ref denotes the rec that lexically encloses it in the written
+// descriptor (ADR 0011): each rec binding closes over the environment it was written
+// in, and a ref continues in its binding's environment, never the unfolding site's.
+// The env binds each in-scope rec name to its body; pending holds the bindings
+// entered or unfolded at the current v-node WITHOUT a descent since, by identity, so
+// a ref to a pending binding is unguarded (it would loop) and yields false.
 // Descending into a child value clears pending (a constructor of v was consumed);
 // same-v combinators (union/and/not) thread it unchanged. Termination: between two
 // unfoldings of the same ref there must be a descent, and each descent strictly
@@ -121,12 +124,13 @@ func Conforms(v, t Value) bool {
 
 // conformsIn is Conforms with the recursion environment threaded through:
 //
-//   - env binds each in-scope rec name to its body descriptor (an envScope cons list).
-//   - pending holds the names bound or unfolded at the current v-node without a
-//     descent since (a nameScope cons list) — a ref to a pending name is unguarded
-//     (it would loop) and yields false. Descending into a child value clears pending;
-//     same-v combinators (union/and/not) thread it unchanged.
-func conformsIn(v, t Value, env *envScope, pending *nameScope, depth int) bool {
+//   - env binds each rec name that lexically encloses t to its body descriptor (an
+//     envScope cons list whose nodes are closures).
+//   - pending holds the bindings entered or unfolded at the current v-node without a
+//     descent since (a bindingScope cons list, by identity) — a ref to a pending
+//     binding is unguarded (it would loop) and yields false. Descending into a child
+//     value clears pending; same-v combinators (union/and/not) thread it unchanged.
+func conformsIn(v, t Value, env *envScope, pending *bindingScope, depth int) bool {
 	// Recursion-depth guard (horos-internal#37): past MaxRecursionDepth frames, return a deterministic
 	// false rather than risk a native-stack overflow. Counted at the same point in all
 	// three cores so the trip depth is byte-identical.
@@ -428,9 +432,9 @@ func conformsIn(v, t Value, env *envScope, pending *nameScope, depth int) bool {
 		nb := nm.Bytes()
 		body := args[1]
 		// Push one shared node onto each chain (no per-frame slice copy); the child
-		// frame sees this binding innermost-first.
+		// frame sees this binding innermost-first. The node closes over env.
 		e := pushEnv(env, nb, body)
-		p := pushName(pending, nb)
+		p := pushBinding(pending, e)
 		return conformsIn(v, body, e, p, depth+1)
 	case "ref":
 		if len(args) != 1 {
@@ -440,18 +444,18 @@ func conformsIn(v, t Value, env *envScope, pending *nameScope, depth int) bool {
 		if !okNm {
 			return false
 		}
-		nb := nm.Bytes()
-		if nameScopeContains(pending, nb) {
-			return false // unguarded at this node — would not terminate
-		}
-		// Innermost-first scan reproduces env.iter().rev(): an inner rec shadows an
-		// outer binding of the same name.
-		body, found := lookupLast(env, nb)
-		if !found {
+		// The nearest enclosing binding of the name in the written descriptor: env is
+		// always the chain of rec bindings that lexically enclose this ref (ADR 0011).
+		b := lookupBinding(env, nm.Bytes())
+		if b == nil {
 			return false // unbound reference
 		}
-		p := pushName(pending, nb)
-		return conformsIn(v, body, env, p, depth+1)
+		if bindingScopeContains(pending, b) {
+			return false // unguarded at this node — would not terminate
+		}
+		// Unfold in the binding's own environment, never the unfolding site's, so the
+		// body's free refs keep the bindings they were written under.
+		return conformsIn(v, b.body, b, pushBinding(pending, b), depth+1)
 
 	// Unknown ctor or wrong arity → not a recognized descriptor.
 	default:

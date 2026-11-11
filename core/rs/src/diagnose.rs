@@ -312,6 +312,23 @@ struct Binding<'a> {
 
 type Env<'a> = Chain<'a, Binding<'a>>;
 
+/// The `rec` bindings entered or unfolded at the current value node, by identity: each
+/// is the binding's own environment node, so a shadowing `rec` never makes an outer
+/// binding of the same name pending (ADR 0011).
+type Bindings<'a> = Chain<'a, &'a Link<'a, Binding<'a>>>;
+
+/// The innermost binding of `name` in `env`, as its node: the node is the binding's
+/// closure, because `env` holds exactly the `rec`s that lexically enclose the `ref`.
+fn find_binding<'a>(mut env: Env<'a>, name: &[u8]) -> Option<&'a Link<'a, Binding<'a>>> {
+    while let Some(node) = env {
+        if node.head.name == name {
+            return Some(node);
+        }
+        env = node.tail;
+    }
+    None
+}
+
 fn locate(path: Path<'_>, pos: Pos<'_>, reason: Reason) -> Location {
     let mut steps: Vec<Step> = chain_iter(path).map(|s| s.owned()).collect();
     steps.reverse();
@@ -422,12 +439,13 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
 // the value recursion — an arm-for-arm mirror of `conforms_in`
 // ---------------------------------------------------------------------------
 
-/// The checking context of one frame: `rec` bindings, the unguarded names at this value
-/// node, the descriptor position, the value path and the counted depth.
+/// The checking context of one frame: the `rec` bindings that lexically enclose the
+/// descriptor, the unguarded bindings at this value node, the descriptor position, the
+/// value path and the counted depth.
 #[derive(Clone, Copy)]
 struct Cx<'a> {
     env: Env<'a>,
-    pending: Names<'a>,
+    pending: Bindings<'a>,
     pos: Pos<'a>,
     path: Path<'a>,
     depth: usize,
@@ -588,7 +606,7 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         },
         cx.env,
     );
-    let p = link(nb, cx.pending);
+    let p = link(&e, cx.pending);
     let inner = Cx {
         env: Some(&e),
         pending: Some(&p),
@@ -599,7 +617,8 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     diagnose_in(v, body, inner)
 }
 
-/// `ref` continues at its `rec` body's position — mirrors the recognizer's guard exactly.
+/// `ref` continues in its lexically enclosing binding's environment, at its `rec` body's
+/// position (ADR 0011) — mirrors the recognizer's guard exactly.
 #[inline(never)]
 fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     let [name] = args else {
@@ -608,20 +627,21 @@ fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     let Some(nb) = atom_bytes(name) else {
         return cx.refused();
     };
-    if names_contain(cx.pending, nb) {
-        return cx.refused(); // unguarded — the recognizer's `false`
-    }
-    let Some(b) = chain_iter(cx.env).find(|b| b.name == nb) else {
+    let Some(b) = find_binding(cx.env, nb) else {
         return cx.refused(); // unbound
     };
-    let p = link(nb, cx.pending);
+    if chain_iter(cx.pending).any(|p| std::ptr::eq(*p, b)) {
+        return cx.refused(); // unguarded — the recognizer's `false`
+    }
+    let p = link(b, cx.pending);
     let inner = Cx {
+        env: Some(b),
         pending: Some(&p),
-        pos: b.pos,
+        pos: b.head.pos,
+        path: cx.path,
         depth: cx.depth + 1,
-        ..cx
     };
-    diagnose_in(v, b.body, inner)
+    diagnose_in(v, b.head.body, inner)
 }
 
 /// `tuple`, `seq` and `compound`: the bare tuple, its arity and label, then the items.
