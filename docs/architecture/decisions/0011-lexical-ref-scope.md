@@ -43,9 +43,9 @@ identifies bindings by name, which is only sound while one name means one bindin
    enclosing it, and the `rec` itself. Every `ref` inside the unfolded body keeps the
    binding it was written under, whatever `rec`s enclose the place where the unfolding
    happens. Renaming a binding together with its references, so that every `ref`
-   still denotes the same `rec`, changes no judgment. This
-   is the standard, capture-avoiding reading of recursive types, and it is the reading
-   well-formedness already used.
+   still denotes the same `rec`, changes no judgment. This is the standard,
+   capture-avoiding reading of recursive types, and it is the reading well-formedness
+   already used.
 2. **Each binding is a closure.** A `rec` creates one binding that records its name,
    its body and the environment it was written in. A `ref` looks up its binding,
    innermost first, and continues in that binding's environment instead of the current
@@ -90,9 +90,9 @@ identifies bindings by name, which is only sound while one name means one bindin
    reproducer, a false-positive twin, a descriptor a dynamic reading loops on, shadowing
    three deep, shadowing without capture, exhaustion through shadowed recursion and a
    lexically unguarded `ref`. Go, Rust, TypeScript and Python replay its booleans and
-   its diagnoses, and so does the CLI harness. Go's checker before
-   this change disagrees with 12 of its 33 value judgments, booleans or diagnoses, and a
-   Go build with lexical lookup but a name-keyed guard disagrees with 4.
+   its diagnoses, and so does the CLI harness. Go's checker before this change
+   disagrees with 12 of its 33 value judgments, booleans or diagnoses, and a Go build
+   with lexical lookup but a name-keyed guard disagrees with 4.
 
 ## The verdict change
 
