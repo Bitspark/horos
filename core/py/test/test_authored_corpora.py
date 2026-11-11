@@ -1,10 +1,10 @@
 """The authored corpora match their sources.
 
-The Python source has no diagnostic API, so this lane does not replay
-``vectors/diagnose.json``. It checks that each authored corpus
-(``vectors/diagnose.json`` and ``vectors/integer-bounds.json``) and its Go
-and Rust package copies are exactly what its script encodes from the authored
-cases, so the hex inputs cannot drift from the source.
+``test_diagnose.py`` replays ``vectors/diagnose.json``. This test checks that
+each authored corpus (``vectors/diagnose.json`` and
+``vectors/integer-bounds.json``) and its Go and Rust package copies are exactly
+what its script encodes from the authored cases, so the hex inputs cannot drift
+from the source.
 """
 
 from __future__ import annotations

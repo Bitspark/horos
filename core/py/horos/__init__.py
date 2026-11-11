@@ -1,6 +1,7 @@
 """Python validation lane for horos descriptors over ontos values.
 
 Source-only; replays the same conformance corpus as Go, Rust and TypeScript.
+Diagnostics (ADR 0008 verdicts, ADR 0009 locations) are in ``horos.diagnose``.
 No independently authored or production-package qualification is claimed.
 """
 
