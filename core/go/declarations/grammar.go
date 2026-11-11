@@ -166,7 +166,7 @@ func descriptorSchema() kindmodel.Schema {
 	forms := make([]kindmodel.Form, 0, 24)
 	for _, name := range []string{
 		"any", "atom", "atom-exact", "atom-len", "atom-in", "exact",
-		"text-len", "key-grammar", "text-non-blank", "lowercase-uuid",
+		"int-min", "int-max", "text-len", "key-grammar", "text-non-blank", "lowercase-uuid",
 	} {
 		forms = append(forms, kindmodel.Form{Name: name, MaxChildren: 0})
 	}
