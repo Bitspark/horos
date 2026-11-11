@@ -1,6 +1,6 @@
 # Go declaration tooling
 
-**Revision-4 API, Go 0.10.2, 5 November 2026.** The
+**Revision-4 API, Go 0.11.0.** The
 package `github.com/Bitspark/horos/core/go/declarations` is the public Go boundary
 for [canonical declarations](../../../docs/spec/declarations.md) and
 [general structural kinds](../../../docs/spec/kinds.md). It consumes Ontos
