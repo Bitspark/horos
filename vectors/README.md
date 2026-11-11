@@ -36,5 +36,5 @@ denotes the `rec` that lexically encloses it. Each case carries the boolean `wf`
 and `conforms` of the original oracle's format, and beside them the expected
 `diagnose_wf` and `diagnosis` in the JSON form of the location corpus. Its source
 is `recursion-scope.py`, which encodes the inputs only; run it as `diagnose.py`
-above. All four lanes and the CLI harness replay its booleans; Go, Rust,
-TypeScript and the CLI harness replay its diagnoses.
+above. All four lanes and the CLI harness replay its booleans and its
+diagnoses.

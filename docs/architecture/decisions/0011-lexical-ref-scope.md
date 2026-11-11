@@ -1,7 +1,8 @@
 # A ref denotes the rec that lexically encloses it
 
 Status: accepted, 11 November 2026. Found while giving the Python lane diagnostics;
-decided by the horos coordinator on 11 November 2026.
+decided by the horos coordinator on 11 November 2026. The Python diagnostics from
+#46 resolved `ref`s the old way too and are made lexical with the other cores.
 
 ## Context
 
@@ -50,8 +51,8 @@ identifies bindings by name, which is only sound while one name means one bindin
    innermost first, and continues in that binding's environment instead of the current
    one. The environment then always holds exactly the `rec`s that enclose the
    descriptor node being checked. So a binding's environment is the binding's own node
-   of a cons list (Go, Rust and TypeScript recognizers, Python, Rust diagnostics), or
-   the prefix of the environment that ends with it (Go and TypeScript diagnostics).
+   of a cons list (the four recognizers, Rust and Python diagnostics), or the prefix of
+   the environment that ends with it (Go and TypeScript diagnostics).
    Restoring it needs no search beyond the lookup the `ref` already makes.
 3. **The unguarded-unfolding guard is removed.** The recognizers refused a `ref` whose
    name had been bound or unfolded at the current value without a descent since, and
@@ -88,8 +89,8 @@ identifies bindings by name, which is only sound while one name means one bindin
    `vectors/recursion-scope.py`, which only encodes the inputs. It covers the reported
    reproducer, a false-positive twin, a descriptor a dynamic reading loops on, shadowing
    three deep, shadowing without capture, exhaustion through shadowed recursion and a
-   lexically unguarded `ref`. Go, Rust, TypeScript and Python replay its booleans, and
-   Go, Rust, TypeScript and the CLI harness replay its diagnoses. Go's checker before
+   lexically unguarded `ref`. Go, Rust, TypeScript and Python replay its booleans and
+   its diagnoses, and so does the CLI harness. Go's checker before
    this change disagrees with 12 of its 33 value judgments, booleans or diagnoses, and a
    Go build with lexical lookup but a name-keyed guard disagrees with 4.
 
