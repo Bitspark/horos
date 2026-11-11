@@ -107,8 +107,8 @@ interface Head {
  * `rec`/`ref` frame pushes ONE node that points at the parent chain instead of
  * spread-copying the whole array (`[...env, …]` / `[...pending, …]`), so a descent costs
  * O(1) and allocates one small node rather than an O(depth) array. Lookups walk
- * head→tail, i.e. innermost-first, reproducing the Rust core's `env.iter().rev()` /
- * `pending.contains` semantics exactly. `undefined` is the empty chain.
+ * head→tail, i.e. innermost-first, so an inner binding shadows an outer one of the same
+ * name. `undefined` is the empty chain.
  */
 interface Cons<T> {
   readonly head: T;

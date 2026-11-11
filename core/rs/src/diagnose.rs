@@ -251,7 +251,8 @@ impl Out {
 }
 
 /// A persistent stack node borrowed from the parent frame: positions, value paths, `rec`
-/// bindings and pending names cost no allocation until a failure materializes them.
+/// bindings and pending bindings or names cost no allocation until a failure materializes
+/// them.
 struct Link<'a, T> {
     head: T,
     tail: Option<&'a Link<'a, T>>,

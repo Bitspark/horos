@@ -29,3 +29,12 @@ replay it, and the CLI harness checks the three built command-line tools against
 original oracle's format, since that oracle is pinned byte for byte. Its source is
 `integer-bounds.py`, which encodes the inputs only; run it as `diagnose.py` above.
 All four lanes and the CLI harness replay it.
+
+`recursion-scope.json` is the hand-authored oracle for `ref` scoping
+([ADR 0011](../docs/architecture/decisions/0011-lexical-ref-scope.md)): a `ref`
+denotes the `rec` that lexically encloses it. Each case carries the boolean `wf`
+and `conforms` of the original oracle's format, and beside them the expected
+`diagnose_wf` and `diagnosis` in the JSON form of the location corpus. Its source
+is `recursion-scope.py`, which encodes the inputs only; run it as `diagnose.py`
+above. All four lanes and the CLI harness replay its booleans; Go, Rust,
+TypeScript and the CLI harness replay its diagnoses.

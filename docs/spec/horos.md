@@ -49,7 +49,7 @@ flags marked `Atom` are raw atoms, and `T`, `K`, `V` are child descriptors.
 | `not(T)` | Boolean complement of the inner recognizer; read the bounded-check qualification below |
 | `exact(value)` | The singleton containing exactly this ontos value |
 | `rec(Atom(name),T)` | Bind a recursion name in T |
-| `ref(Atom(name))` | Unfold the nearest matching enclosing recursion binding, after structural descent |
+| `ref(Atom(name))` | Unfold the `rec` of that name that most closely encloses this `ref` in the written descriptor, after structural descent |
 
 Unknown constructors, incorrect arities, incorrect child forms, duplicate field
 names, invalid flags and invalid recursion references are malformed descriptors.
@@ -102,11 +102,20 @@ not aliases for platform-dependent string library behavior.
 
 ## Guarded recursion
 
-Every path from a `rec` to its matching `ref` must descend into a strict child of
-the value being checked. Tuple, compound, collection and record value positions
+Recursion is lexically scoped. A `ref` denotes the nearest `rec` with its name among
+the `rec`s that enclose the `ref` in the descriptor as written; an inner binding
+shadows an outer one of the same name only within its own body. Unfolding a `ref`
+checks the value against the body of the `rec` it denotes, with the bindings in scope
+at that `rec`. Every `ref` inside that body therefore keeps the binding it was written
+under, whatever `rec`s enclose the place where the unfolding happens: the unfolding
+site never rebinds a name. Renaming a binding together with its references, so that
+every `ref` still denotes the same `rec`, changes no judgment. See the [scoping decision](../architecture/decisions/0011-lexical-ref-scope.md).
+
+Every path from a `rec` to a `ref` that denotes it must descend into a strict child
+of the value being checked. Tuple, compound, collection and record value positions
 provide descent; `union`, `and` and `not` do not. An unbound or unguarded reference
-is malformed. Inner bindings shadow matching outer names. The values themselves
-remain finite acyclic trees; recursion is in the descriptor's interpretation.
+is malformed. The values themselves remain finite acyclic trees; recursion is in the
+descriptor's interpretation.
 
 `rec`/`ref` do not provide generic type parameters, module imports, external type
 references or arbitrary fixed-point subtyping.
@@ -162,8 +171,8 @@ records the reasons. Its JSON form, used by the command-line tools and the
 Indices are 0-based and count canonical order. `at` is the position of the
 descriptor at fault: the tuple-item indices leading from the root descriptor to
 it, so `union(A, B)` has `B` at `[2]` and a record's first field type is at
-`[2, 3]`. A `ref` continues at the position of its `rec` body, so `at` is always
-a node of the written descriptor. `arg` is an item index within the descriptor at
+`[2, 3]`. A `ref` continues at the position of the body of the `rec` it denotes, so
+`at` is always a node of the written descriptor. `arg` is an item index within the descriptor at
 `at`; `at` extended by `arg` is the faulty argument's position.
 
 ### Mismatch

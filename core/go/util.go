@@ -46,8 +46,8 @@ func utf8Valid(b []byte) bool { return utf8.Valid(b) }
 // recursion by pointer. Each rec/ref frame pushes ONE node that points at the parent
 // chain instead of copying the whole slice (the old appendName/to_vec per frame), so a
 // descent costs O(1) and allocates a single small node rather than an O(depth) slice.
-// nameScopeContains walks head→tail, i.e. innermost-first, reproducing the Rust core's
-// `pending.contains` / `bound.contains` over its cons-list exactly.
+// nameScopeContains walks head→tail, i.e. innermost-first. WF threads its bound and
+// pending names in it; WF's lexical walk never unfolds, so names identify bindings there.
 type nameScope struct {
 	name []byte
 	tail *nameScope

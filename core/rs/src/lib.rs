@@ -18,9 +18,9 @@ use ontos_data::{
 /// reference. Each `rec`/`ref` frame pushes one node that **borrows** the parent chain
 /// instead of cloning it (the old `env.to_vec()` / `pending.to_vec()` per frame), so a
 /// descent costs O(1) and allocates nothing on the native stack the recursion already
-/// uses. Lookups walk head→tail, i.e. **innermost-first**, reproducing the reference
-/// core's `env.iter().rev()` / `pending.contains` semantics exactly (innermost binding
-/// shadows, and a name is "pending" iff any frame since the last descent pushed it).
+/// uses. Lookups walk head→tail, i.e. **innermost-first**: the innermost binding of a
+/// name shadows outer ones. A node of the conformance environment is also its binding's
+/// closure (ADR 0011): its tail is the environment its `rec` was written in.
 struct Scope<'a, T> {
     head: T,
     tail: Option<&'a Scope<'a, T>>,

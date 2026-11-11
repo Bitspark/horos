@@ -28,7 +28,9 @@ rec "tree"
 
 This describes a finite binary tree with integer leaves. Each recursive reference
 is beneath a compound child and therefore guarded. `rec "x" (ref "x")` is not
-well formed.
+well formed. A `ref` always denotes the `rec` it is written under, even where it is
+unfolded inside an inner `rec` of the same name
+([guarded recursion](../spec/horos.md#guarded-recursion)).
 
 ```text
 record closed
