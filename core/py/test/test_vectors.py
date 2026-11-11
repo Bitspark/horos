@@ -39,8 +39,12 @@ sys.path.insert(0, str(_HERE.parents[1]))  # core/py → import horos
 from ontos_codec import decode  # noqa: E402
 from horos import conforms, wf  # noqa: E402
 
-# The original oracle and the int-min/int-max oracle (ADR 0010), same format.
-_ORACLES = [_HERE.parents[3] / "vectors" / name for name in ("conformance.json", "integer-bounds.json")]
+# The original oracle, the int-min/int-max oracle (ADR 0010) and the ref-scoping oracle
+# (ADR 0011), same format.
+_ORACLES = [
+    _HERE.parents[3] / "vectors" / name
+    for name in ("conformance.json", "integer-bounds.json", "recursion-scope.json")
+]
 
 
 class TestVectorsReplay(unittest.TestCase):

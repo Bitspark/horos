@@ -125,12 +125,25 @@ mod tests {
     /// the rendering this command prints, comparing parsed JSON with the expectations.
     #[test]
     fn the_location_corpus_replays() {
+        replay_located("diagnose.json", "wf");
+    }
+
+    /// Replays the diagnoses of the ref-scoping oracle (vectors/recursion-scope.json,
+    /// ADR 0011); its `wf` is the boolean, so its wf diagnosis is `diagnose_wf`.
+    #[test]
+    fn the_recursion_scope_diagnoses_replay() {
+        replay_located("recursion-scope.json", "diagnose_wf");
+    }
+
+    /// Checks every diagnosis of a located corpus in testdata; `wf_key` names the case
+    /// member that holds the expected `diagnose-wf` result.
+    fn replay_located(file: &'static str, wf_key: &'static str) {
         std::thread::Builder::new()
             .stack_size(64 * 1024 * 1024)
-            .spawn(|| {
+            .spawn(move || {
                 let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                     .join("testdata")
-                    .join("diagnose.json");
+                    .join(file);
                 let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
                     panic!("the location corpus {} is required: {e}", path.display())
                 });
@@ -143,12 +156,15 @@ mod tests {
                     let name = c["name"].as_str().unwrap();
                     let t = from_hex(c["descriptor"].as_str().unwrap());
                     let got = parse(render(&diagnose_wf_located(&t)));
-                    assert_eq!(got, c["wf"], "diagnose-wf for {name}");
+                    assert_eq!(got, c[wf_key], "diagnose-wf for {file} {name}");
                     checked += 1;
                     for (i, val) in c["values"].as_array().unwrap().iter().enumerate() {
                         let v = from_hex(val["value"].as_str().unwrap());
                         let got = parse(render(&diagnose_located(&v, &t)));
-                        assert_eq!(got, val["diagnosis"], "diagnose for {name} / value[{i}]");
+                        assert_eq!(
+                            got, val["diagnosis"],
+                            "diagnose for {file} {name} / value[{i}]"
+                        );
                         checked += 1;
                     }
                 }

@@ -1,8 +1,9 @@
 # Built-artifact conformance
 
 `bash scripts/check.sh conformance` builds the Go, Rust and TypeScript CLIs,
-replays the original oracle, the integer-bounds oracle and the
-diagnostic-location corpus through each, then compares judgments over 2,000
+replays the original oracle, the integer-bounds oracle, the ref-scoping oracle
+(booleans and diagnoses) and the diagnostic-location corpus through each, then
+compares judgments over 2,000
 seeded descriptor/value pairs. For each pair the three diagnoses must be
 identical, location included, and a completed diagnosis must agree with the
 boolean. The generator chooses input; it does not author

@@ -1,0 +1,1388 @@
+{
+  "cases": [
+    {
+      "descriptor": "01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016101030009686f726f732f72656300014c0103000b686f726f732f7475706c6501020009686f726f732f72656600014d01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f65786163740001620102000b686f726f732f7475706c6501020009686f726f732f72656600014c",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "reproducer",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "a: the outer base case",
+          "value": "000161"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, b): the inner M checks b where it is written; nothing is unfolded inside it",
+          "value": "0102000161000162"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, ((a, b),)), as reported: L unfolded inside the inner M still reads ref(M) as the outer M, so a conforms",
+          "value": "010200016101010102000161000162"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, (((a, ((a, b),)), b),)): the outer M again, one unfolding deeper",
+          "value": "010200016101010102010200016101010102000161000162000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, ((b, b),)), the twin: b is not an outer M, though it is an inner one; the outer union names itself",
+          "value": "010200016101010102000162000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, c): no alternative of the inner M where it is written",
+          "value": "0102000161000163"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016101030009686f726f732f72656300014c0103000b686f726f732f7475706c6501020009686f726f732f72656600014d01030009686f726f732f72656300014b0103000b686f726f732f756e696f6e0102000b686f726f732f65786163740001620102000b686f726f732f7475706c6501020009686f726f732f72656600014c",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "reproducer-renamed",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "a: the outer base case",
+          "value": "000161"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, b): the inner M checks b where it is written; nothing is unfolded inside it",
+          "value": "0102000161000162"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, ((a, b),)), as reported: L unfolded inside the inner M still reads ref(M) as the outer M, so a conforms",
+          "value": "010200016101010102000161000162"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, (((a, ((a, b),)), b),)): the outer M again, one unfolding deeper",
+          "value": "010200016101010102010200016101010102000161000162000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, ((b, b),)), the twin: b is not an outer M, though it is an inner one; the outer union names itself",
+          "value": "010200016101010102000162000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, c): no alternative of the inner M where it is written",
+          "value": "0102000161000163"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014d0103000e686f726f732f636f6d706f756e6400016d01030009686f726f732f72656300014c0103000b686f726f732f756e696f6e01020009686f726f732f72656600014d0103000e686f726f732f636f6d706f756e6400016c01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016201020009686f726f732f72656600014c",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "guard-identifies-bindings",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(m, (l, b)): the inner M is b",
+          "value": "010200016d010200016c000162"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(m, (l, (m, (l, b)))): the inner M is an L, which is the outer M at the same value",
+          "value": "010200016d010200016c010200016d010200016c000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(m, (l, (m, (l, c)))): c is not the inner M's b, nor an L, four levels down",
+          "value": "010200016d010200016c010200016d010200016c000163"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016101030009686f726f732f72656300014c0103000b686f726f732f7475706c6501020009686f726f732f72656600014d01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016201030009686f726f732f72656300014b0103000b686f726f732f7475706c6501020009686f726f732f72656600014d01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f65786163740001630103000b686f726f732f7475706c6501020009686f726f732f72656600014c01020009686f726f732f72656600014b",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "shadowing-three-deep",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "a",
+          "value": "000161"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, (b, c)): each binding once; nothing is unfolded under a shadow",
+          "value": "01020001610102000162000163"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(a, (b, ((a, b), (b, c)))): inside M3, L's ref(M) is M1 and K's is M2",
+          "value": "01020001610102000162010201020001610001620102000162000163"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, (b, ((c, b), (c, c)))): c is an M3 but not the M1 that L's ref(M) denotes",
+          "value": "01020001610102000162010201020001630001620102000163000163"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(a, (b, ((a, b), (c, c)))): L holds; c is not the M2 that K's ref(M) denotes",
+          "value": "01020001610102000162010201020001610001620102000163000163"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001780103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d657861637400046f6e696c0103000b686f726f732f7475706c6501030009686f726f732f7265630001780103000b686f726f732f756e696f6e01020010686f726f732f61746f6d2d65786163740004696e696c0103000b686f726f732f7475706c650102000c686f726f732f7363616c61720003696e7401020009686f726f732f72656600017801020009686f726f732f726566000178",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "shadowing-without-capture",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "onil",
+          "value": "00046f6e696c"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "(inil, onil)",
+          "value": "01020004696e696c00046f6e696c"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "((1, inil), onil)",
+          "value": "0102010201020003696e74000200010004696e696c00046f6e696c"
+        },
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "((1, (2, inil)), (inil, onil)): each ref keeps its own binding",
+          "value": "0102010201020003696e7400020001010201020003696e74000200020004696e696c01020004696e696c00046f6e696c"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                1,
+                2
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(onil, onil): the inner x is not the outer one",
+          "value": "010200046f6e696c00046f6e696c"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                2,
+                1,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "no-alternative"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "(inil, (onil, onil)): the outer ref, written outside the inner x, is the outer x",
+          "value": "01020004696e696c010200046f6e696c00046f6e696c"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f7265630001780102000d686f726f732f6c6973742d6f6601030009686f726f732f7265630001780102000d686f726f732f6c6973742d6f6601020009686f726f732f726566000178",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "closed-argument-under-same-name",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "[[[]]]",
+          "value": "010200046c697374010200046c697374010100046c697374"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "at": [
+                2,
+                1,
+                2
+              ],
+              "path": [
+                {
+                  "index": 0,
+                  "kind": "elem"
+                },
+                {
+                  "index": 0,
+                  "kind": "elem"
+                }
+              ],
+              "reason": "refused"
+            },
+            "verdict": "mismatch"
+          },
+          "note": "[[1]]: the inner x is a list",
+          "value": "010200046c697374010200046c69737401020003696e7400020001"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016101030009686f726f732f72656300014c0103000b686f726f732f7475706c6501020009686f726f732f72656600014d01030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f65786163740001620102000b686f726f732f7475706c6501020009686f726f732f72656600014c",
+      "diagnose_wf": {
+        "verdict": "conforms"
+      },
+      "name": "exhaustion-through-shadowing",
+      "values": [
+        {
+          "conforms": true,
+          "diagnosis": {
+            "verdict": "conforms"
+          },
+          "note": "101 unfoldings of L inside the inner M complete",
+          "value": "01020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161000162"
+        },
+        {
+          "conforms": false,
+          "diagnosis": {
+            "limit": "recursion_depth",
+            "location": {
+              "at": [
+                2,
+                2,
+                2
+              ],
+              "path": [
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                },
+                {
+                  "index": 1,
+                  "kind": "item"
+                },
+                {
+                  "index": 0,
+                  "kind": "item"
+                }
+              ],
+              "reason": "limit"
+            },
+            "verdict": "exhausted"
+          },
+          "note": "102 unfoldings reach the bound at the L tuple; the boolean is false",
+          "value": "0102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161010101020001610101010200016101010102000161000162"
+        }
+      ],
+      "wf": true
+    },
+    {
+      "descriptor": "01030009686f726f732f72656300014d0102000b686f726f732f7475706c6501030009686f726f732f72656300014d0103000b686f726f732f756e696f6e0102000b686f726f732f657861637400016201020009686f726f732f72656600014d",
+      "diagnose_wf": {
+        "location": {
+          "arg": 1,
+          "at": [
+            2,
+            1,
+            2,
+            2
+          ],
+          "path": [],
+          "reason": "unguarded-ref"
+        },
+        "verdict": "not_well_formed"
+      },
+      "name": "wf-shadowing-ref-unguarded",
+      "values": [
+        {
+          "conforms": false,
+          "diagnosis": {
+            "location": {
+              "arg": 1,
+              "at": [
+                2,
+                1,
+                2,
+                2
+              ],
+              "path": [],
+              "reason": "unguarded-ref"
+            },
+            "verdict": "not_well_formed"
+          },
+          "note": "any value",
+          "value": "000178"
+        }
+      ],
+      "wf": false
+    }
+  ],
+  "note": "Hand-authored oracle for ref scoping (ADR 0011): a ref denotes the rec that lexically encloses it. `descriptor` and `value` are ontos-codec-v1 lowercase hex; `wf`/`conforms` are the expected booleans and `diagnose_wf`/`diagnosis` the expected diagnoses in the JSON form of docs/spec/horos.md#diagnostic-locations, authored from the specification. Generated inputs only: vectors/recursion-scope.py encodes them.",
+  "version": "horos-recursion-scope-v1"
+}
