@@ -16,7 +16,7 @@ primitive Horos formation and the ground value checker.
 
 A module is a finite ground Ontos value. Type and kind variables are encoded
 syntax, not variables added to Ontos. Encoding uses
-[ontos-codec-v1](https://github.com/Bitspark/ontos/blob/v0.16.0/docs/spec/ontos-codec.md).
+[ontos-codec-v1](https://github.com/Bitspark/ontos/blob/v0.17.0/docs/spec/ontos-codec.md).
 
 ```text
 A(s)           = Atom(UTF8(s))

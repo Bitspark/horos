@@ -21,7 +21,11 @@ private history and are not tags in this repository.
 | TypeScript | npmjs `@bitspark/horos@0.9.0` | ontos core, codec and data 0.16.0 |
 | Rust | crates.io `bitspark-horos@0.9.0`, library `horos` | bitspark-ontos-core/codec/data 0.16.0 |
 | Go | `github.com/Bitspark/horos/core/go@v0.10.1` | github.com/bitspark/ontos v0.16.0 |
-| Python | Source-only validation lane | ontos v0.16.0 Python source |
+| Python | Source-only validation lane | ontos v0.17.0 Python source |
+
+The published packages in this table use Ontos 0.16.0. The source on main
+requires Ontos 0.17.0 in every package and in the Python lane; the next release
+moves all packages to it together.
 
 There are no private runtime dependencies, hidden registry routes or compatibility
 exports for the pre-public proof/witness APIs. Code-generation tools do not form
@@ -93,13 +97,23 @@ express generic contracts in one language. Earlier revisions are no longer
 accepted; imports must be repinned after canonical module migration. The removed
 `wire` package and template-lifting facility remain absent.
 No corresponding Rust or TypeScript declaration APIs are claimed. All consumers
-must align to Ontos 0.16.0; no compatibility shim, local replacement or duplicate
-value implementation bridges older versions. In TypeScript, a second installed
+must align to the one Ontos version their Horos release requires (0.16.0 for the
+releases above, 0.17.0 from the next); no compatibility shim, local replacement
+or duplicate value implementation bridges older versions. In TypeScript, a second installed
 Ontos core means different Atom/Tuple constructors even if its bytes are unchanged.
 
-The installed-consumer gate explicitly installs Ontos core/codec/data/wire 0.16.0
-and Bitwire 0.7.0 with Horos, checks a single constructor family, replays ground
-conformance through both codecs, and checks the static ground/mixed boundary.
-Bitwire is only a qualification dependency, not a Horos runtime dependency.
-Rust and Go consumer checks use public Ontos 0.16.0. These checks establish no
+The installed-consumer gate explicitly installs Ontos core/codec/data/wire 0.17.0
+with Horos, checks a single constructor family, replays ground conformance through
+the Ontos codec, and checks the static ground/mixed boundary against Ontos's native
+mixed model (`NativeValue` from `@bitspark/ontos-wire/native`).
+
+Its Bitwire qualification is suspended. Bitwire 0.7.0, the latest release on
+11 November 2026, pins Ontos 0.16.0 exactly, so installing it would add a second
+Ontos constructor family, which the gate rejects. The gate does not override
+Bitwire's dependencies: that would qualify a combination Bitwire never released.
+Every run prints the suspension and the verification receipt records it. When
+Bitwire publishes a release on Ontos 0.17.0, restore its install, its message
+codec round trip and its `HydratedValue` types. Bitwire is only a qualification
+dependency, not a Horos runtime dependency.
+Rust and Go consumer checks use public Ontos 0.17.0. These checks establish no
 live mixed-value conformance, capability authority or service deployment.

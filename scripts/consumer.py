@@ -11,6 +11,17 @@ import tarfile
 
 from package import ROOT, VERSION, digest, receipt
 
+ONTOS = "0.17.0"
+# Bitwire qualification is suspended, not skipped silently: every run prints this
+# and the verification receipt records it. Bitwire 0.7.0, its latest release
+# (checked 11 November 2026), pins Ontos 0.16.0 exactly, so installing it here
+# would add a second Ontos constructor family. Restore the Bitwire install,
+# its message codec round trip and its HydratedValue types when Bitwire
+# publishes a release on Ontos 0.17.0. The ground/mixed boundary it exercised
+# is Ontos's native mixed model, checked below with @bitspark/ontos-wire.
+BITWIRE_SUSPENDED = ("Bitwire consumer qualification suspended: no Bitwire release uses Ontos "
+                     f"{ONTOS} (Bitwire 0.7.0 pins Ontos 0.16.0)")
+
 
 def run(args, cwd, env, retry=False):
     for attempt in range(30 if retry else 1):
@@ -57,12 +68,12 @@ def main():
             target = str(root / packed[0]["filename"])
         else:
             target = f"@bitspark/horos@{VERSION}" if args.mode == "published" else str(directory / "bitspark-horos-0.10.0.tgz")
+        print(BITWIRE_SUSPENDED, flush=True)
         run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target,
-             "@bitspark/ontos-core@0.16.0", "@bitspark/ontos-codec@0.16.0",
-             "@bitspark/ontos-data@0.16.0", "@bitspark/ontos-wire@0.16.0",
-             "@bitspark/bitwire@0.7.0", "typescript@5.7.3"], npm, env, args.mode == "published")
+             *(f"@bitspark/ontos-{p}@{ONTOS}" for p in ("core", "codec", "data", "wire")),
+             "typescript@5.7.3"], npm, env, args.mode == "published")
         shutil.copyfile(ROOT / "conformance/installed-ontos.mjs", npm / "installed-ontos.mjs")
-        run(["node", "installed-ontos.mjs"], npm, env)
+        run(["node", "installed-ontos.mjs", ONTOS], npm, env)
         (npm / "check.mjs").write_text('''import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {decode} from "@bitspark/ontos-codec";
@@ -88,12 +99,13 @@ console.log(`npm: ${doc.cases.length} oracle descriptors and diagnostics from in
 import {diagnose, type Diagnosis} from "@bitspark/horos/diagnose";
 import {tuple} from "@bitspark/ontos-core";
 import type {NativeValue} from "@bitspark/ontos-wire/native";
-import type {HydratedValue, HydratedWire} from "@bitspark/bitwire";
+// A consumer-owned leaf in Ontos's native mixed model (Bitwire's HydratedValue
+// is NativeValue<HydratedWire>); see BITWIRE_SUSPENDED in scripts/consumer.py.
+interface OpaqueLeaf { readonly label: string }
 const value=tuple([]); const result:Diagnosis=diagnose(value,value);
-const shared:NativeValue<HydratedWire>=value;
-const hydrated:HydratedValue=shared;
-void [wf(value), conforms(value,value),result,hydrated];
-declare const mixed:HydratedValue;
+const shared:NativeValue<OpaqueLeaf>=value;
+void [wf(value), conforms(value,value),result,shared];
+declare const mixed:NativeValue<OpaqueLeaf>;
 // @ts-expect-error The mixed domain is not a ground Horos checker input.
 conforms(mixed,value);
 ''')
@@ -113,7 +125,7 @@ conforms(mixed,value);
                 archive.extractall(extracted, filter="data")
             run(["cargo", "test", "--locked"], extracted / "bitspark-horos-0.10.0", env)
             dependency = 'bitspark-horos = { path = ' + json.dumps(str(extracted / "bitspark-horos-0.10.0")) + ' }'
-        (rust / "Cargo.toml").write_text('[package]\nname="horos-consumer"\nversion="0.0.0"\nedition="2024"\n[dependencies]\n' + dependency + '\nontos-codec={package="bitspark-ontos-codec",version="=0.16.0"}\nserde_json="1"\n')
+        (rust / "Cargo.toml").write_text('[package]\nname="horos-consumer"\nversion="0.0.0"\nedition="2024"\n[dependencies]\n' + dependency + '\nontos-codec={package="bitspark-ontos-codec",version="=' + ONTOS + '"}\nserde_json="1"\n')
         (rust / "src/main.rs").write_text('''fn main() {
     std::thread::Builder::new().stack_size(64*1024*1024).spawn(|| {
         fn decode(s:&str)->ontos_codec::Value { unreachable!() }
@@ -147,14 +159,14 @@ conforms(mixed,value);
             # Tests ship inside the module, including its independently authored oracle.
             assert digest(Path(meta["Dir"]) / "testdata/conformance.json") == accepted["oracle_sha256"]
             run(["go", "test", "-mod=readonly", "-race", "-count=1", "./..."], Path(meta["Dir"]), env)
-            run(["go", "get", "github.com/Bitspark/horos/core/go@v0.10.0", "github.com/bitspark/ontos@v0.16.0"], go, env)
+            run(["go", "get", "github.com/Bitspark/horos/core/go@v0.10.0", f"github.com/bitspark/ontos@v{ONTOS}"], go, env)
             selected = json.loads(run(["go", "list", "-m", "-json", "github.com/bitspark/ontos"], go, env))
-            assert selected["Version"] == "v0.16.0" and "Replace" not in selected
+            assert selected["Version"] == f"v{ONTOS}" and "Replace" not in selected
 
         verification = {"source": accepted["source"], "version": VERSION, "mode": args.mode,
                         "anonymous_consumers": ["npm", "crates.io"] + (["Go proxy"] if go_origin else []),
                         "oracle_sha256": accepted["oracle_sha256"], "go_origin": go_origin,
-                        "ontos_version": "0.16.0", "bitwire_consumer_version": "0.7.0",
+                        "ontos_version": ONTOS, "bitwire_consumer_version": None, "bitwire_suspended": BITWIRE_SUSPENDED,
                         "ci": os.environ.get("ACCEPTED_CI"), "run_id": os.environ.get("GITHUB_RUN_ID")}
         (directory / f"{args.mode}-verification.json").write_text(json.dumps(verification, indent=2) + "\n")
 

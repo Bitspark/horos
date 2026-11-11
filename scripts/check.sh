@@ -32,7 +32,7 @@ case "${1:-all}" in
     python3 scripts/consumer.py typescript
     ;;
   python)
-    : "${ONTOS_PY_ROOT:?Set ONTOS_PY_ROOT to an ontos v0.16.0 checkout}"
+    : "${ONTOS_PY_ROOT:?Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout}"
     python3 -m unittest discover core/py/test -v
     ;;
   conformance)

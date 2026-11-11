@@ -10,6 +10,11 @@ in a fresh consumer and must reach the same judgments:
 - published: the npm release Bittype's binding design consumes today. Its
   version is pinned so this check stays reproducible; move the pin when a new
   npm release is published.
+
+Each lane installs only its package, so Ontos comes from that package's own
+exact dependency pins: the in-repo lane gets the Ontos version core/ts requires,
+and the published lane gets the one its release requires (0.16.0 for 0.9.0).
+ground-evidence.mjs checks that exactly one Ontos family is installed.
 """
 from pathlib import Path
 import json
@@ -19,7 +24,6 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 PUBLISHED = "@bitspark/horos@0.9.0"
-ONTOS = ["@bitspark/ontos-core@0.16.0", "@bitspark/ontos-codec@0.16.0", "@bitspark/ontos-data@0.16.0"]
 
 
 def run(args, cwd):
@@ -43,7 +47,7 @@ def main():
             consumer = root / lane
             consumer.mkdir()
             (consumer / "package.json").write_text('{"name":"horos-ground-consumer","private":true,"type":"module"}')
-            run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target, *ONTOS], consumer)
+            run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund", target], consumer)
             shutil.copyfile(ROOT / "conformance/ground-evidence.mjs", consumer / "ground-evidence.mjs")
             print(run(["node", "ground-evidence.mjs", str(fixture), lane], consumer), end="", flush=True)
 

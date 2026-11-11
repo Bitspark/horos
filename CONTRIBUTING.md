@@ -59,5 +59,9 @@ Contributions use Apache-2.0; retain existing copyright and license notices.
 The owner requires a clean dependency cut: consumers upgrade together. Do not
 add duplicate Ontos models, old-version fallbacks, compatibility exports or
 structural coercion to accept values from a different installed constructor family.
-The release consumer checks install public Ontos 0.16.0 and Bitwire 0.7.0 alongside
-Horos and check that ground values, codecs and diagnostics share one value model.
+The release consumer checks install public Ontos 0.17.0 alongside Horos and check
+that ground values, codecs and diagnostics share one value model. Their Bitwire
+qualification is suspended until Bitwire publishes a release on Ontos 0.17.0:
+Bitwire 0.7.0 pins Ontos 0.16.0, which would install a second constructor family.
+Do not override Bitwire's dependencies to work around this; see
+[distribution](docs/distribution.md).
