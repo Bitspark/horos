@@ -127,8 +127,8 @@ class ReadingsBeyondTheCorpus(unittest.TestCase):
     """Precedence the contract implies but vectors/diagnose.json does not exercise.
 
     Authored from docs/spec/horos.md ("among those that decided the verdict") and
-    ADR 0008/0009. Cons level k of FLAT is entered at depth 1 + 3k below its rec,
-    so a 171-cell value exhausts it; DEEP spends five levels per cell.
+    ADR 0008/0009. FLAT's union for cons cell k is entered 1 + 3k levels below its
+    rec, so a 171-cell value exhausts it; DEEP spends five levels per cell.
     """
 
     @classmethod
