@@ -4,7 +4,7 @@
 
 Use `WF(descriptor)`, `Conforms(value, descriptor)` and `Diagnose(value, descriptor)`
 over values from `github.com/bitspark/ontos/core/go`. `CheckingProfile()` identifies
-the effective checking limits. The module uses ontos v0.16.0.
+the effective checking limits. The module uses ontos v0.17.0.
 
 See the [form contract](https://github.com/Bitspark/horos/blob/v0.9.0/docs/spec/horos.md).
 The checked testdata copy of the shared oracle makes the module's own tests

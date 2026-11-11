@@ -6,7 +6,7 @@ descriptors and values as ontos-codec-v1 hex. Maps and sets are written in their
 canonical order, so authored indices are the canonical ones; ontos's own readers
 confirm that order instead of silently re-sorting.
 
-Run:  ONTOS_PY_ROOT=<ontos v0.16.0 checkout> python3 vectors/diagnose.py [--check]
+Run:  ONTOS_PY_ROOT=<ontos v0.17.0 checkout> python3 vectors/diagnose.py [--check]
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ COPIES = [ROOT / "core" / "go" / "testdata" / "diagnose.json", ROOT / "core" / "
 
 _ONTOS = os.environ.get("ONTOS_PY_ROOT")
 if not _ONTOS:
-    raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.16.0 checkout")
+    raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout")
 for sub in ("core/py", "codec/py", "data/py"):
     sys.path.insert(0, str(Path(_ONTOS) / sub))
 

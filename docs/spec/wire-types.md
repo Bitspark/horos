@@ -163,8 +163,9 @@ Function, Stream, Cell or a structural fingerprint to select behavior.
 
 [Bitwire 0.7.0](https://github.com/Bitspark/bitwire/blob/v0.7.0/docs/wire/hydrated-native.md)
 and [Bitruntime 0.8.0](https://github.com/Bitspark/bitruntime/blob/v0.8.0/hydrated/README.md)
-use Ontos 0.16.0's native mixed structure. Export references, proxies and endpoint
-lifetimes remain there; they do not consult Horos to hydrate messages. Constructor
+use Ontos 0.16.0's native mixed structure, which Ontos 0.17.0 (required by Horos)
+leaves unchanged. Export references, proxies and endpoint lifetimes remain there;
+they do not consult Horos to hydrate messages. Constructor
 kinds change neither that value model nor those protocols.
 
 Resolution, kind compilation, inclusion, constructor reasoning and materialization

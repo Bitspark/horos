@@ -21,7 +21,7 @@ allows opaque contents, including live capabilities. Structural selection does
 not interpret them or confer portable identity, equality or serialization.
 The [ground Ontos projection](https://github.com/Bitspark/ontos/blob/a3f1d081f2e82f1e0ec39688c4060b5606b16c63/projection/deixis/PROJECTION.md)
 uses the Deixis structure with optional byte contents. The
-[ontos/wire extension](https://github.com/Bitspark/ontos/blob/v0.16.0/docs/design/0007-optional-wire-extension.md)
+[ontos/wire extension](https://github.com/Bitspark/ontos/blob/v0.17.0/docs/design/0007-optional-wire-extension.md)
 implements a separate recognized profile in Go and TypeScript with
 byte-or-capability payloads: an atom leaf, an opaque capability leaf or a dense
 positional tuple. Arbitrary Deixis nodes do not become mixed values. This uses Deixis as a value foundation, not as a
@@ -40,8 +40,11 @@ HydratedValue = ByteAtom | HydratedTuple(HydratedValue*) | Wire
 ```
 
 Bitwire 0.7.0 specializes the Ontos 0.16.0 native mixed value model for its
-sending contract. Bitruntime 0.8.0 uses the shared immutable tuple factory with
-runtime-owned handle recognition. The
+sending contract. Ontos 0.17.0, which Horos requires, leaves that model unchanged,
+but one dependency graph cannot hold both versions: Horos's consumer checks
+qualify the ground/mixed boundary against Ontos's native model directly until
+Bitwire publishes a release on Ontos 0.17.0. Bitruntime 0.8.0 uses the shared
+immutable tuple factory with runtime-owned handle recognition. The
 [native hydrated contract](https://github.com/Bitspark/bitwire/blob/v0.7.0/docs/wire/hydrated-native.md)
 keeps raw Wire ground-only. The pure reference/frame codec remains in Bitwire;
 exports, proxies, ownership, admission and lifetimes remain in Bitruntime.

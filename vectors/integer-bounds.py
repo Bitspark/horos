@@ -6,7 +6,7 @@ expected `wf` and `conforms` below is written from docs/spec/horos.md and ADR 00
 never from checker output. This script only encodes the inputs as ontos-codec-v1
 hex. Values include integers beyond 128 bits on both sides.
 
-Run:  ONTOS_PY_ROOT=<ontos v0.16.0 checkout> python3 vectors/integer-bounds.py [--check]
+Run:  ONTOS_PY_ROOT=<ontos v0.17.0 checkout> python3 vectors/integer-bounds.py [--check]
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ COPIES = [ROOT / "core" / "go" / "testdata" / "integer-bounds.json", ROOT / "cor
 
 _ONTOS = os.environ.get("ONTOS_PY_ROOT")
 if not _ONTOS:
-    raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.16.0 checkout")
+    raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout")
 for sub in ("core/py", "codec/py", "data/py"):
     sys.path.insert(0, str(Path(_ONTOS) / sub))
 
