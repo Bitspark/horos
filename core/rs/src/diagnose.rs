@@ -23,8 +23,8 @@
 //!   never of traversal order.
 //!
 //! Every recursive arm mirrors [`crate::conforms`]'s own arm structure — the same depth
-//! accounting, the same `pending` guard threading (same-`v` combinators thread it, a descent
-//! into a child value clears it) — so a completed outcome here is the boolean's answer. That
+//! accounting and the same lexical `rec`/`ref` environment (ADR 0011) — so a completed
+//! outcome here is the boolean's answer. That
 //! agreement is swept over the whole oracle by `diagnosis_agrees_with_the_boolean_on_completed`
 //! rather than assumed.
 //!
@@ -312,6 +312,18 @@ struct Binding<'a> {
 
 type Env<'a> = Chain<'a, Binding<'a>>;
 
+/// The innermost binding of `name` in `env`, as its node: the node is the binding's
+/// closure, because `env` holds exactly the `rec`s that lexically enclose the `ref`.
+fn find_binding<'a>(mut env: Env<'a>, name: &[u8]) -> Option<&'a Link<'a, Binding<'a>>> {
+    while let Some(node) = env {
+        if node.head.name == name {
+            return Some(node);
+        }
+        env = node.tail;
+    }
+    None
+}
+
 fn locate(path: Path<'_>, pos: Pos<'_>, reason: Reason) -> Location {
     let mut steps: Vec<Step> = chain_iter(path).map(|s| s.owned()).collect();
     steps.reverse();
@@ -403,7 +415,6 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
         Diagnosis::Conforms => {
             let cx = Cx {
                 env: None,
-                pending: None,
                 pos: None,
                 path: None,
                 depth: 0,
@@ -422,12 +433,11 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
 // the value recursion — an arm-for-arm mirror of `conforms_in`
 // ---------------------------------------------------------------------------
 
-/// The checking context of one frame: `rec` bindings, the unguarded names at this value
-/// node, the descriptor position, the value path and the counted depth.
+/// The checking context of one frame: the `rec` bindings that lexically enclose the
+/// descriptor, the descriptor position, the value path and the counted depth.
 #[derive(Clone, Copy)]
 struct Cx<'a> {
     env: Env<'a>,
-    pending: Names<'a>,
     pos: Pos<'a>,
     path: Path<'a>,
     depth: usize,
@@ -442,7 +452,7 @@ impl Cx<'_> {
     }
 }
 
-/// Check the same value against the child descriptor at item `item`; `pending` threads.
+/// Check the same value against the child descriptor at item `item`.
 fn same<'a>(v: &Value, ct: &'a Value, cx: Cx<'a>, item: usize) -> Out {
     let p = link(item, cx.pos);
     diagnose_in(
@@ -457,13 +467,12 @@ fn same<'a>(v: &Value, ct: &'a Value, cx: Cx<'a>, item: usize) -> Out {
 }
 
 /// Check a child value against the child descriptor at `items` below the position, one
-/// path step further. A descent into a child value clears `pending`.
+/// path step further.
 fn descend<'a>(cv: &Value, ct: &'a Value, cx: Cx<'a>, items: &[usize], step: StepRef<'a>) -> Out {
     let s = link(step, cx.path);
     let p1 = link(items[0], cx.pos);
     let inner = |pos| Cx {
         env: cx.env,
-        pending: None,
         pos,
         path: Some(&s),
         depth: cx.depth + 1,
@@ -588,10 +597,8 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         },
         cx.env,
     );
-    let p = link(nb, cx.pending);
     let inner = Cx {
         env: Some(&e),
-        pending: Some(&p),
         pos: Some(&bp),
         path: cx.path,
         depth: cx.depth + 1,
@@ -599,7 +606,8 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     diagnose_in(v, body, inner)
 }
 
-/// `ref` continues at its `rec` body's position — mirrors the recognizer's guard exactly.
+/// `ref` continues in its lexically enclosing binding's environment, at its `rec` body's
+/// position (ADR 0011), one counted frame deeper — mirrors the recognizer.
 #[inline(never)]
 fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     let [name] = args else {
@@ -608,20 +616,16 @@ fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     let Some(nb) = atom_bytes(name) else {
         return cx.refused();
     };
-    if names_contain(cx.pending, nb) {
-        return cx.refused(); // unguarded — the recognizer's `false`
-    }
-    let Some(b) = chain_iter(cx.env).find(|b| b.name == nb) else {
+    let Some(b) = find_binding(cx.env, nb) else {
         return cx.refused(); // unbound
     };
-    let p = link(nb, cx.pending);
     let inner = Cx {
-        pending: Some(&p),
-        pos: b.pos,
+        env: Some(b),
+        pos: b.head.pos,
+        path: cx.path,
         depth: cx.depth + 1,
-        ..cx
     };
-    diagnose_in(v, b.body, inner)
+    diagnose_in(v, b.head.body, inner)
 }
 
 /// `tuple`, `seq` and `compound`: the bare tuple, its arity and label, then the items.

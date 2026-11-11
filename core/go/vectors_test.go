@@ -53,9 +53,10 @@ func decodeHex(t *testing.T, name, what, h string) Value {
 // descriptor/value from ontos-codec-v1 hex and re-check WF/Conforms. This proves
 // Go == the oracle == Rust (the three cores agree on one oracle, byte-for-byte).
 func TestVectorsReplay(t *testing.T) {
-	// testdata holds checked copies of vectors/conformance.json and of
-	// vectors/integer-bounds.json, the oracle for int-min/int-max (ADR 0010).
-	for _, file := range []string{"conformance.json", "integer-bounds.json"} {
+	// testdata holds checked copies of vectors/conformance.json, of
+	// vectors/integer-bounds.json, the oracle for int-min/int-max (ADR 0010), and of
+	// vectors/recursion-scope.json, the oracle for ref scoping (ADR 0011).
+	for _, file := range []string{"conformance.json", "integer-bounds.json", "recursion-scope.json"} {
 		path := filepath.Join("testdata", file)
 		txt, err := os.ReadFile(path)
 		if err != nil {

@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
     checks = 0
     if args.seed is None:
-        for oracle in ("conformance.json", "integer-bounds.json"):
+        for oracle in ("conformance.json", "integer-bounds.json", "recursion-scope.json"):
             doc = json.loads((ROOT / "vectors" / oracle).read_text())
             for case in doc["cases"]:
                 check(["wf", case["descriptor"]], case["wf"])
@@ -52,13 +52,16 @@ def main():
                 for value in case["values"]:
                     check(["conforms", case["descriptor"], value["value"]], value["conforms"])
                     checks += 1
-        located = json.loads((ROOT / "vectors/diagnose.json").read_text())
-        for case in located["cases"]:
-            check_located(["diagnose-wf", case["descriptor"]], case["wf"])
-            checks += 1
-            for value in case["values"]:
-                check_located(["diagnose", case["descriptor"], value["value"]], value["diagnosis"])
+        # The location corpus's wf is a diagnosis; the ref-scoping oracle's wf is the
+        # boolean checked above and its wf diagnosis is diagnose_wf (ADR 0011).
+        for corpus, wf_key in (("diagnose.json", "wf"), ("recursion-scope.json", "diagnose_wf")):
+            located = json.loads((ROOT / "vectors" / corpus).read_text())
+            for case in located["cases"]:
+                check_located(["diagnose-wf", case["descriptor"]], case[wf_key])
                 checks += 1
+                for value in case["values"]:
+                    check_located(["diagnose", case["descriptor"], value["value"]], value["diagnosis"])
+                    checks += 1
     else:
         if args.count <= 0:
             raise SystemExit("count must be positive")

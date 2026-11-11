@@ -22,6 +22,7 @@ interface CorpusCase {
   readonly name: string;
   readonly descriptor: string;
   readonly wf: unknown;
+  readonly diagnose_wf?: unknown;
   readonly values: readonly CorpusValue[];
 }
 
@@ -35,26 +36,37 @@ function hexToBytes(h: string): Uint8Array {
 /** The JSON form of the contract: what the corpus pins and the command-line tool prints. */
 const json = (d: Diagnosis): unknown => JSON.parse(JSON.stringify(d));
 
-test("every diagnosis in the location corpus is reproduced exactly (ADR 0009)", () => {
-  const path = resolve(process.cwd(), "../../vectors/diagnose.json");
+/** Replays a located corpus; `wfOf` picks the expected `diagnoseWf` result of a case. */
+function replayLocated(file: string, wfOf: (c: CorpusCase) => unknown): void {
+  const path = resolve(process.cwd(), "../../vectors", file);
   const doc = JSON.parse(readFileSync(path, "utf8")) as { cases: readonly CorpusCase[] };
-  assert.ok(doc.cases.length > 0, "the location corpus has no cases");
+  assert.ok(doc.cases.length > 0, `${file} has no cases`);
   let checked = 0;
   for (const c of doc.cases) {
     const t = decode(hexToBytes(c.descriptor));
-    assert.deepEqual(json(diagnoseWf(t)), c.wf, `diagnoseWf for ${c.name}`);
+    assert.deepEqual(json(diagnoseWf(t)), wfOf(c), `diagnoseWf for ${file} ${c.name}`);
     checked += 1;
     c.values.forEach((v, i) => {
       const got = json(diagnose(decode(hexToBytes(v.value)), t));
       assert.deepEqual(
         got,
         v.diagnosis,
-        `diagnose for ${c.name} / value[${i}] (${v.note})`,
+        `diagnose for ${file} ${c.name} / value[${i}] (${v.note})`,
       );
       checked += 1;
     });
   }
-  assert.ok(checked > doc.cases.length, "the location corpus has no values");
+  assert.ok(checked > doc.cases.length, `${file} has no values`);
+}
+
+test("every diagnosis in the location corpus is reproduced exactly (ADR 0009)", () => {
+  replayLocated("diagnose.json", (c) => c.wf);
+});
+
+// The ref-scoping oracle (ADR 0011) pins booleans as `wf`/`conforms`, which the vectors
+// replay checks, and diagnoses as `diagnose_wf`/`diagnosis`.
+test("every diagnosis in the ref-scoping oracle is reproduced exactly (ADR 0011)", () => {
+  replayLocated("recursion-scope.json", (c) => c.diagnose_wf);
 });
 
 const enc = new TextEncoder();

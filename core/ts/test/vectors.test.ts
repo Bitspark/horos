@@ -31,10 +31,11 @@ interface VectorDoc {
 // `npm test` runs with cwd = core/ts; the repo-root vectors/ is two levels up
 // (mirroring the Rust core's CARGO_MANIFEST_DIR/../../vectors and the Go core's
 // ../../vectors from core/go).
-// integer-bounds.json is the hand-authored oracle for int-min/int-max (ADR 0010); the
-// original oracle is pinned byte for byte.
-const VEC_PATHS = ["conformance.json", "integer-bounds.json"].map((f) =>
-  resolve(process.cwd(), "../../vectors", f),
+// integer-bounds.json is the hand-authored oracle for int-min/int-max (ADR 0010) and
+// recursion-scope.json the one for ref scoping (ADR 0011); the original oracle is pinned
+// byte for byte.
+const VEC_PATHS = ["conformance.json", "integer-bounds.json", "recursion-scope.json"].map(
+  (f) => resolve(process.cwd(), "../../vectors", f),
 );
 
 function hexToBytes(h: string): Uint8Array {

@@ -12,15 +12,32 @@ import (
 // Replays the hand-authored location corpus (vectors/diagnose.json, ADR 0009) through
 // DiagnoseWF and Diagnose, comparing the contract JSON form of each result.
 func TestDiagnosticLocationsReplay(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("testdata", "diagnose.json"))
+	if checked := replayLocated(t, "diagnose.json", "wf"); checked < 100 {
+		t.Errorf("expected at least 100 located judgments, got %d", checked)
+	}
+}
+
+// Replays the diagnoses of the ref-scoping oracle (vectors/recursion-scope.json,
+// ADR 0011), whose booleans TestVectorsReplay checks. Its wf diagnosis is diagnose_wf,
+// since its wf is the boolean.
+func TestRecursionScopeLocationsReplay(t *testing.T) {
+	if checked := replayLocated(t, "recursion-scope.json", "diagnose_wf"); checked == 0 {
+		t.Error("no located judgments")
+	}
+}
+
+// replayLocated checks every diagnosis of a located corpus in testdata; wfKey names the
+// case member that holds the expected DiagnoseWF result.
+func replayLocated(t *testing.T, file, wfKey string) int {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("testdata", file))
 	if err != nil {
-		t.Fatalf("read testdata/diagnose.json: %v", err)
+		t.Fatalf("read testdata/%s: %v", file, err)
 	}
 	var doc struct {
 		Cases []struct {
-			Name       string          `json:"name"`
-			Descriptor string          `json:"descriptor"`
-			WF         json.RawMessage `json:"wf"`
+			Name       string `json:"name"`
+			Descriptor string `json:"descriptor"`
 			Values     []struct {
 				Note      string          `json:"note"`
 				Value     string          `json:"value"`
@@ -28,11 +45,17 @@ func TestDiagnosticLocationsReplay(t *testing.T) {
 			} `json:"values"`
 		} `json:"cases"`
 	}
+	var wfs struct {
+		Cases []map[string]json.RawMessage `json:"cases"`
+	}
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parse testdata/diagnose.json: %v", err)
+		t.Fatalf("parse testdata/%s: %v", file, err)
+	}
+	if err := json.Unmarshal(raw, &wfs); err != nil {
+		t.Fatalf("parse testdata/%s: %v", file, err)
 	}
 	if len(doc.Cases) == 0 {
-		t.Fatal("testdata/diagnose.json has no cases")
+		t.Fatalf("testdata/%s has no cases", file)
 	}
 	same := func(label string, got Diagnosis, want json.RawMessage) {
 		t.Helper()
@@ -52,9 +75,13 @@ func TestDiagnosticLocationsReplay(t *testing.T) {
 		}
 	}
 	checked := 0
-	for _, c := range doc.Cases {
+	for k, c := range doc.Cases {
 		desc := decodeHex(t, c.Name, "descriptor", c.Descriptor)
-		same(c.Name+" wf", DiagnoseWF(desc), c.WF)
+		want, ok := wfs.Cases[k][wfKey]
+		if !ok {
+			t.Fatalf("%s: case %s has no %s", file, c.Name, wfKey)
+		}
+		same(c.Name+" wf", DiagnoseWF(desc), want)
 		checked++
 		for i, v := range c.Values {
 			val := decodeHex(t, c.Name, "value", v.Value)
@@ -62,9 +89,7 @@ func TestDiagnosticLocationsReplay(t *testing.T) {
 			checked++
 		}
 	}
-	if checked < 100 {
-		t.Errorf("expected at least 100 located judgments, got %d", checked)
-	}
+	return checked
 }
 
 // A conforming diagnosis carries no location; every other one does.

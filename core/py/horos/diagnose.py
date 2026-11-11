@@ -25,10 +25,13 @@ The reading of the contract, rule by rule:
   exhausted child decides exhaustion.
 - An exhausted union takes the location of its first exhausted alternative, in
   item order. The longest-path rule chooses between mismatching alternatives only.
-- A ``ref`` resolves to the innermost binding of its name in the current unfolding,
-  as the boolean recognizer does. Completed diagnoses must agree with the
-  boolean. A ``ref`` reached again before the value descends, which that
-  resolution allows in a well-formed descriptor, is refused at the ``ref``.
+- A ``ref`` denotes the ``rec`` that lexically encloses it, as the boolean
+  recognizer reads it (ADR 0011): each ``rec`` binding closes over the environment
+  it was written in, and the ``ref`` continues in that environment, at the
+  position of its ``rec``'s body. Completed diagnoses must agree with the boolean.
+  Well-formedness puts a descent between every ``rec`` and each ``ref`` that
+  denotes it, so no binding is unfolded twice before the value descends; the depth
+  bound, which every unfolding counts toward, is the backstop.
 
 Like the boolean functions, these never raise for any pair of ontos values, but
 the host interpreter's recursion limit can be reached before the logical depth
@@ -360,11 +363,14 @@ def _refused(path, at) -> _Outcome:
 
 
 def _lookup(env, name: bytes):
-    """The innermost binding of ``name``: (body, body position), or None."""
+    """The innermost binding of ``name`` as its environment node, or None. A node is
+    ``((name, body, body position), parent)``. ``env`` holds exactly the ``rec``
+    bindings that lexically enclose the ``ref``, so the node, whose parent is the
+    environment its ``rec`` was written in, is the binding's closure (ADR 0011)."""
     while env is not None:
-        (bound_name, body, body_at), env = env
-        if bound_name == name:
-            return body, body_at
+        if env[0][0] == name:
+            return env
+        env = env[1]
     return None
 
 
@@ -401,19 +407,19 @@ def _record(v: Value, args: List[Value], path, at):
     return None, children
 
 
-def _check(v: Value, t: Value, path, at, env, pending: Tuple[bytes, ...], depth: int) -> _Outcome:
+def _check(v: Value, t: Value, path, at, env, depth: int) -> _Outcome:
     if depth > MAX_RECURSION_DEPTH:
         return EXHAUSTED, Location(path, at, "limit")
     ctor, args = _head(t)  # the gate admitted t, so every node reached is a descriptor
 
     if ctor in _LEAVES:
-        return None if _conforms_in(v, t, None, None, 0) else _refused(path, at)
+        return None if _conforms_in(v, t, None, 0) else _refused(path, at)
 
     if ctor == "union":
         exhausted: _Outcome = None
         deepest: _Outcome = None
         for i, alternative in enumerate(args, start=1):
-            outcome = _check(v, alternative, path, at + (i,), env, pending, depth + 1)
+            outcome = _check(v, alternative, path, at + (i,), env, depth + 1)
             if outcome is None:
                 return None
             if outcome[0] == EXHAUSTED:
@@ -428,31 +434,27 @@ def _check(v: Value, t: Value, path, at, env, pending: Tuple[bytes, ...], depth:
         return MISMATCH, Location(path, at, "no-alternative")
 
     if ctor == "not":
-        outcome = _check(v, args[0], path, at + (1,), env, pending, depth + 1)
+        outcome = _check(v, args[0], path, at + (1,), env, depth + 1)
         if outcome is None:
             return MISMATCH, Location(path, at, "complement")
         return None if outcome[0] == MISMATCH else outcome
 
     if ctor == "rec":
-        name = args[0].bytes()
         body_at = at + (2,)
-        return _check(v, args[1], path, body_at, ((name, args[1], body_at), env), pending + (name,), depth + 1)
+        return _check(v, args[1], path, body_at, ((args[0].bytes(), args[1], body_at), env), depth + 1)
 
     if ctor == "ref":
-        name = args[0].bytes()
-        binding = None if name in pending else _lookup(env, name)
-        if binding is None:
+        binding = _lookup(env, args[0].bytes())
+        if binding is None:  # pragma: no cover - the gate admits only bound refs
             return _refused(path, at)
-        body, body_at = binding
-        return _check(v, body, path, body_at, env, pending + (name,), depth + 1)
+        (_name, body, body_at), _parent = binding
+        return _check(v, body, path, body_at, binding, depth + 1)
 
     # The rest are conjunctions: and over the same value, the others over parts of
     # it after their own checks. Each child is (value, descriptor, path, position).
     children: list
-    child_pending: Tuple[bytes, ...] = ()
     if ctor == "and":
         children = [(v, c, path, at + (i,)) for i, c in enumerate(args, start=1)]
-        child_pending = pending
     elif ctor == "tuple":
         if not v.is_tuple or len(v.items()) != len(args):
             return _refused(path, at)
@@ -491,7 +493,7 @@ def _check(v: Value, t: Value, path, at, env, pending: Tuple[bytes, ...], depth:
     # A mismatching child decides; otherwise the first exhausted child does.
     exhausted = None
     for child_v, child_t, child_path, child_at in children:
-        outcome = _check(child_v, child_t, child_path, child_at, env, child_pending, depth + 1)
+        outcome = _check(child_v, child_t, child_path, child_at, env, depth + 1)
         if outcome is None:
             continue
         if outcome[0] == MISMATCH:
@@ -507,4 +509,4 @@ def diagnose(v: Value, t: Value) -> Diagnosis:
     gate = _wf(t, (), (), (), 0)
     if gate is not None:
         return _finish(gate)
-    return _finish(_check(v, t, (), (), None, (), 0))
+    return _finish(_check(v, t, (), (), None, 0))

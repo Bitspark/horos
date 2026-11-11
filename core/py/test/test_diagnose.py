@@ -1,7 +1,8 @@
 """The Python lane's diagnostics: ADR 0008 verdicts and ADR 0009 locations.
 
 ``vectors/diagnose.json`` is replayed in full: every ``diagnose_wf`` and
-``diagnose`` result must equal the authored JSON form, location included. The
+``diagnose`` result must equal the authored JSON form, location included. So are
+the diagnoses of ``vectors/recursion-scope.json`` (ADR 0011). The
 original oracle and the integer-bounds oracle are swept through the diagnostic
 API: every completed diagnosis must equal the oracle's authored judgment, and the
 only exhausted judgment is the oracle's authored over-the-cap case.
@@ -49,18 +50,27 @@ def _decode(h: str):
 
 
 class DiagnoseCorpusReplay(unittest.TestCase):
-    """vectors/diagnose.json, every expected diagnosis, location included."""
+    """vectors/diagnose.json and the diagnoses of vectors/recursion-scope.json, every
+    expected diagnosis, location included."""
 
     def test_replay_the_location_corpus(self) -> None:
-        doc = json.loads((_VECTORS / "diagnose.json").read_text(encoding="utf-8"))
-        self.assertEqual(doc["version"], "horos-diagnose-v1")
+        self._replay("diagnose.json", "horos-diagnose-v1", "wf")
+
+    def test_replay_the_recursion_scope_diagnoses(self) -> None:
+        # Its `wf` is the boolean, which test_vectors replays; its wf diagnosis is
+        # `diagnose_wf`.
+        self._replay("recursion-scope.json", "horos-recursion-scope-v1", "diagnose_wf")
+
+    def _replay(self, file: str, version: str, wf_key: str) -> None:
+        doc = json.loads((_VECTORS / file).read_text(encoding="utf-8"))
+        self.assertEqual(doc["version"], version)
         disagreements = []
         checked = 0
         for case in doc["cases"]:
             t = _decode(case["descriptor"])
             got = diagnose_wf(t).to_json()
-            if got != case["wf"]:
-                disagreements.append({"case": case["name"], "diagnose_wf": got, "expected": case["wf"]})
+            if got != case[wf_key]:
+                disagreements.append({"case": case["name"], "diagnose_wf": got, "expected": case[wf_key]})
             checked += 1
             for vc in case["values"]:
                 got = diagnose(_decode(vc["value"]), t).to_json()
@@ -70,7 +80,7 @@ class DiagnoseCorpusReplay(unittest.TestCase):
                     )
                 checked += 1
         self.assertEqual(disagreements, [], json.dumps(disagreements, indent=1))
-        print(f"py diagnose replay: {checked} diagnoses over {len(doc['cases'])} cases, all matching")
+        print(f"py diagnose replay of {file}: {checked} diagnoses over {len(doc['cases'])} cases, all matching")
 
 
 class OracleSweep(unittest.TestCase):

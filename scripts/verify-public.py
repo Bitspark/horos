@@ -41,7 +41,7 @@ expected = (ROOT / "vectors/conformance.sha256").read_text().strip()
 assert hashlib.sha256(oracle).hexdigest() == expected, "original oracle changed"
 for lane in ("go", "rs"):
     assert (ROOT / f"core/{lane}/testdata/conformance.json").read_bytes() == oracle
-for corpus in ("diagnose.json", "integer-bounds.json"):
+for corpus in ("diagnose.json", "integer-bounds.json", "recursion-scope.json"):
     authored = (ROOT / "vectors" / corpus).read_bytes()
     for lane in ("go", "rs"):
         assert (ROOT / f"core/{lane}/testdata/{corpus}").read_bytes() == authored, (lane, corpus)

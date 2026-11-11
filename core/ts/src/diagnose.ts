@@ -319,11 +319,12 @@ export function diagnoseWf(t: Value): Diagnosis {
 export function diagnose(v: Value, t: Value): Diagnosis {
   const w = diagnoseWfIn(t, [], [], 0, undefined);
   if (w.verdict !== "conforms") return report(w);
-  return report(diagnoseIn(v, t, [], [], 0, undefined, undefined));
+  return report(diagnoseIn(v, t, [], 0, undefined, undefined));
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
 
+/** One `rec` binding. */
 interface Binding {
   readonly name: string;
   readonly body: Value;
@@ -371,7 +372,6 @@ function diagnoseIn(
   v: Value,
   t: Value,
   env: readonly Binding[],
-  pending: readonly string[],
   depth: number,
   path: PathNode | undefined,
   pos: PosNode | undefined,
@@ -386,28 +386,31 @@ function diagnoseIn(
   if (isLeafCtor(ctor)) return leafClassifies(v, t) ? CONFORMS : refused();
 
   switch (ctor) {
-    // Composition on the SAME v — pending threads through unchanged.
+    // Composition on the SAME v.
     case "union":
       return kleeneAny(
         args.length,
-        (i) => diagnoseIn(v, args[i]!, env, pending, depth + 1, path, at(pos, i + 1)),
+        (i) => diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
         path,
         pos,
       );
     case "and":
       return kleeneAll(args.length, (i) =>
-        diagnoseIn(v, args[i]!, env, pending, depth + 1, path, at(pos, i + 1)),
+        diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
       );
     case "not": {
       if (args.length !== 1) return refused();
       return kleeneNot(
-        diagnoseIn(v, args[0]!, env, pending, depth + 1, path, at(pos, 1)),
+        diagnoseIn(v, args[0]!, env, depth + 1, path, at(pos, 1)),
         path,
         pos,
       );
     }
 
-    // Recursion — mirrors the recognizer's guard exactly, and is transparent to locations.
+    // Recursion — mirrors the recognizer, and is transparent to locations. A ref denotes
+    // the rec that lexically encloses it and continues in that binding's environment, one
+    // counted frame deeper (ADR 0011). `env` holds exactly the enclosing bindings,
+    // outermost first, so a binding's closure is the prefix of `env` that ends with it.
     case "rec": {
       if (args.length !== 2) return refused();
       const name = atomStringOf(args[0]!);
@@ -418,7 +421,6 @@ function diagnoseIn(
         v,
         body,
         [...env, { name, body, at: bodyAt }],
-        [...pending, name],
         depth + 1,
         path,
         bodyAt,
@@ -428,24 +430,23 @@ function diagnoseIn(
       if (args.length !== 1) return refused();
       const name = atomStringOf(args[0]!);
       if (name === undefined) return refused();
-      if (pending.includes(name)) return refused(); // unguarded — the recognizer's false
       for (let i = env.length - 1; i >= 0; i -= 1) {
         const b = env[i]!;
         if (b.name === name) {
-          return diagnoseIn(v, b.body, env, [...pending, name], depth + 1, path, b.at);
+          return diagnoseIn(v, b.body, env.slice(0, i + 1), depth + 1, path, b.at);
         }
       }
       return refused(); // unbound
     }
   }
 
-  // Structural arms: the gate is decisive, and a descent into a CHILD VALUE clears pending.
+  // Structural arms: the gate is decisive, then each child value against its descriptor.
   const gate = structuralChildren(v, ctor, args, path, pos);
   if (!Array.isArray(gate)) return mismatch(gate as Fault);
   const children = gate as readonly Child[];
   return kleeneAll(children.length, (i) => {
     const c = children[i]!;
-    return diagnoseIn(c.v, c.t, env, [], depth + 1, stepInto(path, c.step), c.at);
+    return diagnoseIn(c.v, c.t, env, depth + 1, stepInto(path, c.step), c.at);
   });
 }
 

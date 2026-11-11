@@ -1721,13 +1721,17 @@ fn emit(cases: &[Case]) {
         .expect("write vectors/conformance.json");
 }
 
-/// Replay the committed `vectors/conformance.json` and `vectors/integer-bounds.json`
-/// (ADR 0010) — decode each descriptor/value from `ontos-codec-v1` hex and re-check
-/// `wf`/`conforms`. This is the exact replay the Go, TS and Python lanes run, so the
-/// cores agree on one set of oracles.
+/// Replay the committed `vectors/conformance.json`, `vectors/integer-bounds.json`
+/// (ADR 0010) and `vectors/recursion-scope.json` (ADR 0011) — decode each
+/// descriptor/value from `ontos-codec-v1` hex and re-check `wf`/`conforms`. This is the
+/// exact replay the Go, TS and Python lanes run, so the cores agree on one set of oracles.
 #[test]
 fn vectors_replay() {
-    for file in ["conformance.json", "integer-bounds.json"] {
+    for file in [
+        "conformance.json",
+        "integer-bounds.json",
+        "recursion-scope.json",
+    ] {
         let path = format!("{}/testdata/{file}", env!("CARGO_MANIFEST_DIR"));
         let txt = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
         let doc: serde_json::Value = serde_json::from_str(&txt).unwrap();
