@@ -13,7 +13,7 @@ in a fresh consumer and must reach the same judgments:
 
 Each lane installs only its package, so Ontos comes from that package's own
 exact dependency pins: the in-repo lane gets the Ontos version core/ts requires,
-and the published lane gets the one its release requires (0.16.0 for 0.9.0).
+and the published lane gets the one its release requires (0.17.0 for 0.11.0).
 ground-evidence.mjs checks that exactly one Ontos family is installed.
 """
 from pathlib import Path
@@ -23,7 +23,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-PUBLISHED = "@bitspark/horos@0.9.0"
+PUBLISHED = "@bitspark/horos@0.11.0"
 
 
 def run(args, cwd):
