@@ -124,11 +124,57 @@ function consContainsName(s: Cons<Uint8Array> | undefined, name: Uint8Array): bo
   return false;
 }
 
-/** An in-scope `rec` binding: the name (atom bytes) and its body descriptor. */
+/**
+ * An in-scope `rec` binding: the name (atom bytes), its body descriptor and the body's
+ * position in the written descriptor (see {@link Checker}).
+ */
 interface Binding {
   readonly name: Uint8Array;
   readonly body: Value;
+  readonly bodyAt: number;
 }
+
+/**
+ * One check's memo (ADR 0013). A value is named by the object itself, so a subvalue shared
+ * between several places is checked once; a descriptor node is named by its position in
+ * the written descriptor, numbered from its parent's position and its item index (0 is the
+ * root), and the position fixes its environment (ADR 0011). A composite sub-check's verdict
+ * is a function of (value, position, depth) alone, so `memo` keeps it.
+ */
+class Checker {
+  private readonly values = new Map<Value, number>();
+  private readonly positions = new Map<number, Map<number, number>>();
+  private nextPosition = 1;
+  readonly memo = new Map<string, boolean>();
+
+  /** The position of item `index` of the descriptor at position `parent`. */
+  position(parent: number, index: number): number {
+    let children = this.positions.get(parent);
+    if (children === undefined) {
+      children = new Map();
+      this.positions.set(parent, children);
+    }
+    let id = children.get(index);
+    if (id === undefined) {
+      id = this.nextPosition;
+      this.nextPosition += 1;
+      children.set(index, id);
+    }
+    return id;
+  }
+
+  key(v: Value, at: number, depth: number): string {
+    let id = this.values.get(v);
+    if (id === undefined) {
+      id = this.values.size;
+      this.values.set(v, id);
+    }
+    return `${id},${at},${depth}`;
+  }
+}
+
+/** Leaf arms never use their checker; leaf-only callers share this one, which stays empty. */
+const LEAF_CHECKER = new Checker();
 
 /**
  * If `t` is `Tuple(Atom("horos/<ctor>"), args...)` with a valid-UTF-8 label under the
@@ -274,7 +320,7 @@ export function conforms(v: Value, t: Value): boolean {
   // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
   // not well-formed admits no values, even where an individual arm would otherwise
   // match — so check `wf` once at the entry and never arm-by-arm below.
-  return wf(t) && conformsIn(v, t, undefined, 0);
+  return wf(t) && conformsIn(new Checker(), v, t, 0, undefined, 0);
 }
 
 /**
@@ -284,8 +330,10 @@ export function conforms(v: Value, t: Value): boolean {
  * first; `conformsIn` relies on its guardedness (see the module comment).
  */
 function conformsIn(
+  c: Checker,
   v: Value,
   t: Value,
+  at: number,
   env: Cons<Binding> | undefined,
   depth: number,
 ): boolean {
@@ -295,6 +343,24 @@ function conformsIn(
   if (depth > MAX_RECURSION_DEPTH) return false;
   const h = head(t);
   if (h === undefined) return false; // not a horos descriptor
+  if (isLeafCtor(h.ctor)) return node(c, v, h, at, env, depth);
+  const key = c.key(v, at, depth);
+  const hit = c.memo.get(key);
+  if (hit !== undefined) return hit;
+  const r = node(c, v, h, at, env, depth);
+  c.memo.set(key, r);
+  return r;
+}
+
+/** One descriptor node against `v`; `conformsIn` memoizes the composite ones. */
+function node(
+  c: Checker,
+  v: Value,
+  h: Head,
+  at: number,
+  env: Cons<Binding> | undefined,
+  depth: number,
+): boolean {
   const { ctor, args } = h;
   switch (ctor) {
     // Top.
@@ -446,15 +512,17 @@ function conformsIn(
       const items = v.items();
       if (items.length !== args.length) return false;
       for (let i = 0; i < items.length; i += 1) {
-        if (!conformsIn(items[i]!, args[i]!, env, depth + 1)) return false;
+        if (!conformsIn(c, items[i]!, args[i]!, c.position(at, i + 1), env, depth + 1))
+          return false;
       }
       return true;
     }
     case "seq": {
       if (args.length !== 1) return false;
       if (!(v instanceof Tuple)) return false;
-      for (const c of v.items()) {
-        if (!conformsIn(c, args[0]!, env, depth + 1)) return false;
+      for (const item of v.items()) {
+        if (!conformsIn(c, item, args[0]!, c.position(at, 1), env, depth + 1))
+          return false;
       }
       return true;
     }
@@ -470,7 +538,8 @@ function conformsIn(
       const head0 = atomBytes(items[0]!);
       if (head0 === undefined || !bytesEqual(head0, lb)) return false;
       for (let i = 0; i < ts.length; i += 1) {
-        if (!conformsIn(items[i + 1]!, ts[i]!, env, depth + 1)) return false;
+        if (!conformsIn(c, items[i + 1]!, ts[i]!, c.position(at, i + 2), env, depth + 1))
+          return false;
       }
       return true;
     }
@@ -486,7 +555,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
+        if (!conformsIn(c, e, args[0]!, c.position(at, 1), env, depth + 1)) return false;
       }
       return true;
     }
@@ -499,7 +568,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
+        if (!conformsIn(c, e, args[0]!, c.position(at, 1), env, depth + 1)) return false;
       }
       return true;
     }
@@ -513,8 +582,8 @@ function conformsIn(
       }
       for (const [k, val] of entries) {
         if (
-          !conformsIn(k, args[0]!, env, depth + 1) ||
-          !conformsIn(val, args[1]!, env, depth + 1)
+          !conformsIn(c, k, args[0]!, c.position(at, 1), env, depth + 1) ||
+          !conformsIn(c, val, args[1]!, c.position(at, 2), env, depth + 1)
         ) {
           return false;
         }
@@ -526,25 +595,27 @@ function conformsIn(
     // and a mandatory open/closed flag.
     case "record": {
       if (args.length < 1) return false;
-      return conformsRecord(v, args[0]!, args.slice(1), env, depth);
+      return conformsRecord(c, v, args[0]!, args.slice(1), at, env, depth);
     }
 
     // Composition — recurse on the SAME v.
     case "union": {
-      for (const ct of args) {
-        if (conformsIn(v, ct, env, depth + 1)) return true;
+      for (let i = 0; i < args.length; i += 1) {
+        if (conformsIn(c, v, args[i]!, c.position(at, i + 1), env, depth + 1))
+          return true;
       }
       return false;
     }
     case "and": {
-      for (const ct of args) {
-        if (!conformsIn(v, ct, env, depth + 1)) return false;
+      for (let i = 0; i < args.length; i += 1) {
+        if (!conformsIn(c, v, args[i]!, c.position(at, i + 1), env, depth + 1))
+          return false;
       }
       return true;
     }
     case "not": {
       if (args.length !== 1) return false;
-      return !conformsIn(v, args[0]!, env, depth + 1);
+      return !conformsIn(c, v, args[0]!, c.position(at, 1), env, depth + 1);
     }
 
     // Singleton — membership by ontos structural identity (defines no new equality).
@@ -563,7 +634,15 @@ function conformsIn(
       const body = args[1]!;
       // Push one shared node (no per-frame spread copy); the child frame sees this
       // binding innermost-first. The node closes over `env`.
-      return conformsIn(v, body, cons<Binding>({ name: nb, body }, env), depth + 1);
+      const bodyAt = c.position(at, 2);
+      return conformsIn(
+        c,
+        v,
+        body,
+        bodyAt,
+        cons<Binding>({ name: nb, body, bodyAt }, env),
+        depth + 1,
+      );
     }
     case "ref": {
       if (args.length !== 1) return false;
@@ -571,11 +650,11 @@ function conformsIn(
       if (!(nm instanceof Atom)) return false;
       // The nearest enclosing binding in the written descriptor: `env` holds exactly
       // the bindings that lexically enclose this `ref` (ADR 0011).
-      const node = lookupBinding(env, nm.bytes());
-      if (node === undefined) return false; // unbound reference
+      const found = lookupBinding(env, nm.bytes());
+      if (found === undefined) return false; // unbound reference
       // Unfold in the binding's own environment, so the body's free refs keep the
-      // bindings they were written under.
-      return conformsIn(v, node.head.body, node, depth + 1);
+      // bindings they were written under. The body is checked at its own position.
+      return conformsIn(c, v, found.head.body, found.head.bodyAt, found, depth + 1);
     }
 
     // Unknown ctor or wrong arity → not a recognized descriptor.
@@ -617,9 +696,11 @@ function readField(f: Value): Field | undefined {
 }
 
 function conformsRecord(
+  c: Checker,
   v: Value,
   mode: Value,
   fields: readonly Value[],
+  at: number,
   env: Cons<Binding> | undefined,
   depth: number,
 ): boolean {
@@ -660,13 +741,15 @@ function conformsRecord(
   // covers. Field names are pairwise-distinct (`wf(record)`, checked at entry), so a
   // present declared key is counted at most once.
   let covered = 0;
-  for (const f of fields) {
-    const fld = readField(f);
+  for (let k = 0; k < fields.length; k += 1) {
+    const fld = readField(fields[k]!);
     if (fld === undefined) return false; // malformed field descriptor
     const val = present.get(fld.name);
     if (val !== undefined) {
       covered += 1;
-      if (!conformsIn(val, fld.ty, env, depth + 1)) return false;
+      // Field k is the record's item k + 2; its type is the field form's item 3.
+      const tyAt = c.position(c.position(at, k + 2), 3);
+      if (!conformsIn(c, val, fld.ty, tyAt, env, depth + 1)) return false;
     } else if (fld.required) {
       return false;
     }
@@ -714,7 +797,7 @@ export function isLeafCtor(ctor: string): boolean {
 export function leafClassifies(v: Value, t: Value): boolean {
   const h = head(t);
   if (h === undefined || !isLeafCtor(h.ctor)) return false;
-  return conformsIn(v, t, undefined, 0);
+  return node(LEAF_CHECKER, v, h, 0, undefined, 0);
 }
 
 /** Decide whether a LEAF descriptor `t` is well-formed (the `horos/wf-leaf(T)` builtin). */

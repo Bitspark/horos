@@ -43,7 +43,7 @@ for lane in ("go", "rs"):
     assert (ROOT / f"core/{lane}/testdata/conformance.json").read_bytes() == oracle
 # Mixed inhabitation has no checker in any core; only the Go form tests read its copy.
 assert (ROOT / "core/go/testdata/mixed-inhabitation.json").read_bytes() == (ROOT / "vectors/mixed-inhabitation.json").read_bytes()
-for corpus in ("diagnose.json", "integer-bounds.json", "recursion-scope.json"):
+for corpus in ("diagnose.json", "integer-bounds.json", "recursion-scope.json", "checking-work.json"):
     authored = (ROOT / "vectors" / corpus).read_bytes()
     for lane in ("go", "rs"):
         assert (ROOT / f"core/{lane}/testdata/{corpus}").read_bytes() == authored, (lane, corpus)

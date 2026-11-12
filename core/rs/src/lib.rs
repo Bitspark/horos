@@ -226,7 +226,26 @@ pub fn conforms(v: &Value, t: &Value) -> bool {
     // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
     // not well-formed admits no values, even where an individual arm would otherwise
     // match — so check `wf` once at the entry and never arm-by-arm below.
-    wf(t) && conforms_in(v, t, None, 0)
+    wf(t) && conforms_in(v, t, None, 0, &mut Memo::new())
+}
+
+/// One check's memo (ADR 0013): a composite sub-check's verdict, keyed by the addresses of
+/// its value and descriptor nodes and its depth. Every `&Value` that reaches `conforms_in`
+/// is borrowed from the caller's value or descriptor, never a temporary copy, so within a
+/// check an address names one value occurrence or one node of the written descriptor, and
+/// the descriptor node fixes its environment (ADR 0011). The verdict is a function of the
+/// key alone, so no sub-check is computed twice.
+type Memo = HashMap<(usize, usize, usize), bool>;
+
+pub(crate) fn addr(v: &Value) -> usize {
+    std::ptr::from_ref(v) as usize
+}
+
+/// The items of a tuple `v`, borrowed: the caller has already recognized `v` (as a list,
+/// set or map) with ontos/data, so the elements are `v`'s items after the label.
+pub(crate) fn labelled_items(v: &Value) -> &[Value] {
+    v.as_tuple()
+        .map_or(&[], |t| t.items().get(1..).unwrap_or(&[]))
 }
 
 /// An in-scope `rec` binding: the name (atom bytes) and its body descriptor.
@@ -247,7 +266,38 @@ type EnvNode<'s, 'a> = Scope<'s, EnvEntry<'a>>;
 /// `rec` strictly above every descriptor node checked since the last descent, and each
 /// descent strictly shrinks the finite `v`. Every unfolding is also one counted frame, so
 /// `MAX_RECURSION_DEPTH` is the backstop.
-fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth: usize) -> bool {
+fn conforms_in<'a>(
+    v: &Value,
+    t: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
+    if depth > MAX_RECURSION_DEPTH {
+        return false;
+    }
+    match head(t) {
+        Some((ctor, _)) if !is_leaf_ctor(ctor) => {
+            let key = (addr(v), addr(t), depth);
+            if let Some(&r) = memo.get(&key) {
+                return r;
+            }
+            let r = node(v, t, env, depth, memo);
+            memo.insert(key, r);
+            r
+        }
+        _ => node(v, t, env, depth, memo),
+    }
+}
+
+/// One descriptor node against `v`; `conforms_in` memoizes the composite ones.
+fn node<'a>(
+    v: &Value,
+    t: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
     // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a
     // deterministic `false` rather than risk a native-stack overflow. Counted at the
     // same point in all three cores so the trip depth is byte-identical.
@@ -332,7 +382,7 @@ fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth
                     && items
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, memo))
             }
             None => false,
         },
@@ -340,7 +390,7 @@ fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth
             Some(tup) => tup
                 .items()
                 .iter()
-                .all(|c| conforms_in(c, te, env, depth + 1)),
+                .all(|c| conforms_in(c, te, env, depth + 1, memo)),
             None => false,
         },
         ("compound", [label, ts @ ..]) => match (v.as_tuple(), atom_bytes(label)) {
@@ -351,36 +401,47 @@ fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth
                     && items[1..]
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, memo))
             }
             _ => false,
         },
 
         // Structural collections — well-formedness delegates to ontos/data; the element
         // descriptors add the per-element checks (descents).
-        ("list-of", [te]) => match read_list(v) {
-            Ok(elems) => elems.iter().all(|e| conforms_in(e, te, env, depth + 1)),
-            Err(_) => false,
-        },
-        ("set-of", [te]) => match read_set(v) {
-            Ok(elems) => elems.iter().all(|e| conforms_in(e, te, env, depth + 1)),
-            Err(_) => false,
-        },
-        ("map-of", [tk, tv]) => match read_map(v) {
-            Ok(entries) => entries.iter().all(|(k, val)| {
-                conforms_in(k, tk, env, depth + 1) && conforms_in(val, tv, env, depth + 1)
-            }),
-            Err(_) => false,
-        },
+        // The elements are walked borrowed from `v`, as the memo requires.
+        ("list-of", [te]) => {
+            read_list(v).is_ok()
+                && labelled_items(v)
+                    .iter()
+                    .all(|e| conforms_in(e, te, env, depth + 1, memo))
+        }
+        ("set-of", [te]) => {
+            read_set(v).is_ok()
+                && labelled_items(v)
+                    .iter()
+                    .all(|e| conforms_in(e, te, env, depth + 1, memo))
+        }
+        ("map-of", [tk, tv]) => {
+            read_map(v).is_ok()
+                && labelled_items(v)
+                    .iter()
+                    .all(|entry| match entry.as_tuple().map(|e| e.items()) {
+                        Some([k, val]) => {
+                            conforms_in(k, tk, env, depth + 1, memo)
+                                && conforms_in(val, tv, env, depth + 1, memo)
+                        }
+                        _ => false,
+                    })
+        }
 
         // Records — a well-formed map keyed by utf8-text, with required/optional fields
         // and a mandatory open/closed flag.
-        ("record", [mode, fields @ ..]) => conforms_record(v, mode, fields, env, depth),
+        ("record", [mode, fields @ ..]) => conforms_record(v, mode, fields, env, depth, memo),
 
         // Composition — recurse on the SAME `v`.
-        ("union", ts) => ts.iter().any(|ct| conforms_in(v, ct, env, depth + 1)),
-        ("and", ts) => ts.iter().all(|ct| conforms_in(v, ct, env, depth + 1)),
-        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1),
+        ("union", ts) => ts.iter().any(|ct| conforms_in(v, ct, env, depth + 1, memo)),
+        ("and", ts) => ts.iter().all(|ct| conforms_in(v, ct, env, depth + 1, memo)),
+        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1, memo),
 
         // Singleton — membership by ontos structural identity (defines no new equality).
         ("exact", [v0]) => v == v0,
@@ -392,7 +453,7 @@ fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth
                 // Push one borrowed node (no per-frame copy); the child frame sees this
                 // binding innermost-first. The node closes over `env`.
                 let e = Scope::push((nm.bytes(), body), env);
-                conforms_in(v, body, Some(&e), depth + 1)
+                conforms_in(v, body, Some(&e), depth + 1, memo)
             }
             None => false,
         },
@@ -406,7 +467,7 @@ fn conforms_in<'a>(v: &Value, t: &'a Value, env: Option<&EnvNode<'_, 'a>>, depth
                 };
                 // Unfold in the binding's own environment, so the body's free refs keep
                 // the bindings they were written under.
-                conforms_in(v, b.head.1, Some(b), depth + 1)
+                conforms_in(v, b.head.1, Some(b), depth + 1, memo)
             }
             None => false,
         },
@@ -441,6 +502,7 @@ fn conforms_record<'a>(
     fields: &'a [Value],
     env: Option<&Scope<'_, EnvEntry<'a>>>,
     depth: usize,
+    memo: &mut Memo,
 ) -> bool {
     // mode is a bare atom flag (open | closed).
     let open = match atom_bytes(mode) {
@@ -448,10 +510,12 @@ fn conforms_record<'a>(
         Some(b"closed") => false,
         _ => return false,
     };
-    // v must be a well-formed ontos/data map.
-    let Ok(entries) = read_map(v) else {
+    // v must be a well-formed ontos/data map. Its entries are walked borrowed from `v`,
+    // as the memo requires.
+    if read_map(v).is_err() {
         return false;
-    };
+    }
+    let entries = labelled_items(v);
     // Index the map's utf8-text keys to their values in a single pass — a map-backed
     // lookup replacing the old per-field linear `present.iter().find`. `read_map`
     // already guarantees keys are sorted and dup-free by codec bytes; distinct keys
@@ -459,7 +523,10 @@ fn conforms_record<'a>(
     // map preserves the reference core's "first match in map order" exactly. A non-text
     // key makes `v` not a record-shaped value (same early `false` as the linear scan).
     let mut present: HashMap<String, &Value> = HashMap::with_capacity(entries.len());
-    for (k, val) in &entries {
+    for entry in entries {
+        let Some([k, val]) = entry.as_tuple().map(|e| e.items()) else {
+            return false;
+        };
         let Ok(key) = read_text(k) else {
             return false;
         };
@@ -478,7 +545,7 @@ fn conforms_record<'a>(
         match present.get(name.as_str()) {
             Some(val) => {
                 covered += 1;
-                if !conforms_in(val, ty, env, depth + 1) {
+                if !conforms_in(val, ty, env, depth + 1, memo) {
                     return false;
                 }
             }
@@ -657,7 +724,7 @@ pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
 /// inert and the result is exactly the recognizer's leaf verdict.
 pub(crate) fn leaf_classifies(v: &Value, t: &Value) -> bool {
     match head(t) {
-        Some((ctor, _)) if is_leaf_ctor(ctor) => conforms_in(v, t, None, 0),
+        Some((ctor, _)) if is_leaf_ctor(ctor) => node(v, t, None, 0, &mut Memo::new()),
         _ => false,
     }
 }

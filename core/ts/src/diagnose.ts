@@ -319,7 +319,82 @@ export function diagnoseWf(t: Value): Diagnosis {
 export function diagnose(v: Value, t: Value): Diagnosis {
   const w = diagnoseWfIn(t, [], [], 0, undefined);
   if (w.verdict !== "conforms") return report(w);
-  return report(diagnoseIn(v, t, [], 0, undefined, undefined));
+  return report(diagnoseIn(new DiagChecker(), v, t, [], 0, undefined, undefined));
+}
+
+/**
+ * One diagnosis's memo (ADR 0013). Its path and position nodes are canonical: one node per
+ * (parent, step) and per (parent, item index), so within a check a path node names one
+ * value occurrence and a position node one node of the written descriptor, whose
+ * environment the position fixes (ADR 0011). A composite sub-check's outcome, location
+ * included, is a function of (path, position, depth), and `get`/`put` keep it.
+ */
+class DiagChecker {
+  private readonly paths = new Map<PathNode | undefined, Map<string, PathNode>>();
+  private readonly positions = new Map<PosNode | undefined, Map<number, PosNode>>();
+  private readonly memo = new Map<
+    PathNode | undefined,
+    Map<PosNode | undefined, Map<number, Outcome>>
+  >();
+
+  /** The canonical path node for `step` below `path`. */
+  step(path: PathNode | undefined, step: Step): PathNode {
+    let children = this.paths.get(path);
+    if (children === undefined) {
+      children = new Map();
+      this.paths.set(path, children);
+    }
+    const key =
+      step.kind === "field" ? `field:${step.name}` : `${step.kind}:${step.index}`;
+    let node = children.get(key);
+    if (node === undefined) {
+      node = stepInto(path, step);
+      children.set(key, node);
+    }
+    return node;
+  }
+
+  /** The canonical position node for item `index` below `pos`. */
+  at(pos: PosNode | undefined, index: number): PosNode {
+    let children = this.positions.get(pos);
+    if (children === undefined) {
+      children = new Map();
+      this.positions.set(pos, children);
+    }
+    let node = children.get(index);
+    if (node === undefined) {
+      node = at(pos, index);
+      children.set(index, node);
+    }
+    return node;
+  }
+
+  get(
+    path: PathNode | undefined,
+    pos: PosNode | undefined,
+    depth: number,
+  ): Outcome | undefined {
+    return this.memo.get(path)?.get(pos)?.get(depth);
+  }
+
+  put(
+    path: PathNode | undefined,
+    pos: PosNode | undefined,
+    depth: number,
+    o: Outcome,
+  ): void {
+    let byPos = this.memo.get(path);
+    if (byPos === undefined) {
+      byPos = new Map();
+      this.memo.set(path, byPos);
+    }
+    let byDepth = byPos.get(pos);
+    if (byDepth === undefined) {
+      byDepth = new Map();
+      byPos.set(pos, byDepth);
+    }
+    byDepth.set(depth, o);
+  }
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -369,6 +444,7 @@ interface Child {
 }
 
 function diagnoseIn(
+  d: DiagChecker,
   v: Value,
   t: Value,
   env: readonly Binding[],
@@ -385,23 +461,42 @@ function diagnoseIn(
   // Leaves never recurse into a value position, so they are always decisive here.
   if (isLeafCtor(ctor)) return leafClassifies(v, t) ? CONFORMS : refused();
 
+  const hit = d.get(path, pos, depth);
+  if (hit !== undefined) return hit;
+  const o = composite(d, v, ctor, args, env, depth, path, pos);
+  d.put(path, pos, depth, o);
+  return o;
+}
+
+/** One composite descriptor node against `v`; `diagnoseIn` memoizes it. */
+function composite(
+  d: DiagChecker,
+  v: Value,
+  ctor: string,
+  args: readonly Value[],
+  env: readonly Binding[],
+  depth: number,
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+): Outcome {
+  const refused = (): Outcome => mismatch({ path, at: pos, reason: "refused" });
   switch (ctor) {
     // Composition on the SAME v.
     case "union":
       return kleeneAny(
         args.length,
-        (i) => diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
+        (i) => diagnoseIn(d, v, args[i]!, env, depth + 1, path, d.at(pos, i + 1)),
         path,
         pos,
       );
     case "and":
       return kleeneAll(args.length, (i) =>
-        diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
+        diagnoseIn(d, v, args[i]!, env, depth + 1, path, d.at(pos, i + 1)),
       );
     case "not": {
       if (args.length !== 1) return refused();
       return kleeneNot(
-        diagnoseIn(v, args[0]!, env, depth + 1, path, at(pos, 1)),
+        diagnoseIn(d, v, args[0]!, env, depth + 1, path, d.at(pos, 1)),
         path,
         pos,
       );
@@ -416,8 +511,9 @@ function diagnoseIn(
       const name = atomStringOf(args[0]!);
       if (name === undefined) return refused();
       const body = args[1]!;
-      const bodyAt = at(pos, 2);
+      const bodyAt = d.at(pos, 2);
       return diagnoseIn(
+        d,
         v,
         body,
         [...env, { name, body, at: bodyAt }],
@@ -433,7 +529,7 @@ function diagnoseIn(
       for (let i = env.length - 1; i >= 0; i -= 1) {
         const b = env[i]!;
         if (b.name === name) {
-          return diagnoseIn(v, b.body, env.slice(0, i + 1), depth + 1, path, b.at);
+          return diagnoseIn(d, v, b.body, env.slice(0, i + 1), depth + 1, path, b.at);
         }
       }
       return refused(); // unbound
@@ -441,12 +537,12 @@ function diagnoseIn(
   }
 
   // Structural arms: the gate is decisive, then each child value against its descriptor.
-  const gate = structuralChildren(v, ctor, args, path, pos);
+  const gate = structuralChildren(d, v, ctor, args, path, pos);
   if (!Array.isArray(gate)) return mismatch(gate as Fault);
   const children = gate as readonly Child[];
   return kleeneAll(children.length, (i) => {
     const c = children[i]!;
-    return diagnoseIn(c.v, c.t, env, depth + 1, stepInto(path, c.step), c.at);
+    return diagnoseIn(d, c.v, c.t, env, depth + 1, d.step(path, c.step), c.at);
   });
 }
 
@@ -456,6 +552,7 @@ function diagnoseIn(
  * so `v` cannot conform regardless of any child.
  */
 function structuralChildren(
+  d: DiagChecker,
   v: Value,
   ctor: string,
   args: readonly Value[],
@@ -472,12 +569,12 @@ function structuralChildren(
         v: c,
         t: args[i]!,
         step: { kind: "item", index: i },
-        at: at(pos, i + 1),
+        at: d.at(pos, i + 1),
       }));
     }
     case "seq": {
       if (args.length !== 1 || v.kind !== "tuple") return refused;
-      const childAt = at(pos, 1);
+      const childAt = d.at(pos, 1);
       return v.items().map((c, i) => ({
         v: c,
         t: args[0]!,
@@ -502,7 +599,7 @@ function structuralChildren(
         v: items[i + 1]!,
         t: ct,
         step: { kind: "item", index: i + 1 },
-        at: at(pos, i + 2),
+        at: d.at(pos, i + 2),
       }));
     }
     case "list-of":
@@ -514,7 +611,7 @@ function structuralChildren(
       } catch {
         return refused;
       }
-      const childAt = at(pos, 1);
+      const childAt = d.at(pos, 1);
       return elems.map((e, i) => ({
         v: e,
         t: args[0]!,
@@ -530,8 +627,8 @@ function structuralChildren(
       } catch {
         return refused;
       }
-      const keyAt = at(pos, 1);
-      const valueAt = at(pos, 2);
+      const keyAt = d.at(pos, 1);
+      const valueAt = d.at(pos, 2);
       const out: Child[] = [];
       entries.forEach(([k, val], i) => {
         out.push(
@@ -544,7 +641,7 @@ function structuralChildren(
     case "record":
       return args.length < 1
         ? refused
-        : recordChildren(v, args[0]!, args.slice(1), path, pos);
+        : recordChildren(d, v, args[0]!, args.slice(1), path, pos);
   }
   return refused;
 }
@@ -555,6 +652,7 @@ function structuralChildren(
  * fields of a closed record in canonical key order, then the present declared fields.
  */
 function recordChildren(
+  d: DiagChecker,
   v: Value,
   mode: Value,
   fields: readonly Value[],
@@ -599,7 +697,7 @@ function recordChildren(
       v: val,
       t: fd.ty,
       step: { kind: "field", name: fd.name },
-      at: at(at(pos, j + 2), 3),
+      at: d.at(d.at(pos, j + 2), 3),
     });
   }
   if (m === "closed") {

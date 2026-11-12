@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 class AuthoredCorpusTest(unittest.TestCase):
     def test_corpora_match_their_sources(self) -> None:
-        for script in ("diagnose.py", "integer-bounds.py", "recursion-scope.py", "mixed-inhabitation.py"):
+        for script in ("diagnose.py", "integer-bounds.py", "recursion-scope.py", "mixed-inhabitation.py", "checking-work.py"):
             result = subprocess.run(
                 [sys.executable, "-I", str(ROOT / "vectors" / script), "--check"],
                 capture_output=True,

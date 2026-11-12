@@ -78,15 +78,16 @@ func nameScopeContains(s *nameScope, name []byte) bool {
 // was written, so a ref that resolves to the node continues with the node itself as
 // its environment.
 type envScope struct {
-	name []byte
-	body Value
-	tail *envScope
+	name   []byte
+	body   Value
+	bodyAt int // the body's position in the written descriptor (checker)
+	tail   *envScope
 }
 
 // pushEnv returns a new env node with (name, body) at the head and e as the tail — the
 // analogue of Rust's `Scope::push((nb, body), env)`.
-func pushEnv(e *envScope, name []byte, body Value) *envScope {
-	return &envScope{name: name, body: body, tail: e}
+func pushEnv(e *envScope, name []byte, body Value, bodyAt int) *envScope {
+	return &envScope{name: name, body: body, bodyAt: bodyAt, tail: e}
 }
 
 // lookupBinding finds the binding of name, searching from the innermost (head) binding
@@ -192,4 +193,36 @@ func isASCIIWS(c rune) bool {
 	default:
 		return false
 	}
+}
+
+// checker holds one check's memo (ADR 0013). ontos values carry no identity a Go program
+// can observe, so the checker names each value occurrence by its parent's occurrence and
+// its item index in the parent tuple, and each descriptor position the same way; the
+// root of each is 0. Within one check an occurrence names one value and a position one
+// descriptor node, whose environment is fixed by the position (ADR 0011). A composite
+// sub-check's verdict is therefore a function of (occurrence, position, depth), and memo
+// keeps it, so no sub-check is computed twice.
+type checker struct {
+	values    childIDs
+	positions childIDs
+	memo      map[memoKey]bool
+}
+
+type memoKey struct{ value, position, depth int }
+
+// childIDs numbers the children of numbered nodes: (parent, item index) -> child.
+type childIDs map[[2]int]int
+
+func (m childIDs) child(parent, index int) int {
+	k := [2]int{parent, index}
+	if id, ok := m[k]; ok {
+		return id
+	}
+	id := len(m) + 1
+	m[k] = id
+	return id
+}
+
+func newChecker() *checker {
+	return &checker{values: childIDs{}, positions: childIDs{}, memo: map[memoKey]bool{}}
 }

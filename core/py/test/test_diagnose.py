@@ -61,6 +61,9 @@ class DiagnoseCorpusReplay(unittest.TestCase):
         # `diagnose_wf`.
         self._replay("recursion-scope.json", "horos-recursion-scope-v1", "diagnose_wf")
 
+    def test_replay_the_checking_work_diagnoses(self) -> None:
+        self._replay("checking-work.json", "horos-checking-work-v1", "diagnose_wf")
+
     def _replay(self, file: str, version: str, wf_key: str) -> None:
         doc = json.loads((_VECTORS / file).read_text(encoding="utf-8"))
         self.assertEqual(doc["version"], version)

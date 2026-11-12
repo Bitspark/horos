@@ -181,7 +181,63 @@ func Diagnose(v, t Value) Diagnosis {
 	if w := diagnoseWFIn(t, nil, nil, 0, nil); w.verdict != VerdictConforms {
 		return w.diagnosis()
 	}
-	return diagnoseIn(v, t, nil, 0, nil, nil).diagnosis()
+	return newDiagChecker().diagnoseIn(v, t, nil, 0, nil, nil).diagnosis()
+}
+
+// diagChecker holds one diagnosis's memo (ADR 0013). Its path and position nodes are
+// canonical: one node per (parent, step) and per (parent, item index), so within one check
+// a path node names one value occurrence and a position node one node of the written
+// descriptor, whose environment the position fixes (ADR 0011). A composite sub-check's
+// outcome, location included, is a function of (path, position, depth), and memo keeps it.
+type diagChecker struct {
+	paths     map[pathKey]*pathNode
+	positions map[posKey]*posNode
+	memo      map[diagKey]outcome
+}
+
+type pathKey struct {
+	parent *pathNode
+	step   Step
+}
+
+type posKey struct {
+	parent *posNode
+	index  int
+}
+
+type diagKey struct {
+	path  *pathNode
+	at    *posNode
+	depth int
+}
+
+func newDiagChecker() *diagChecker {
+	return &diagChecker{paths: map[pathKey]*pathNode{}, positions: map[posKey]*posNode{}, memo: map[diagKey]outcome{}}
+}
+
+// step is the canonical path node for s below p.
+func (d *diagChecker) step(p *pathNode, s Step) *pathNode {
+	k := pathKey{parent: p, step: s}
+	if n, ok := d.paths[k]; ok {
+		return n
+	}
+	n := p.push(s)
+	d.paths[k] = n
+	return n
+}
+
+// pos is the canonical position node for indices below p.
+func (d *diagChecker) pos(p *posNode, indices ...int) *posNode {
+	for _, i := range indices {
+		k := posKey{parent: p, index: i}
+		n, ok := d.positions[k]
+		if !ok {
+			n = p.push(i)
+			d.positions[k] = n
+		}
+		p = n
+	}
+	return p
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -228,7 +284,7 @@ func lookupEnv(env []*diagEnv, name []byte) int {
 	return -1
 }
 
-func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
+func (d *diagChecker) diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
 	if depth > MaxRecursionDepth {
 		return exhaustedAt(path, at)
 	}
@@ -245,7 +301,18 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		}
 		return refused()
 	}
+	key := diagKey{path: path, at: at, depth: depth}
+	if o, hit := d.memo[key]; hit {
+		return o
+	}
+	o := d.composite(v, ctor, args, env, depth, path, at)
+	d.memo[key] = o
+	return o
+}
 
+// composite diagnoses one composite descriptor node against v.
+func (d *diagChecker) composite(v Value, ctor string, args []Value, env []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
+	refused := func() outcome { return failAt(VerdictMismatch, path, at, ReasonRefused) }
 	switch ctor {
 	// Composition on the SAME v.
 	case "union":
@@ -254,7 +321,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		var exhausted *outcome
 		var deepest *fault
 		for i, ct := range args {
-			o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1))
+			o := d.diagnoseIn(v, ct, env, depth+1, path, d.pos(at, i+1))
 			switch o.verdict {
 			case VerdictConforms:
 				return conformsO
@@ -278,7 +345,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 	case "and":
 		var all allOf
 		for i, ct := range args {
-			if o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1)); all.add(o) {
+			if o := d.diagnoseIn(v, ct, env, depth+1, path, d.pos(at, i+1)); all.add(o) {
 				return o
 			}
 		}
@@ -287,7 +354,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		if len(args) != 1 {
 			return refused()
 		}
-		switch o := diagnoseIn(v, args[0], env, depth+1, path, at.push(1)); o.verdict {
+		switch o := d.diagnoseIn(v, args[0], env, depth+1, path, d.pos(at, 1)); o.verdict {
 		case VerdictConforms:
 			return failAt(VerdictMismatch, path, at, ReasonComplement)
 		case VerdictMismatch:
@@ -309,9 +376,9 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		if !okn {
 			return refused()
 		}
-		bodyAt := at.push(2)
+		bodyAt := d.pos(at, 2)
 		b := &diagEnv{name: nb, body: args[1], at: bodyAt}
-		return diagnoseIn(v, args[1], diagPushEnv(env, b), depth+1, path, bodyAt)
+		return d.diagnoseIn(v, args[1], diagPushEnv(env, b), depth+1, path, bodyAt)
 	case "ref":
 		if len(args) != 1 {
 			return refused()
@@ -325,7 +392,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 			return refused() // unbound
 		}
 		b := env[i]
-		return diagnoseIn(v, b.body, env[:i+1], depth+1, path, b.at)
+		return d.diagnoseIn(v, b.body, env[:i+1], depth+1, path, b.at)
 	}
 
 	// Structural arms: the gate is decisive, then each child value against its descriptor.
@@ -339,7 +406,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 	}
 	var all allOf
 	for _, c := range children {
-		if o := diagnoseIn(c.v, c.t, env, depth+1, path.push(c.step), at.push(c.at...)); all.add(o) {
+		if o := d.diagnoseIn(c.v, c.t, env, depth+1, d.step(path, c.step), d.pos(at, c.at...)); all.add(o) {
 			return o
 		}
 	}

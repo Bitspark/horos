@@ -43,7 +43,7 @@ from horos import conforms, wf  # noqa: E402
 # (ADR 0011), same format.
 _ORACLES = [
     _HERE.parents[3] / "vectors" / name
-    for name in ("conformance.json", "integer-bounds.json", "recursion-scope.json")
+    for name in ("conformance.json", "integer-bounds.json", "recursion-scope.json", "checking-work.json")
 ]
 
 
