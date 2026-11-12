@@ -24,5 +24,11 @@ jobs:
         with:
           python-version: '3.13'
       - run: rustup toolchain install --no-self-update
+      - name: Public Python dependency
+        run: git -c credential.helper= clone --depth 1 --branch v0.17.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
       - run: bash scripts/check.sh conformance
+        env:
+          ONTOS_PY_ROOT: ${{ runner.temp }}/ontos
       - run: python3 conformance/run.py --seed "$GITHUB_RUN_NUMBER" --count 2000
+        env:
+          ONTOS_PY_ROOT: ${{ runner.temp }}/ontos

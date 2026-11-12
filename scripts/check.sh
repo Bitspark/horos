@@ -36,6 +36,7 @@ case "${1:-all}" in
     python3 -m unittest discover core/py/test -v
     ;;
   conformance)
+    : "${ONTOS_PY_ROOT:?Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout}"
     prepare_bins
     python3 conformance/run.py
     python3 conformance/run.py --seed 1 --count "${HOROS_FUZZ_COUNT:-2000}"

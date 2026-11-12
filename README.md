@@ -91,9 +91,9 @@ documented in the contract.
 ## Develop
 
 Run `bash scripts/check.sh <target>` for `public`, `go`, `rust`, `typescript`,
-`python` or `conformance`. `all` requires every toolchain and an `ONTOS_PY_ROOT`
-checkout at v0.17.0. Missing dependencies fail the check; no language is silently
-skipped. [CONTRIBUTING.md](CONTRIBUTING.md) describes the workflow.
+`python` or `conformance`. `python`, `conformance` and `all` require an
+`ONTOS_PY_ROOT` checkout at v0.17.0, and `all` requires every toolchain. Missing
+dependencies fail the check; no language is silently skipped. [CONTRIBUTING.md](CONTRIBUTING.md) describes the workflow.
 
 ## History and license
 

@@ -39,7 +39,7 @@ jobs:
           python-version: '3.13'
       - run: rustup toolchain install --no-self-update
       - name: Public Python dependency
-        if: matrix.target == 'python'
+        if: matrix.target == 'python' || matrix.target == 'conformance'
         run: git -c credential.helper= clone --depth 1 --branch v0.17.0 https://github.com/Bitspark/ontos.git "$RUNNER_TEMP/ontos"
       - name: Check
         id: check
