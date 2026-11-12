@@ -21,5 +21,5 @@ checker against judgments authored from the specification, including a value
 that exhausts the depth limit and is therefore `exhausted`, not `mismatch`. The
 TypeScript `conforms` and `diagnose` must reach the same judgments twice: from
 the package packed from `core/ts`, and from the published npm release
-(`@bitspark/horos@0.9.0`) that consumers use. Each is installed in a fresh
+(`@bitspark/horos@0.11.0`) that consumers use. Each is installed in a fresh
 consumer project.
