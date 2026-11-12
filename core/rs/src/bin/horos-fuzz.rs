@@ -834,6 +834,10 @@ fn has_ref(t: &Value) -> bool {
     }
 }
 
+/// How deep a derived value nests, which keeps each seed's run time predictable. Deep
+/// values still come from the boundary pairs.
+const MAX_DERIVED_DEPTH: usize = 12;
+
 /// A value shaped by `t`, aiming to conform under `reading`: unions pick an alternative
 /// (a `ref`-free one once `budget` runs low), `ref`s unfold, collections hold derived
 /// elements. A rare random subtree turns it into a near miss. Not a judgment: whatever
@@ -844,8 +848,12 @@ fn derive(
     env: &Option<Rc<Bind>>,
     budget: &mut i32,
     reading: Reading,
+    depth: usize,
 ) -> Value {
     *budget -= 1;
+    if depth > MAX_DERIVED_DEPTH {
+        return atom(b"deep");
+    }
     if rng.one_in(80) {
         return rand_value(rng, 1);
     }
@@ -854,7 +862,7 @@ fn derive(
     };
     let kids = |rng: &mut Rng, budget: &mut i32, ts: &[Value]| -> Vec<Value> {
         ts.iter()
-            .map(|c| derive(rng, c, env, budget, reading))
+            .map(|c| derive(rng, c, env, budget, reading, depth + 1))
             .collect()
     };
     match (ctor, args) {
@@ -888,7 +896,7 @@ fn derive(
         ("seq", [c]) => {
             let n = if *budget > 0 { rng.range(0, 3) } else { 0 };
             tup((0..n)
-                .map(|_| derive(rng, c, env, budget, reading))
+                .map(|_| derive(rng, c, env, budget, reading, depth + 1))
                 .collect())
         }
         ("compound", [label, ts @ ..]) => {
@@ -900,7 +908,7 @@ fn derive(
             let n = if *budget > 0 { rng.range(0, 3) } else { 0 };
             encode_list(
                 &(0..n)
-                    .map(|_| derive(rng, c, env, budget, reading))
+                    .map(|_| derive(rng, c, env, budget, reading, depth + 1))
                     .collect::<Vec<_>>(),
             )
         }
@@ -908,7 +916,7 @@ fn derive(
             let n = if *budget > 0 { rng.range(0, 3) } else { 0 };
             let mut elems: Vec<Value> = Vec::new();
             for _ in 0..n {
-                let e = derive(rng, c, env, budget, reading);
+                let e = derive(rng, c, env, budget, reading, depth + 1);
                 if !elems.contains(&e) {
                     elems.push(e);
                 }
@@ -919,9 +927,9 @@ fn derive(
             let n = if *budget > 0 { rng.range(0, 3) } else { 0 };
             let mut entries: Vec<(Value, Value)> = Vec::new();
             for _ in 0..n {
-                let key = derive(rng, k, env, budget, reading);
+                let key = derive(rng, k, env, budget, reading, depth + 1);
                 if entries.iter().all(|(seen, _)| *seen != key) {
-                    let value = derive(rng, v, env, budget, reading);
+                    let value = derive(rng, v, env, budget, reading, depth + 1);
                     entries.push((key, value));
                 }
             }
@@ -935,7 +943,7 @@ fn derive(
                 };
                 let required = flag.as_atom().is_some_and(|a| a.bytes() == b"req");
                 if (required || rng.one_in(2)) && entries.iter().all(|(seen, _)| seen != name) {
-                    let value = derive(rng, ty, env, budget, reading);
+                    let value = derive(rng, ty, env, budget, reading, depth + 1);
                     entries.push((name.clone(), value));
                 }
             }
@@ -959,9 +967,9 @@ fn derive(
             } else {
                 pick(rng, &alts.iter().collect::<Vec<_>>())
             };
-            derive(rng, alt, env, budget, reading)
+            derive(rng, alt, env, budget, reading, depth)
         }
-        ("and", [first, ..]) => derive(rng, first, env, budget, reading),
+        ("and", [first, ..]) => derive(rng, first, env, budget, reading, depth),
         ("rec", [name, body]) => {
             let Some(n) = name.as_atom() else {
                 return rand_value(rng, 1);
@@ -971,7 +979,7 @@ fn derive(
                 body: body.clone(),
                 parent: env.clone(),
             });
-            derive(rng, body, &Some(bind), budget, reading)
+            derive(rng, body, &Some(bind), budget, reading, depth)
         }
         ("ref", [name]) => {
             let found = name.as_atom().and_then(|n| lookup(env, n.bytes()));
@@ -981,7 +989,7 @@ fn derive(
                         Reading::Lexical => Some(b.clone()),
                         Reading::Dynamic => env.clone(),
                     };
-                    derive(rng, &b.body, &unfold_env, budget, reading)
+                    derive(rng, &b.body, &unfold_env, budget, reading, depth)
                 }
                 _ => rand_value(rng, 1),
             }
@@ -1107,10 +1115,10 @@ fn scoping_pair(rng: &mut Rng) -> (Value, Value) {
         let depth = rng.range(2, 5);
         scoped_descriptor(rng, depth, &GenScope::default())
     };
-    let mut budget = pick(rng, &[8, 24, 60, 400]);
+    let mut budget = pick(rng, &[8, 24, 60, 120]);
     let v = match rng.below(10) {
-        0..=5 => derive(rng, &d, &None, &mut budget, Reading::Lexical),
-        6..=8 => derive(rng, &d, &None, &mut budget, Reading::Dynamic),
+        0..=5 => derive(rng, &d, &None, &mut budget, Reading::Lexical, 0),
+        6..=8 => derive(rng, &d, &None, &mut budget, Reading::Dynamic, 0),
         _ => rand_value(rng, 3),
     };
     (d, v)
@@ -1140,7 +1148,7 @@ fn gen_pair(rng: &mut Rng) -> (Value, Value) {
             let d = rand_descriptor(rng, depth);
             let v = if rng.one_in(2) {
                 let mut budget = 24;
-                derive(rng, &d, &None, &mut budget, Reading::Lexical)
+                derive(rng, &d, &None, &mut budget, Reading::Lexical, 0)
             } else {
                 let depth = rng.range(1, 5);
                 rand_value(rng, depth)
