@@ -51,7 +51,10 @@ exports, proxies, ownership, admission and lifetimes remain in Bitruntime.
 Neither structural capture nor conversion sends, exports or tests liveness.
 The explicit Deixis projection is not inserted into every send. Bitruntime does
 not consult Horos to hydrate values. None of this supplies a public Horos
-mixed-value checker or changes ground descriptor checking.
+mixed-value checker or changes ground descriptor checking. What it means for a
+mixed value to inhabit a materialized Descriptor is specified, with a replayable
+corpus, in [mixed inhabitation](mixed-inhabitation.md); a binding backend
+implements it.
 
 ## Ownership and composition
 
@@ -60,7 +63,8 @@ mixed-value checker or changes ground descriptor checking.
 | Deixis | Generic structure over opaque contents |
 | Ontos core | Ground data values, structural identity and encoding |
 | Optional ontos/wire | Mixed value structure and exact ground embedding/recovery |
-| Horos | Ground descriptors/conformance; unified declarations, structural kinds, constructor contracts, resolution and materialization |
+| Horos | Ground descriptors/conformance; unified declarations, structural kinds, constructor contracts, resolution and materialization; the meaning of [mixed inhabitation](mixed-inhabitation.md) and its corpus, with no checker |
+| Binding backend | Implementing and enforcing mixed inhabitation against that specification ([bittype#194](https://github.com/Bitspark/bittype/issues/194)) |
 | Bittype | AST/CST and semantic projections, provider composition and separately qualified transformations |
 | Bitwire / bitruntime | Sending capabilities and hydration realization |
 | Contract libraries | Function, Stream, Cell declarations, representations and behavioral laws |

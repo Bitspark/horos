@@ -38,3 +38,14 @@ and `conforms` of the original oracle's format, and beside them the expected
 is `recursion-scope.py`, which encodes the inputs only; run it as `diagnose.py`
 above. All four lanes and the CLI harness replay its booleans and its
 diagnoses.
+
+`mixed-inhabitation.json` is the hand-authored corpus for
+[mixed inhabitation](../docs/spec/mixed-inhabitation.md)
+([ADR 0012](../docs/architecture/decisions/0012-mixed-inhabitation.md)): whether an
+ontos/wire mixed value inhabits a materialized Descriptor. Horos has no checker
+for it; a binding backend replays it. Descriptors are ontos-codec-v1 hex, and
+values use ontos's value-tree notation with a `{"wire": name}` leaf. Its source is
+`mixed-inhabitation.py`, which encodes the inputs and checks their form; run it as
+`diagnose.py` above. The Go declarations tests check that every descriptor is a
+materialized Descriptor and that the verdicts for descriptors without `wire` are
+the ground judgment.

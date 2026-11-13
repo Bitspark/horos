@@ -152,6 +152,7 @@ results and aliases; it does not silently specialize or prune them.
 | Static semantics | Horos binding, primitive formation, kind membership, constructor contracts and materialization |
 | Ground conformance | Existing WF/Conforms and diagnostics over ground Ontos data |
 | Mixed structural admission | Ontos/wire finite positional structure and payload admission |
+| Mixed inhabitation | A mixed value's structure against a materialized Descriptor, each capability an opaque leaf; meaning by Horos ([specification](mixed-inhabitation.md)), implementation by a binding backend |
 | Capability recognition | Runtime recognition of a particular sending face |
 | Operational validity | Authority, scope, endpoint lifetime and transport state |
 | Protocol compliance | Library-owned message, reply, state and cancellation laws |
