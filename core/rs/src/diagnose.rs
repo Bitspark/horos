@@ -422,6 +422,7 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
                 path: None,
                 depth: 0,
                 memo: &memo,
+                shared: false,
             };
             Located::from_out(diagnose_in(v, t, cx))
         }
@@ -438,7 +439,8 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
 // ---------------------------------------------------------------------------
 
 /// One diagnosis's memo (ADR 0013): a composite sub-check's outcome, location included,
-/// keyed by the addresses of its value and descriptor nodes and its depth. Every `&Value`
+/// keyed by the addresses of its value and descriptor nodes and its depth, kept only in
+/// shared mode (`Cx::shared`). Every `&Value`
 /// that reaches `diagnose_in` is borrowed from the caller's value or descriptor, never a
 /// temporary copy, so within a check an address names one value occurrence, whose path is
 /// fixed, or one node of the written descriptor, whose position and environment are fixed.
@@ -454,6 +456,9 @@ struct Cx<'a> {
     path: Path<'a>,
     depth: usize,
     memo: &'a RefCell<DiagMemo>,
+    /// Below a union or intersection with two or more alternatives over one value, where a
+    /// sub-check can be reached along several routes: only there is the memo kept.
+    shared: bool,
 }
 
 impl Cx<'_> {
@@ -490,6 +495,7 @@ fn descend<'a>(cv: &Value, ct: &'a Value, cx: Cx<'a>, items: &[usize], step: Ste
         path: Some(&s),
         depth: cx.depth + 1,
         memo: cx.memo,
+        shared: cx.shared,
     };
     match items.get(1) {
         Some(&second) => {
@@ -514,6 +520,9 @@ fn diagnose_in<'a>(v: &Value, t: &'a Value, cx: Cx<'a>) -> Out {
         } else {
             cx.refused()
         };
+    }
+    if !cx.shared {
+        return composite_in(v, ctor, args, cx);
     }
     let key = (crate::addr(v), crate::addr(t), cx.depth);
     if let Some(o) = cx.memo.borrow().get(&key).cloned() {
@@ -545,6 +554,10 @@ fn composite_in<'a>(v: &Value, ctor: &str, args: &'a [Value], cx: Cx<'a>) -> Out
 /// went deeper than the union's own value, else the union itself (ADR 0009).
 #[inline(never)]
 fn union_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
+    let cx = Cx {
+        shared: cx.shared || ts.len() > 1,
+        ..cx
+    };
     let mut exhausted: Option<Out> = None;
     let mut not_wf: Option<Out> = None;
     let mut deepest: Option<Out> = None;
@@ -578,6 +591,10 @@ fn union_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
 
 #[inline(never)]
 fn and_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
+    let cx = Cx {
+        shared: cx.shared || ts.len() > 1,
+        ..cx
+    };
     let mut fold = AllFold::new();
     for (i, ct) in ts.iter().enumerate() {
         if let Some(o) = fold.add(same(v, ct, cx, i + 1)) {
@@ -628,6 +645,7 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         path: cx.path,
         depth: cx.depth + 1,
         memo: cx.memo,
+        shared: cx.shared,
     };
     diagnose_in(v, body, inner)
 }
@@ -651,6 +669,7 @@ fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         path: cx.path,
         depth: cx.depth + 1,
         memo: cx.memo,
+        shared: cx.shared,
     };
     diagnose_in(v, b.head.body, inner)
 }

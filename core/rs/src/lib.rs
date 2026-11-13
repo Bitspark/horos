@@ -226,11 +226,13 @@ pub fn conforms(v: &Value, t: &Value) -> bool {
     // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
     // not well-formed admits no values, even where an individual arm would otherwise
     // match — so check `wf` once at the entry and never arm-by-arm below.
-    wf(t) && conforms_in(v, t, None, 0, &mut Memo::new())
+    wf(t) && conforms_in(v, t, None, 0, false, &mut Memo::new())
 }
 
 /// One check's memo (ADR 0013): a composite sub-check's verdict, keyed by the addresses of
-/// its value and descriptor nodes and its depth. Every `&Value` that reaches `conforms_in`
+/// its value and descriptor nodes and its depth. It is kept only in shared mode, below a
+/// union or intersection with two or more alternatives over one value: elsewhere every
+/// sub-check is reached along one route. Every `&Value` that reaches `conforms_in`
 /// is borrowed from the caller's value or descriptor, never a temporary copy, so within a
 /// check an address names one value occurrence or one node of the written descriptor, and
 /// the descriptor node fixes its environment (ADR 0011). The verdict is a function of the
@@ -271,8 +273,13 @@ fn conforms_in<'a>(
     t: &'a Value,
     env: Option<&EnvNode<'_, 'a>>,
     depth: usize,
+    shared: bool,
     memo: &mut Memo,
 ) -> bool {
+    // Outside shared mode every sub-check is reached along one route: nothing to keep.
+    if !shared {
+        return node(v, t, env, depth, false, memo);
+    }
     if depth > MAX_RECURSION_DEPTH {
         return false;
     }
@@ -282,20 +289,22 @@ fn conforms_in<'a>(
             if let Some(&r) = memo.get(&key) {
                 return r;
             }
-            let r = node(v, t, env, depth, memo);
+            let r = node(v, t, env, depth, true, memo);
             memo.insert(key, r);
             r
         }
-        _ => node(v, t, env, depth, memo),
+        _ => node(v, t, env, depth, true, memo),
     }
 }
 
-/// One descriptor node against `v`; `conforms_in` memoizes the composite ones.
+/// One descriptor node against `v`; `conforms_in` memoizes the composite ones in shared
+/// mode.
 fn node<'a>(
     v: &Value,
     t: &'a Value,
     env: Option<&EnvNode<'_, 'a>>,
     depth: usize,
+    shared: bool,
     memo: &mut Memo,
 ) -> bool {
     // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a
@@ -382,7 +391,7 @@ fn node<'a>(
                     && items
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, memo))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, shared, memo))
             }
             None => false,
         },
@@ -390,7 +399,7 @@ fn node<'a>(
             Some(tup) => tup
                 .items()
                 .iter()
-                .all(|c| conforms_in(c, te, env, depth + 1, memo)),
+                .all(|c| conforms_in(c, te, env, depth + 1, shared, memo)),
             None => false,
         },
         ("compound", [label, ts @ ..]) => match (v.as_tuple(), atom_bytes(label)) {
@@ -401,7 +410,7 @@ fn node<'a>(
                     && items[1..]
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, memo))
+                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, shared, memo))
             }
             _ => false,
         },
@@ -413,13 +422,13 @@ fn node<'a>(
             read_list(v).is_ok()
                 && labelled_items(v)
                     .iter()
-                    .all(|e| conforms_in(e, te, env, depth + 1, memo))
+                    .all(|e| conforms_in(e, te, env, depth + 1, shared, memo))
         }
         ("set-of", [te]) => {
             read_set(v).is_ok()
                 && labelled_items(v)
                     .iter()
-                    .all(|e| conforms_in(e, te, env, depth + 1, memo))
+                    .all(|e| conforms_in(e, te, env, depth + 1, shared, memo))
         }
         ("map-of", [tk, tv]) => {
             read_map(v).is_ok()
@@ -427,8 +436,8 @@ fn node<'a>(
                     .iter()
                     .all(|entry| match entry.as_tuple().map(|e| e.items()) {
                         Some([k, val]) => {
-                            conforms_in(k, tk, env, depth + 1, memo)
-                                && conforms_in(val, tv, env, depth + 1, memo)
+                            conforms_in(k, tk, env, depth + 1, shared, memo)
+                                && conforms_in(val, tv, env, depth + 1, shared, memo)
                         }
                         _ => false,
                     })
@@ -436,12 +445,24 @@ fn node<'a>(
 
         // Records — a well-formed map keyed by utf8-text, with required/optional fields
         // and a mandatory open/closed flag.
-        ("record", [mode, fields @ ..]) => conforms_record(v, mode, fields, env, depth, memo),
+        ("record", [mode, fields @ ..]) => {
+            conforms_record(v, mode, fields, env, depth, shared, memo)
+        }
 
         // Composition — recurse on the SAME `v`.
-        ("union", ts) => ts.iter().any(|ct| conforms_in(v, ct, env, depth + 1, memo)),
-        ("and", ts) => ts.iter().all(|ct| conforms_in(v, ct, env, depth + 1, memo)),
-        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1, memo),
+        // Two or more alternatives over one value: below them a sub-check can be reached
+        // along several routes, so they are checked in shared mode (ADR 0013).
+        ("union", ts) => {
+            let shared = shared || ts.len() > 1;
+            ts.iter()
+                .any(|ct| conforms_in(v, ct, env, depth + 1, shared, memo))
+        }
+        ("and", ts) => {
+            let shared = shared || ts.len() > 1;
+            ts.iter()
+                .all(|ct| conforms_in(v, ct, env, depth + 1, shared, memo))
+        }
+        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1, shared, memo),
 
         // Singleton — membership by ontos structural identity (defines no new equality).
         ("exact", [v0]) => v == v0,
@@ -453,7 +474,7 @@ fn node<'a>(
                 // Push one borrowed node (no per-frame copy); the child frame sees this
                 // binding innermost-first. The node closes over `env`.
                 let e = Scope::push((nm.bytes(), body), env);
-                conforms_in(v, body, Some(&e), depth + 1, memo)
+                conforms_in(v, body, Some(&e), depth + 1, shared, memo)
             }
             None => false,
         },
@@ -467,7 +488,7 @@ fn node<'a>(
                 };
                 // Unfold in the binding's own environment, so the body's free refs keep
                 // the bindings they were written under.
-                conforms_in(v, b.head.1, Some(b), depth + 1, memo)
+                conforms_in(v, b.head.1, Some(b), depth + 1, shared, memo)
             }
             None => false,
         },
@@ -502,6 +523,7 @@ fn conforms_record<'a>(
     fields: &'a [Value],
     env: Option<&Scope<'_, EnvEntry<'a>>>,
     depth: usize,
+    shared: bool,
     memo: &mut Memo,
 ) -> bool {
     // mode is a bare atom flag (open | closed).
@@ -545,7 +567,7 @@ fn conforms_record<'a>(
         match present.get(name.as_str()) {
             Some(val) => {
                 covered += 1;
-                if !conforms_in(val, ty, env, depth + 1, memo) {
+                if !conforms_in(val, ty, env, depth + 1, shared, memo) {
                     return false;
                 }
             }
@@ -724,7 +746,7 @@ pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
 /// inert and the result is exactly the recognizer's leaf verdict.
 pub(crate) fn leaf_classifies(v: &Value, t: &Value) -> bool {
     match head(t) {
-        Some((ctor, _)) if is_leaf_ctor(ctor) => node(v, t, None, 0, &mut Memo::new()),
+        Some((ctor, _)) if is_leaf_ctor(ctor) => node(v, t, None, 0, false, &mut Memo::new()),
         _ => false,
     }
 }
