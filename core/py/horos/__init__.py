@@ -130,11 +130,12 @@ def _matches_lowercase_uuid(s: str) -> bool:
 class _Binding:
     """One ``rec`` binding and its environment node. ``parent`` is the environment
     the ``rec`` was written in, so the node is the binding's closure (ADR 0011);
-    ``body_at`` is the body's position in the written descriptor."""
+    ``body_at`` is the body's position in the written descriptor, set lazily: None until
+    a shared ``ref`` needs it (see ``_conforms_in``)."""
 
     __slots__ = ("name", "body", "body_at", "parent")
 
-    def __init__(self, name: bytes, body: Value, body_at: tuple, parent: Optional["_Binding"]) -> None:
+    def __init__(self, name: bytes, body: Value, body_at: Optional[tuple], parent: Optional["_Binding"]) -> None:
         self.name = name
         self.body = body
         self.body_at = body_at
@@ -171,7 +172,7 @@ def conforms(v: Value, t: Value) -> bool:
     """Decide ``v : T``. Total and search-free: a non-conforming value AND a
     non-well-formed ``T`` both yield False; never raises."""
     # Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`.
-    return wf(t) and _conforms_in(v, t, (), None, 0, {})
+    return wf(t) and _conforms_in(v, t, None, None, 0, {})
 
 
 # The constructors whose check recurses; their sub-checks are memoized (ADR 0013).
@@ -180,13 +181,18 @@ _COMPOSITE = frozenset(
 )
 
 
-def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: int, memo: Optional[dict]) -> bool:
-    """``conforms`` with the recursion threaded through. ``at`` is ``t``'s position in
-    the written descriptor, which fixes ``env`` (ADR 0011), so a composite sub-check's
-    verdict is a function of (the value object, ``at``, ``depth``) and ``memo`` keeps
-    it for the rest of the check (ADR 0013). A value is named by the object itself, so a
-    subvalue shared between several places is checked once. The memo lives in this one
-    frame, so a level of descent costs no more interpreter frames than before it."""
+def _conforms_in(v: Value, t: Value, at: Optional[tuple], env: Optional[_Binding], depth: int, memo: Optional[dict]) -> bool:
+    """``conforms`` with the recursion threaded through. A check reaches one sub-check
+    along two routes only below a union or intersection with two or more alternatives
+    over the same value, so it memoizes only there, in shared mode (ADR 0013). Outside
+    shared mode ``at`` is None: no position is built and nothing is kept, so a check
+    without such a node costs what it did before. In shared mode ``at`` is ``t``'s
+    position in the written descriptor: a token unique to the node where shared mode
+    began, followed by item indices. The position fixes ``env`` (ADR 0011), so a shared
+    composite sub-check's verdict is a function of (the value object, ``at``, ``depth``)
+    and ``memo`` keeps it. A value is named by the object itself, so a subvalue shared
+    between several places is checked once. The memo lives in this one frame, so a level
+    of descent costs no more interpreter frames than before."""
     if depth > MAX_RECURSION_DEPTH:
         return False
     h = _head(t)
@@ -195,10 +201,11 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
     ctor, args = h
     if memo is None or ctor not in _COMPOSITE:
         return _leaf(v, ctor, args)
-    key = (id(v), at, depth)
-    hit = memo.get(key)
-    if hit is not None:
-        return hit
+    if at is not None:
+        key = (id(v), at, depth)
+        hit = memo.get(key)
+        if hit is not None:
+            return hit
     n = len(args)
     r = False
 
@@ -209,14 +216,14 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
         if items is not None and len(items) == n:
             r = True
             for i, (c, ct) in enumerate(zip(items, args)):
-                if not _conforms_in(c, ct, at + (i + 1,), env, depth + 1, memo):
+                if not _conforms_in(c, ct, None if at is None else at + (i + 1,), env, depth + 1, memo):
                     r = False
                     break
     elif ctor == "seq":
         if n == 1 and v.is_tuple:
             r = True
             for c in v.items():
-                if not _conforms_in(c, args[0], at + (1,), env, depth + 1, memo):
+                if not _conforms_in(c, args[0], None if at is None else at + (1,), env, depth + 1, memo):
                     r = False
                     break
     elif ctor == "compound":
@@ -225,7 +232,7 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
         if lb is not None and items is not None and len(items) == n and _atom_bytes(items[0]) == lb:
             r = True
             for i, (c, ct) in enumerate(zip(items[1:], args[1:])):
-                if not _conforms_in(c, ct, at + (i + 2,), env, depth + 1, memo):
+                if not _conforms_in(c, ct, None if at is None else at + (i + 2,), env, depth + 1, memo):
                     r = False
                     break
 
@@ -238,7 +245,7 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
         if elems is not None:
             r = True
             for e in elems:
-                if not _conforms_in(e, args[0], at + (1,), env, depth + 1, memo):
+                if not _conforms_in(e, args[0], None if at is None else at + (1,), env, depth + 1, memo):
                     r = False
                     break
     elif ctor == "map-of":
@@ -250,8 +257,8 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
             r = True
             for k, val in entries:
                 if not (
-                    _conforms_in(k, args[0], at + (1,), env, depth + 1, memo)
-                    and _conforms_in(val, args[1], at + (2,), env, depth + 1, memo)
+                    _conforms_in(k, args[0], None if at is None else at + (1,), env, depth + 1, memo)
+                    and _conforms_in(val, args[1], None if at is None else at + (2,), env, depth + 1, memo)
                 ):
                     r = False
                     break
@@ -262,18 +269,21 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
 
     # Composition (same `v`).
     elif ctor == "union":
+        # Two or more alternatives over one value: below them, shared mode.
+        uat = at if at is not None or n < 2 else (object(),)
         for i, ct in enumerate(args):
-            if _conforms_in(v, ct, at + (i + 1,), env, depth + 1, memo):
+            if _conforms_in(v, ct, None if uat is None else uat + (i + 1,), env, depth + 1, memo):
                 r = True
                 break
     elif ctor == "and":
         r = True
+        uat = at if at is not None or n < 2 else (object(),)
         for i, ct in enumerate(args):
-            if not _conforms_in(v, ct, at + (i + 1,), env, depth + 1, memo):
+            if not _conforms_in(v, ct, None if uat is None else uat + (i + 1,), env, depth + 1, memo):
                 r = False
                 break
     elif ctor == "not":
-        r = n == 1 and not _conforms_in(v, args[0], at + (1,), env, depth + 1, memo)
+        r = n == 1 and not _conforms_in(v, args[0], None if at is None else at + (1,), env, depth + 1, memo)
 
     # Recursion. A ``ref`` denotes the ``rec`` that lexically encloses it and
     # continues in that binding's environment, never the unfolding site's (ADR 0011).
@@ -281,15 +291,20 @@ def _conforms_in(v: Value, t: Value, at: tuple, env: Optional[_Binding], depth: 
     elif ctor == "rec":
         nb = _atom_bytes(args[0]) if n == 2 else None
         if nb is not None:
-            binding = _Binding(nb, args[1], at + (2,), env)
+            binding = _Binding(nb, args[1], None if at is None else at + (2,), env)
             r = _conforms_in(v, args[1], binding.body_at, binding, depth + 1, memo)
     elif ctor == "ref":
         nb = _atom_bytes(args[0]) if n == 1 else None
         binding = _env_lookup(env, nb) if nb is not None else None
         if binding is not None:  # else an unbound reference
-            r = _conforms_in(v, binding.body, binding.body_at, binding, depth + 1, memo)
+            # A binding entered before shared mode takes a position when a shared ref first
+            # needs one.
+            if at is not None and binding.body_at is None:
+                binding.body_at = (object(),)
+            r = _conforms_in(v, binding.body, None if at is None else binding.body_at, binding, depth + 1, memo)
 
-    memo[key] = r
+    if at is not None:
+        memo[key] = r
     return r
 
 
@@ -430,7 +445,7 @@ def _conforms_record(v: Value, mode: Value, fields, at: tuple, env, depth: int, 
         if name in present:
             covered += 1
             # Field k is the record's item k + 2; its type is the field form's item 3.
-            if not _conforms_in(present[name], ty, at + (k + 2, 3), env, depth + 1, memo):
+            if not _conforms_in(present[name], ty, None if at is None else at + (k + 2, 3), env, depth + 1, memo):
                 return False
         elif required:
             return False

@@ -375,7 +375,8 @@ def _lookup(env, name: bytes):
 
 
 def _keep(memo: dict, key, outcome: _Outcome) -> _Outcome:
-    memo[key] = outcome
+    if key is not None:
+        memo[key] = outcome
     return outcome
 
 
@@ -412,12 +413,14 @@ def _record(v: Value, args: List[Value], path, at):
     return None, children
 
 
-def _check(v: Value, t: Value, path, at, env, depth: int, memo: dict) -> _Outcome:
+def _check(v: Value, t: Value, path, at, env, depth: int, memo: dict, shared: bool) -> _Outcome:
     """One sub-check. ``path`` and ``at`` are tuples naming the value occurrence and the
     node of the written descriptor, whose environment the position fixes (ADR 0011). A
     composite sub-check's outcome, location included, is a function of (path, at, depth),
-    and ``memo`` keeps it for the rest of the check (ADR 0013). ``_keep`` stores it after
-    the recursion returns, so a level of descent costs no more interpreter frames."""
+    and ``memo`` keeps it for the rest of the check (ADR 0013), in shared mode only: below
+    a union or intersection with two or more alternatives over one value, where a
+    sub-check can be reached along several routes. ``_keep`` stores it after the recursion
+    returns, so a level of descent costs no more interpreter frames."""
     if depth > MAX_RECURSION_DEPTH:
         return EXHAUSTED, Location(path, at, "limit")
     ctor, args = _head(t)  # the gate admitted t, so every node reached is a descriptor
@@ -425,15 +428,15 @@ def _check(v: Value, t: Value, path, at, env, depth: int, memo: dict) -> _Outcom
     if ctor in _LEAVES:
         return None if _conforms_in(v, t, (), None, 0, None) else _refused(path, at)
 
-    key = (path, at, depth)
-    if key in memo:
+    key = (path, at, depth) if shared else None
+    if key is not None and key in memo:
         return memo[key]
 
     if ctor == "union":
         exhausted: _Outcome = None
         deepest: _Outcome = None
         for i, alternative in enumerate(args, start=1):
-            outcome = _check(v, alternative, path, at + (i,), env, depth + 1, memo)
+            outcome = _check(v, alternative, path, at + (i,), env, depth + 1, memo, shared or len(args) > 1)
             if outcome is None:
                 return _keep(memo, key, None)
             if outcome[0] == EXHAUSTED:
@@ -448,25 +451,27 @@ def _check(v: Value, t: Value, path, at, env, depth: int, memo: dict) -> _Outcom
         return _keep(memo, key, (MISMATCH, Location(path, at, "no-alternative")))
 
     if ctor == "not":
-        outcome = _check(v, args[0], path, at + (1,), env, depth + 1, memo)
+        outcome = _check(v, args[0], path, at + (1,), env, depth + 1, memo, shared)
         if outcome is None:
             return _keep(memo, key, (MISMATCH, Location(path, at, "complement")))
         return _keep(memo, key, None if outcome[0] == MISMATCH else outcome)
 
     if ctor == "rec":
         body_at = at + (2,)
-        return _keep(memo, key, _check(v, args[1], path, body_at, ((args[0].bytes(), args[1], body_at), env), depth + 1, memo))
+        return _keep(memo, key, _check(v, args[1], path, body_at, ((args[0].bytes(), args[1], body_at), env), depth + 1, memo, shared))
 
     if ctor == "ref":
         binding = _lookup(env, args[0].bytes())
         if binding is None:  # pragma: no cover - the gate admits only bound refs
             return _keep(memo, key, _refused(path, at))
         (_name, body, body_at), _parent = binding
-        return _keep(memo, key, _check(v, body, path, body_at, binding, depth + 1, memo))
+        return _keep(memo, key, _check(v, body, path, body_at, binding, depth + 1, memo, shared))
 
     # The rest are conjunctions: and over the same value, the others over parts of
     # it after their own checks. Each child is (value, descriptor, path, position).
     children: list
+    # The intersection's conjuncts are alternatives over one value: shared mode below two.
+    child_shared = shared or (ctor == "and" and len(args) > 1)
     if ctor == "and":
         children = [(v, c, path, at + (i,)) for i, c in enumerate(args, start=1)]
     elif ctor == "tuple":
@@ -507,7 +512,7 @@ def _check(v: Value, t: Value, path, at, env, depth: int, memo: dict) -> _Outcom
     # A mismatching child decides; otherwise the first exhausted child does.
     exhausted = None
     for child_v, child_t, child_path, child_at in children:
-        outcome = _check(child_v, child_t, child_path, child_at, env, depth + 1, memo)
+        outcome = _check(child_v, child_t, child_path, child_at, env, depth + 1, memo, child_shared)
         if outcome is None:
             continue
         if outcome[0] == MISMATCH:
@@ -523,4 +528,4 @@ def diagnose(v: Value, t: Value) -> Diagnosis:
     gate = _wf(t, (), (), (), 0)
     if gate is not None:
         return _finish(gate)
-    return _finish(_check(v, t, (), (), None, 0, {}))
+    return _finish(_check(v, t, (), (), None, 0, {}, False))
