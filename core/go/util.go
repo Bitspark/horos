@@ -195,34 +195,64 @@ func isASCIIWS(c rune) bool {
 	}
 }
 
-// checker holds one check's memo (ADR 0013). ontos values carry no identity a Go program
-// can observe, so the checker names each value occurrence by its parent's occurrence and
-// its item index in the parent tuple, and each descriptor position the same way; the
-// root of each is 0. Within one check an occurrence names one value and a position one
-// descriptor node, whose environment is fixed by the position (ADR 0011). A composite
-// sub-check's verdict is therefore a function of (occurrence, position, depth), and memo
-// keeps it, so no sub-check is computed twice.
+// checker holds one check's memo (ADR 0013). A check reaches one sub-check along two
+// routes only below a union or intersection with two or more alternatives over the same
+// value, so the memo is kept only there: the check enters shared mode at such a node, and
+// everything below it is shared. Outside shared mode no id is computed and nothing is
+// kept, so a check without such a node costs what it did before ADR 0013.
+//
+// ontos values carry no identity a Go program can observe, so in shared mode the checker
+// numbers each value occurrence by its parent's number and its item index in the parent
+// tuple, and each descriptor position the same way. The node where shared mode begins is
+// reached by one route, so it takes a fresh number; a rec binding entered before shared
+// mode takes one for its body when a ref first needs it. Within one check a number names
+// one value occurrence or one node of the written descriptor, whose environment the
+// position fixes (ADR 0011). A composite sub-check's verdict is therefore a function of
+// (occurrence, position, depth), and memo keeps it, so no shared sub-check is computed
+// twice. -1 means outside shared mode.
 type checker struct {
-	values    childIDs
-	positions childIDs
-	memo      map[memoKey]bool
+	ids  map[idKey]int
+	memo map[memoKey]bool
+	next int
 }
 
 type memoKey struct{ value, position, depth int }
 
-// childIDs numbers the children of numbered nodes: (parent, item index) -> child.
-type childIDs map[[2]int]int
+type idKey struct {
+	positions     bool
+	parent, index int
+}
 
-func (m childIDs) child(parent, index int) int {
-	k := [2]int{parent, index}
-	if id, ok := m[k]; ok {
+// fresh is a new number, distinct from every other number of this check.
+func (c *checker) fresh() int {
+	if c.memo == nil {
+		c.ids = map[idKey]int{}
+		c.memo = map[memoKey]bool{}
+	}
+	c.next++
+	return c.next
+}
+
+func (c *checker) child(positions bool, parent, index int) int {
+	if parent < 0 {
+		return -1
+	}
+	if index < 0 {
+		return parent
+	}
+	k := idKey{positions: positions, parent: parent, index: index}
+	if id, ok := c.ids[k]; ok {
 		return id
 	}
-	id := len(m) + 1
-	m[k] = id
+	id := c.fresh()
+	c.ids[k] = id
 	return id
 }
 
-func newChecker() *checker {
-	return &checker{values: childIDs{}, positions: childIDs{}, memo: map[memoKey]bool{}}
-}
+// value is the number of item index of the value occurrence parent; pos is the number of
+// item index of the descriptor position parent, or parent itself when index is -1. Both
+// are -1 outside shared mode.
+func (c *checker) value(parent, index int) int { return c.child(false, parent, index) }
+func (c *checker) pos(parent, index int) int   { return c.child(true, parent, index) }
+
+func newChecker() *checker { return &checker{} }

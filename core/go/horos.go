@@ -116,7 +116,7 @@ func Conforms(v, t Value) bool {
 	// Soundness gate (spec §3 MUST): v : T presupposes wf(T). A descriptor that is
 	// not well-formed admits no values, even where an individual arm would otherwise
 	// match — so check WF once at the entry and never arm-by-arm below.
-	return WF(t) && newChecker().conformsIn(v, 0, t, 0, nil, 0)
+	return WF(t) && newChecker().conformsIn(v, -1, t, -1, -1, nil, 0)
 }
 
 // conformsIn is Conforms with the recursion environment threaded through: env binds
@@ -124,10 +124,12 @@ func Conforms(v, t Value) bool {
 // whose nodes are closures). Callers check WF(t) first; conformsIn relies on its
 // guardedness (see the package comment).
 //
-// vid names v's occurrence in the checked value and at names t's position in the
-// written descriptor (checker). A composite sub-check's result is a function of
-// (vid, at, depth) alone, so it is computed once per check (ADR 0013).
-func (c *checker) conformsIn(v Value, vid int, t Value, at int, env *envScope, depth int) bool {
+// In shared mode vid names v's occurrence in the checked value, and t's position in the
+// written descriptor is item index of the position parent (parent itself when index is
+// -1); outside it vid and parent are -1 (checker). The position is numbered only for a
+// shared composite sub-check, whose result is a function of (vid, position, depth) alone,
+// so it is computed once per check (ADR 0013); a leaf is never numbered.
+func (c *checker) conformsIn(v Value, vid int, t Value, parent, index int, env *envScope, depth int) bool {
 	// Recursion-depth guard (horos-internal#37): past MaxRecursionDepth frames, return a deterministic
 	// false rather than risk a native-stack overflow. Counted at the same point in all
 	// three cores so the trip depth is byte-identical.
@@ -138,9 +140,10 @@ func (c *checker) conformsIn(v Value, vid int, t Value, at int, env *envScope, d
 	if !ok {
 		return false // not a horos descriptor
 	}
-	if isLeafCtor(ctor) {
-		return c.node(v, vid, ctor, args, at, env, depth)
+	if vid < 0 || isLeafCtor(ctor) {
+		return c.node(v, vid, ctor, args, -1, env, depth)
 	}
+	at := c.pos(parent, index)
 	key := memoKey{value: vid, position: at, depth: depth}
 	if r, hit := c.memo[key]; hit {
 		return r
@@ -148,6 +151,16 @@ func (c *checker) conformsIn(v Value, vid int, t Value, at int, env *envScope, d
 	r := c.node(v, vid, ctor, args, at, env, depth)
 	c.memo[key] = r
 	return r
+}
+
+// share enters shared mode at a union or intersection of two or more alternatives over
+// the same value: below it one sub-check can be reached along several routes (checker).
+// It returns the numbers of v and of the node, fresh ones when shared mode begins here.
+func (c *checker) share(vid, at, alternatives int) (int, int) {
+	if vid >= 0 || alternatives < 2 {
+		return vid, at
+	}
+	return c.fresh(), c.fresh()
 }
 
 // node decides one descriptor node against v. Leaf arms never use c, so a nil checker
@@ -304,7 +317,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 			return false
 		}
 		for i := range items {
-			if !c.conformsIn(items[i], c.values.child(vid, i), args[i], c.positions.child(at, i+1), env, depth+1) {
+			if !c.conformsIn(items[i], c.value(vid, i), args[i], at, i+1, env, depth+1) {
 				return false
 			}
 		}
@@ -318,7 +331,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 			return false
 		}
 		for i, item := range tup.Items() {
-			if !c.conformsIn(item, c.values.child(vid, i), args[0], c.positions.child(at, 1), env, depth+1) {
+			if !c.conformsIn(item, c.value(vid, i), args[0], at, 1, env, depth+1) {
 				return false
 			}
 		}
@@ -343,7 +356,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 			return false
 		}
 		for i := range ts {
-			if !c.conformsIn(items[i+1], c.values.child(vid, i+1), ts[i], c.positions.child(at, i+2), env, depth+1) {
+			if !c.conformsIn(items[i+1], c.value(vid, i+1), ts[i], at, i+2, env, depth+1) {
 				return false
 			}
 		}
@@ -360,7 +373,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 			return false
 		}
 		for i, e := range elems {
-			if !c.conformsIn(e, c.values.child(vid, i+1), args[0], c.positions.child(at, 1), env, depth+1) {
+			if !c.conformsIn(e, c.value(vid, i+1), args[0], at, 1, env, depth+1) {
 				return false
 			}
 		}
@@ -374,7 +387,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 			return false
 		}
 		for i, e := range elems {
-			if !c.conformsIn(e, c.values.child(vid, i+1), args[0], c.positions.child(at, 1), env, depth+1) {
+			if !c.conformsIn(e, c.value(vid, i+1), args[0], at, 1, env, depth+1) {
 				return false
 			}
 		}
@@ -389,9 +402,9 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 		}
 		for j, kv := range entries {
 			// Entry j is the map's item j+1, a (key, value) tuple.
-			entry := c.values.child(vid, j+1)
-			if !c.conformsIn(kv[0], c.values.child(entry, 0), args[0], c.positions.child(at, 1), env, depth+1) ||
-				!c.conformsIn(kv[1], c.values.child(entry, 1), args[1], c.positions.child(at, 2), env, depth+1) {
+			entry := c.value(vid, j+1)
+			if !c.conformsIn(kv[0], c.value(entry, 0), args[0], at, 1, env, depth+1) ||
+				!c.conformsIn(kv[1], c.value(entry, 1), args[1], at, 2, env, depth+1) {
 				return false
 			}
 		}
@@ -407,15 +420,17 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 
 	// Composition — recurse on the SAME v.
 	case "union":
+		vid, at = c.share(vid, at, len(args))
 		for i, ct := range args {
-			if c.conformsIn(v, vid, ct, c.positions.child(at, i+1), env, depth+1) {
+			if c.conformsIn(v, vid, ct, at, i+1, env, depth+1) {
 				return true
 			}
 		}
 		return false
 	case "and":
+		vid, at = c.share(vid, at, len(args))
 		for i, ct := range args {
-			if !c.conformsIn(v, vid, ct, c.positions.child(at, i+1), env, depth+1) {
+			if !c.conformsIn(v, vid, ct, at, i+1, env, depth+1) {
 				return false
 			}
 		}
@@ -424,7 +439,7 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 		if len(args) != 1 {
 			return false
 		}
-		return !c.conformsIn(v, vid, args[0], c.positions.child(at, 1), env, depth+1)
+		return !c.conformsIn(v, vid, args[0], at, 1, env, depth+1)
 
 	// Singleton — membership by ontos structural identity (defines no new
 	// equality).
@@ -449,8 +464,8 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 		body := args[1]
 		// Push one shared node (no per-frame slice copy); the child frame sees this
 		// binding innermost-first. The node closes over env.
-		bodyAt := c.positions.child(at, 2)
-		return c.conformsIn(v, vid, body, bodyAt, pushEnv(env, nb, body, bodyAt), depth+1)
+		bodyAt := c.pos(at, 2)
+		return c.conformsIn(v, vid, body, bodyAt, -1, pushEnv(env, nb, body, bodyAt), depth+1)
 	case "ref":
 		if len(args) != 1 {
 			return false
@@ -467,8 +482,16 @@ func (c *checker) node(v Value, vid int, ctor string, args []Value, at int, env 
 		}
 		// Unfold in the binding's own environment, never the unfolding site's, so the
 		// body's free refs keep the bindings they were written under. The body is checked
-		// at its own position, which fixes its environment.
-		return c.conformsIn(v, vid, b.body, b.bodyAt, b, depth+1)
+		// at its own position, which fixes its environment; a binding entered before
+		// shared mode takes its body's number when a shared ref first needs it.
+		if vid >= 0 && b.bodyAt < 0 {
+			b.bodyAt = c.fresh()
+		}
+		bodyAt := b.bodyAt
+		if vid < 0 {
+			bodyAt = -1
+		}
+		return c.conformsIn(v, vid, b.body, bodyAt, -1, b, depth+1)
 
 	// Unknown ctor or wrong arity → not a recognized descriptor.
 	default:
@@ -555,8 +578,8 @@ func (c *checker) conformsRecord(v Value, vid int, mode Value, fields []Value, a
 			covered++
 			// Entry j is the map's item j+1; its value is that tuple's item 1. Field k is
 			// the record's item k+2, and its type is the field form's item 3.
-			value := c.values.child(c.values.child(vid, j+1), 1)
-			if !c.conformsIn(entries[j][1], value, ty, c.positions.child(c.positions.child(at, k+2), 3), env, depth+1) {
+			value := c.value(c.value(vid, j+1), 1)
+			if !c.conformsIn(entries[j][1], value, ty, c.pos(at, k+2), 3, env, depth+1) {
 				return false
 			}
 		} else if required {
