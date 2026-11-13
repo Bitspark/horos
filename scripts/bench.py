@@ -14,6 +14,7 @@ growth V8 reports for TypeScript, and the peak traced memory for Python (a separ
 slower run).
 
 Run:  ONTOS_PY_ROOT=<ontos v0.17.0 checkout> python3 scripts/bench.py [--n 200000] [--runs 3] [--against DIR]
+      [--cores go,rust,typescript,python]
 """
 
 from __future__ import annotations
@@ -67,6 +68,7 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=200_000)
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--against", type=Path, help="a second checkout, run alternately with this one")
+    parser.add_argument("--cores", default="go,rust,typescript,python", help="comma-separated cores to time")
     args = parser.parse_args()
     if not os.environ.get("ONTOS_PY_ROOT"):
         raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout")
@@ -75,7 +77,7 @@ def main() -> None:
         cores = {name: build(root, Path(tmp) / name) for name, root in trees.items()}
         rows = []
         for mode in ("plain", "union"):
-            for core in ("go", "rust", "typescript", "python"):
+            for core in args.cores.split(","):
                 samples = {name: [] for name in trees}
                 for _ in range(args.runs):
                     for name in trees:

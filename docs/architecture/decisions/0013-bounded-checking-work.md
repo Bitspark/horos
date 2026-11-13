@@ -61,9 +61,15 @@ because its name-keyed guard pruned the second route, wrongly.
    name; a `rec` entered before shared mode names its body when a shared `ref` first
    needs it. A position is named only for a composite sub-check, never for a leaf.
    - Rust values own their children and cannot share them, so the address of a node
-     borrowed from the caller's value or descriptor names both the occurrence and the
-     position. Collections and records are walked borrowed, never copied, so no
-     temporary can reuse an address.
+     names both the occurrence and the position. Outside shared mode the boolean walks
+     the copies ontos/data returns, as before. Each shared region (a multi-branch node
+     reached outside shared mode, and everything below it) therefore takes a memo of its
+     own, and inside it every value is walked borrowed from the region's value, which
+     outlives the memo. So no freed copy can lend its address to another value while
+     the memo exists. Regions lose no reuse: outside shared mode a value occurrence is
+     checked along one chain of one-child nodes, so it roots at most one region, and two
+     regions share no key. The diagnostic APIs walk borrowed throughout and keep one memo
+     per check.
    - Go's ontos values expose no identity. Go numbers each occurrence by its parent's
      number and its item index, and each position the same way. Its diagnosis keeps
      one canonical path node and position node per step.
@@ -93,13 +99,20 @@ because its name-keyed guard pruned the second route, wrongly.
 
 ## Evidence
 
-The authored corpora replay unchanged in every implementation. On seeds 1 to 3 of
-the scoping generator (c676d42), 2,000 pairs each, the memoized Go checker gives the
-same verdict and the same diagnosis, location included, as the checker before this
-change on every pair. The overlapping family at depth 64, with a failing and a
-conforming innermost value, and the six seed pairs finish within milliseconds in
-every implementation, with the verdicts the checker before this change gave where it
-finished.
+- **Corpora:** the authored corpora replay unchanged in every implementation. The four
+  command-line tools agree on all of them and on seeded conformance.
+  `vectors/checking-work.json` pins the overlapping family at depth 64, with a failing and
+  a conforming innermost value; every implementation finishes it at once.
+- **The six seeds:** on all 12,000 pairs of seeds 1009, 1020, 1036, 1037, 1049 and 1094,
+  the four implementations agree on every `conforms` and `diagnose`, and no call takes
+  more than 0.3 s. The checker before this change gave the same verdict on the six slow
+  pairs where it finished.
+- **Seeded agreement with the old checker:** on the 6,000 pairs of seeds 1–3 of the
+  seeded generator, the Go command-line tool before and after this change gives the same
+  boolean and the same diagnosis, location included, on every pair.
+- **Ordinary input:** `scripts/bench.py --against <main>` alternates the two checkouts run
+  by run on a list of 200,000 closed records, with a field typed as an int or as a
+  three-way union of leaves. BENCHSUMMARY
 
 ## Consequences
 

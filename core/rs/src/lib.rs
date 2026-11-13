@@ -12,6 +12,7 @@ use std::cmp::Ordering;
 
 use ontos_data::{
     read_bool, read_int, read_int_bytes, read_list, read_map, read_set, read_text, recognize_int,
+    DataError,
 };
 
 /// A persistent (cons-list) stack of scoped entries threaded through the recursion by
@@ -226,17 +227,21 @@ pub fn conforms(v: &Value, t: &Value) -> bool {
     // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
     // not well-formed admits no values, even where an individual arm would otherwise
     // match — so check `wf` once at the entry and never arm-by-arm below.
-    wf(t) && conforms_in(v, t, None, 0, false, &mut Memo::new())
+    wf(t) && node::<false>(v, t, None, 0, &mut Memo::new())
 }
 
-/// One check's memo (ADR 0013): a composite sub-check's verdict, keyed by the addresses of
-/// its value and descriptor nodes and its depth. It is kept only in shared mode, below a
-/// union or intersection with two or more alternatives over one value: elsewhere every
-/// sub-check is reached along one route. Every `&Value` that reaches `conforms_in`
-/// is borrowed from the caller's value or descriptor, never a temporary copy, so within a
-/// check an address names one value occurrence or one node of the written descriptor, and
-/// the descriptor node fixes its environment (ADR 0011). The verdict is a function of the
-/// key alone, so no sub-check is computed twice.
+/// One shared region's memo (ADR 0013): a composite sub-check's verdict, keyed by the
+/// addresses of its value and descriptor nodes and its depth. A region is a union or
+/// intersection with two or more alternatives over one value, reached outside shared
+/// mode, and everything below it: only there can a sub-check be reached along several
+/// routes. Each region takes a fresh memo. Inside it every value is walked borrowed from
+/// the region's value, which outlives the memo even when it is part of a copy ontos/data
+/// made outside shared mode, so an address names one value occurrence for as long as the
+/// memo exists; a descriptor address names one node of the written descriptor, which
+/// fixes its environment (ADR 0011). Outside shared mode a value occurrence is checked
+/// along one chain of one-child nodes, so it roots at most one region and two regions
+/// share no key. The verdict is a function of the key alone, so no sub-check is computed
+/// twice.
 type Memo = HashMap<(usize, usize, usize), bool>;
 
 pub(crate) fn addr(v: &Value) -> usize {
@@ -257,7 +262,74 @@ type EnvEntry<'a> = (&'a [u8], &'a Value);
 /// written in, so the node is the binding's closure.
 type EnvNode<'s, 'a> = Scope<'s, EnvEntry<'a>>;
 
-/// `conforms` with the recursion environment threaded through:
+/// A sub-check in shared mode (ADR 0013): a composite node's verdict is kept under its
+/// key and reused by every later route to it. Leaves do no descent and are not kept.
+fn conforms_in<'a>(
+    v: &Value,
+    t: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
+    if depth > MAX_RECURSION_DEPTH {
+        return false;
+    }
+    match head(t) {
+        Some((ctor, _)) if !is_leaf_ctor(ctor) => {
+            let key = (addr(v), addr(t), depth);
+            if let Some(&r) = memo.get(&key) {
+                return r;
+            }
+            let r = node::<true>(v, t, env, depth, memo);
+            memo.insert(key, r);
+            r
+        }
+        _ => node::<true>(v, t, env, depth, memo),
+    }
+}
+
+/// A sub-check of a `SHARED` node: through `conforms_in`'s memo in shared mode, straight
+/// to `node` outside it. Resolved at compile time, so outside shared mode the check runs
+/// the code it ran before ADR 0013, one frame per level.
+#[inline(always)]
+fn sub<'a, const SHARED: bool>(
+    v: &Value,
+    t: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
+    if SHARED {
+        conforms_in(v, t, env, depth, memo)
+    } else {
+        node::<false>(v, t, env, depth, memo)
+    }
+}
+
+/// Two or more alternatives over `v`, reached outside shared mode: a shared region begins,
+/// with a memo of its own (ADR 0013). A union if `union`, else an intersection. Kept out
+/// of `node`, so that a frame of `node` stays the size it was before.
+#[inline(never)]
+fn region<'a>(
+    v: &Value,
+    ts: &'a [Value],
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    union: bool,
+) -> bool {
+    let mut memo = Memo::new();
+    let mut alternative = |ct: &'a Value| conforms_in(v, ct, env, depth + 1, &mut memo);
+    if union {
+        ts.iter().any(&mut alternative)
+    } else {
+        ts.iter().all(&mut alternative)
+    }
+}
+
+/// `conforms` of one descriptor node, with the recursion environment threaded through.
+/// `SHARED` says whether the node lies below a union or intersection with two or more
+/// alternatives over one value, where `conforms_in` keeps its sub-checks in `memo`, the
+/// region's (ADR 0013); outside shared mode `memo` is not used.
 ///
 /// `env` binds each `rec` name that lexically encloses `t` to its body descriptor. A `ref`
 /// denotes its nearest enclosing binding in the written descriptor and continues in that
@@ -268,62 +340,11 @@ type EnvNode<'s, 'a> = Scope<'s, EnvEntry<'a>>;
 /// `rec` strictly above every descriptor node checked since the last descent, and each
 /// descent strictly shrinks the finite `v`. Every unfolding is also one counted frame, so
 /// `MAX_RECURSION_DEPTH` is the backstop.
-fn conforms_in<'a>(
+fn node<'a, const SHARED: bool>(
     v: &Value,
     t: &'a Value,
     env: Option<&EnvNode<'_, 'a>>,
     depth: usize,
-    shared: bool,
-    memo: &mut Memo,
-) -> bool {
-    // Outside shared mode every sub-check is reached along one route: nothing to keep.
-    if !shared {
-        return node(v, t, env, depth, false, memo);
-    }
-    if depth > MAX_RECURSION_DEPTH {
-        return false;
-    }
-    match head(t) {
-        Some((ctor, _)) if !is_leaf_ctor(ctor) => {
-            let key = (addr(v), addr(t), depth);
-            if let Some(&r) = memo.get(&key) {
-                return r;
-            }
-            let r = node(v, t, env, depth, true, memo);
-            memo.insert(key, r);
-            r
-        }
-        _ => node(v, t, env, depth, true, memo),
-    }
-}
-
-/// A sub-check: through `conforms_in`'s memo in shared mode, straight to `node` outside
-/// it, so a check that never enters shared mode takes one frame per level, as before
-/// ADR 0013.
-#[inline(always)]
-fn sub<'a>(
-    v: &Value,
-    t: &'a Value,
-    env: Option<&EnvNode<'_, 'a>>,
-    depth: usize,
-    shared: bool,
-    memo: &mut Memo,
-) -> bool {
-    if shared {
-        conforms_in(v, t, env, depth, true, memo)
-    } else {
-        node(v, t, env, depth, false, memo)
-    }
-}
-
-/// One descriptor node against `v`; `conforms_in` memoizes the composite ones in shared
-/// mode.
-fn node<'a>(
-    v: &Value,
-    t: &'a Value,
-    env: Option<&EnvNode<'_, 'a>>,
-    depth: usize,
-    shared: bool,
     memo: &mut Memo,
 ) -> bool {
     // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a
@@ -410,7 +431,7 @@ fn node<'a>(
                     && items
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| sub(c, ct, env, depth + 1, shared, memo))
+                        .all(|(c, ct)| sub::<SHARED>(c, ct, env, depth + 1, memo))
             }
             None => false,
         },
@@ -418,7 +439,7 @@ fn node<'a>(
             Some(tup) => tup
                 .items()
                 .iter()
-                .all(|c| sub(c, te, env, depth + 1, shared, memo)),
+                .all(|c| sub::<SHARED>(c, te, env, depth + 1, memo)),
             None => false,
         },
         ("compound", [label, ts @ ..]) => match (v.as_tuple(), atom_bytes(label)) {
@@ -429,57 +450,48 @@ fn node<'a>(
                     && items[1..]
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| sub(c, ct, env, depth + 1, shared, memo))
+                        .all(|(c, ct)| sub::<SHARED>(c, ct, env, depth + 1, memo))
             }
             _ => false,
         },
 
         // Structural collections — well-formedness delegates to ontos/data; the element
         // descriptors add the per-element checks (descents).
-        // The elements are walked borrowed from `v`, as the memo requires.
-        ("list-of", [te]) => {
-            read_list(v).is_ok()
-                && labelled_items(v)
-                    .iter()
-                    .all(|e| sub(e, te, env, depth + 1, shared, memo))
-        }
-        ("set-of", [te]) => {
-            read_set(v).is_ok()
-                && labelled_items(v)
-                    .iter()
-                    .all(|e| sub(e, te, env, depth + 1, shared, memo))
-        }
-        ("map-of", [tk, tv]) => {
-            read_map(v).is_ok()
-                && labelled_items(v)
-                    .iter()
-                    .all(|entry| match entry.as_tuple().map(|e| e.items()) {
-                        Some([k, val]) => {
-                            sub(k, tk, env, depth + 1, shared, memo)
-                                && sub(val, tv, env, depth + 1, shared, memo)
-                        }
-                        _ => false,
-                    })
-        }
+        ("list-of", [te]) => elements::<SHARED>(v, read_list(v), te, env, depth, memo),
+        ("set-of", [te]) => elements::<SHARED>(v, read_set(v), te, env, depth, memo),
+        ("map-of", [tk, tv]) => entries::<SHARED>(v, tk, tv, env, depth, memo),
 
         // Records — a well-formed map keyed by utf8-text, with required/optional fields
         // and a mandatory open/closed flag.
         ("record", [mode, fields @ ..]) => {
-            conforms_record(v, mode, fields, env, depth, shared, memo)
+            conforms_record::<SHARED>(v, mode, fields, env, depth, memo)
         }
 
         // Composition — recurse on the SAME `v`.
         // Two or more alternatives over one value: below them a sub-check can be reached
-        // along several routes, so they are checked in shared mode (ADR 0013).
-        ("union", ts) => {
-            let shared = shared || ts.len() > 1;
-            ts.iter().any(|ct| sub(v, ct, env, depth + 1, shared, memo))
+        // along several routes, so they are checked in shared mode (ADR 0013). Reached
+        // outside it, they begin a region with a memo of its own.
+        ("union", ts) if ts.len() > 1 => {
+            if SHARED {
+                ts.iter().any(|ct| conforms_in(v, ct, env, depth + 1, memo))
+            } else {
+                region(v, ts, env, depth, true)
+            }
         }
-        ("and", ts) => {
-            let shared = shared || ts.len() > 1;
-            ts.iter().all(|ct| sub(v, ct, env, depth + 1, shared, memo))
+        ("union", ts) => ts
+            .iter()
+            .any(|ct| sub::<SHARED>(v, ct, env, depth + 1, memo)),
+        ("and", ts) if ts.len() > 1 => {
+            if SHARED {
+                ts.iter().all(|ct| conforms_in(v, ct, env, depth + 1, memo))
+            } else {
+                region(v, ts, env, depth, false)
+            }
         }
-        ("not", [t1]) => !sub(v, t1, env, depth + 1, shared, memo),
+        ("and", ts) => ts
+            .iter()
+            .all(|ct| sub::<SHARED>(v, ct, env, depth + 1, memo)),
+        ("not", [t1]) => !sub::<SHARED>(v, t1, env, depth + 1, memo),
 
         // Singleton — membership by ontos structural identity (defines no new equality).
         ("exact", [v0]) => v == v0,
@@ -491,7 +503,7 @@ fn node<'a>(
                 // Push one borrowed node (no per-frame copy); the child frame sees this
                 // binding innermost-first. The node closes over `env`.
                 let e = Scope::push((nm.bytes(), body), env);
-                sub(v, body, Some(&e), depth + 1, shared, memo)
+                sub::<SHARED>(v, body, Some(&e), depth + 1, memo)
             }
             None => false,
         },
@@ -505,7 +517,7 @@ fn node<'a>(
                 };
                 // Unfold in the binding's own environment, so the body's free refs keep
                 // the bindings they were written under.
-                sub(v, b.head.1, Some(b), depth + 1, shared, memo)
+                sub::<SHARED>(v, b.head.1, Some(b), depth + 1, memo)
             }
             None => false,
         },
@@ -534,13 +546,61 @@ pub(crate) fn read_field(f: &Value) -> Option<(String, bool, &Value)> {
     Some((name, required, ty))
 }
 
-fn conforms_record<'a>(
+/// The elements of a list or set `v`, given what ontos/data made of it, each against
+/// `te`. In shared mode the walk goes over `v`'s own elements, whose addresses the memo
+/// keys on; outside it over the copy ontos/data returned, as before ADR 0013. Kept out of
+/// `node`, like `conforms_record`, so that a frame of `node` stays small.
+fn elements<'a, const SHARED: bool>(
+    v: &Value,
+    read: Result<Vec<Value>, DataError>,
+    te: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
+    let Ok(copy) = read else {
+        return false;
+    };
+    let elems = if SHARED { labelled_items(v) } else { &copy[..] };
+    elems
+        .iter()
+        .all(|e| sub::<SHARED>(e, te, env, depth + 1, memo))
+}
+
+/// The entries of a map `v`, each key against `tk` and each value against `tv`, walked as
+/// `elements` walks a list.
+fn entries<'a, const SHARED: bool>(
+    v: &Value,
+    tk: &'a Value,
+    tv: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    memo: &mut Memo,
+) -> bool {
+    let Ok(copy) = read_map(v) else {
+        return false;
+    };
+    let mut entry = |k: &Value, val: &Value| {
+        sub::<SHARED>(k, tk, env, depth + 1, memo) && sub::<SHARED>(val, tv, env, depth + 1, memo)
+    };
+    if SHARED {
+        labelled_items(v)
+            .iter()
+            .all(|e| match e.as_tuple().map(|e| e.items()) {
+                Some([k, val]) => entry(k, val),
+                _ => false,
+            })
+    } else {
+        copy.iter().all(|(k, val)| entry(k, val))
+    }
+}
+
+fn conforms_record<'a, const SHARED: bool>(
     v: &Value,
     mode: &Value,
     fields: &'a [Value],
     env: Option<&Scope<'_, EnvEntry<'a>>>,
     depth: usize,
-    shared: bool,
     memo: &mut Memo,
 ) -> bool {
     // mode is a bare atom flag (open | closed).
@@ -549,27 +609,36 @@ fn conforms_record<'a>(
         Some(b"closed") => false,
         _ => return false,
     };
-    // v must be a well-formed ontos/data map. Its entries are walked borrowed from `v`,
-    // as the memo requires.
-    if read_map(v).is_err() {
+    // v must be a well-formed ontos/data map.
+    let Ok(entries) = read_map(v) else {
         return false;
-    }
-    let entries = labelled_items(v);
+    };
     // Index the map's utf8-text keys to their values in a single pass — a map-backed
     // lookup replacing the old per-field linear `present.iter().find`. `read_map`
     // already guarantees keys are sorted and dup-free by codec bytes; distinct keys
     // therefore decode to distinct text strings, so no `insert` ever collides and the
     // map preserves the reference core's "first match in map order" exactly. A non-text
     // key makes `v` not a record-shaped value (same early `false` as the linear scan).
+    // In shared mode the values are `v`'s own, whose addresses the memo keys on (ADR
+    // 0013); outside it, the copy `read_map` returned, as before.
     let mut present: HashMap<String, &Value> = HashMap::with_capacity(entries.len());
-    for entry in entries {
-        let Some([k, val]) = entry.as_tuple().map(|e| e.items()) else {
-            return false;
-        };
-        let Ok(key) = read_text(k) else {
-            return false;
-        };
-        present.insert(key, val);
+    if SHARED {
+        for entry in labelled_items(v) {
+            let Some([k, val]) = entry.as_tuple().map(|e| e.items()) else {
+                return false;
+            };
+            let Ok(key) = read_text(k) else {
+                return false;
+            };
+            present.insert(key, val);
+        }
+    } else {
+        for (k, val) in &entries {
+            let Ok(key) = read_text(k) else {
+                return false;
+            };
+            present.insert(key, val);
+        }
     }
     // Single pass over the declared fields drives BOTH checks (no second `read_field`
     // sweep): per field, look the name up in `present` (O(1)) for the required/optional
@@ -584,7 +653,7 @@ fn conforms_record<'a>(
         match present.get(name.as_str()) {
             Some(val) => {
                 covered += 1;
-                if !sub(val, ty, env, depth + 1, shared, memo) {
+                if !sub::<SHARED>(val, ty, env, depth + 1, memo) {
                     return false;
                 }
             }
@@ -763,7 +832,7 @@ pub(crate) fn is_leaf_ctor(ctor: &str) -> bool {
 /// inert and the result is exactly the recognizer's leaf verdict.
 pub(crate) fn leaf_classifies(v: &Value, t: &Value) -> bool {
     match head(t) {
-        Some((ctor, _)) if is_leaf_ctor(ctor) => node(v, t, None, 0, false, &mut Memo::new()),
+        Some((ctor, _)) if is_leaf_ctor(ctor) => node::<false>(v, t, None, 0, &mut Memo::new()),
         _ => false,
     }
 }
