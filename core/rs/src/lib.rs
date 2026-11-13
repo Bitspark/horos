@@ -297,6 +297,25 @@ fn conforms_in<'a>(
     }
 }
 
+/// A sub-check: through `conforms_in`'s memo in shared mode, straight to `node` outside
+/// it, so a check that never enters shared mode takes one frame per level, as before
+/// ADR 0013.
+#[inline(always)]
+fn sub<'a>(
+    v: &Value,
+    t: &'a Value,
+    env: Option<&EnvNode<'_, 'a>>,
+    depth: usize,
+    shared: bool,
+    memo: &mut Memo,
+) -> bool {
+    if shared {
+        conforms_in(v, t, env, depth, true, memo)
+    } else {
+        node(v, t, env, depth, false, memo)
+    }
+}
+
 /// One descriptor node against `v`; `conforms_in` memoizes the composite ones in shared
 /// mode.
 fn node<'a>(
@@ -391,7 +410,7 @@ fn node<'a>(
                     && items
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, shared, memo))
+                        .all(|(c, ct)| sub(c, ct, env, depth + 1, shared, memo))
             }
             None => false,
         },
@@ -399,7 +418,7 @@ fn node<'a>(
             Some(tup) => tup
                 .items()
                 .iter()
-                .all(|c| conforms_in(c, te, env, depth + 1, shared, memo)),
+                .all(|c| sub(c, te, env, depth + 1, shared, memo)),
             None => false,
         },
         ("compound", [label, ts @ ..]) => match (v.as_tuple(), atom_bytes(label)) {
@@ -410,7 +429,7 @@ fn node<'a>(
                     && items[1..]
                         .iter()
                         .zip(ts)
-                        .all(|(c, ct)| conforms_in(c, ct, env, depth + 1, shared, memo))
+                        .all(|(c, ct)| sub(c, ct, env, depth + 1, shared, memo))
             }
             _ => false,
         },
@@ -422,13 +441,13 @@ fn node<'a>(
             read_list(v).is_ok()
                 && labelled_items(v)
                     .iter()
-                    .all(|e| conforms_in(e, te, env, depth + 1, shared, memo))
+                    .all(|e| sub(e, te, env, depth + 1, shared, memo))
         }
         ("set-of", [te]) => {
             read_set(v).is_ok()
                 && labelled_items(v)
                     .iter()
-                    .all(|e| conforms_in(e, te, env, depth + 1, shared, memo))
+                    .all(|e| sub(e, te, env, depth + 1, shared, memo))
         }
         ("map-of", [tk, tv]) => {
             read_map(v).is_ok()
@@ -436,8 +455,8 @@ fn node<'a>(
                     .iter()
                     .all(|entry| match entry.as_tuple().map(|e| e.items()) {
                         Some([k, val]) => {
-                            conforms_in(k, tk, env, depth + 1, shared, memo)
-                                && conforms_in(val, tv, env, depth + 1, shared, memo)
+                            sub(k, tk, env, depth + 1, shared, memo)
+                                && sub(val, tv, env, depth + 1, shared, memo)
                         }
                         _ => false,
                     })
@@ -454,15 +473,13 @@ fn node<'a>(
         // along several routes, so they are checked in shared mode (ADR 0013).
         ("union", ts) => {
             let shared = shared || ts.len() > 1;
-            ts.iter()
-                .any(|ct| conforms_in(v, ct, env, depth + 1, shared, memo))
+            ts.iter().any(|ct| sub(v, ct, env, depth + 1, shared, memo))
         }
         ("and", ts) => {
             let shared = shared || ts.len() > 1;
-            ts.iter()
-                .all(|ct| conforms_in(v, ct, env, depth + 1, shared, memo))
+            ts.iter().all(|ct| sub(v, ct, env, depth + 1, shared, memo))
         }
-        ("not", [t1]) => !conforms_in(v, t1, env, depth + 1, shared, memo),
+        ("not", [t1]) => !sub(v, t1, env, depth + 1, shared, memo),
 
         // Singleton — membership by ontos structural identity (defines no new equality).
         ("exact", [v0]) => v == v0,
@@ -474,7 +491,7 @@ fn node<'a>(
                 // Push one borrowed node (no per-frame copy); the child frame sees this
                 // binding innermost-first. The node closes over `env`.
                 let e = Scope::push((nm.bytes(), body), env);
-                conforms_in(v, body, Some(&e), depth + 1, shared, memo)
+                sub(v, body, Some(&e), depth + 1, shared, memo)
             }
             None => false,
         },
@@ -488,7 +505,7 @@ fn node<'a>(
                 };
                 // Unfold in the binding's own environment, so the body's free refs keep
                 // the bindings they were written under.
-                conforms_in(v, b.head.1, Some(b), depth + 1, shared, memo)
+                sub(v, b.head.1, Some(b), depth + 1, shared, memo)
             }
             None => false,
         },
@@ -567,7 +584,7 @@ fn conforms_record<'a>(
         match present.get(name.as_str()) {
             Some(val) => {
                 covered += 1;
-                if !conforms_in(val, ty, env, depth + 1, shared, memo) {
+                if !sub(val, ty, env, depth + 1, shared, memo) {
                     return false;
                 }
             }
