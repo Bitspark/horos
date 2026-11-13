@@ -31,11 +31,18 @@ because its name-keyed guard pruned the second route, wrongly.
 
 ## Decision
 
-1. **Every composite sub-check is computed once per check.** The result of checking
-   one value against one descriptor node at one depth is kept for the rest of the
-   check, and every later route to the same key reuses it. Leaves (`any`, `atom`,
-   `exact` and the other constructors that never recurse) are not kept: they do no
-   descent.
+1. **Results are kept only where routes can repeat.** A check reaches one sub-check
+   along two routes only below a `union` or `and` with two or more alternatives over
+   the same value. Every other node either passes each child a different part of the
+   value (tuple, collection and record children are distinct occurrences) or has one
+   child (`not`, `rec`, `ref`). A check therefore enters **shared mode** in the
+   alternatives of such a node, and everything below them is shared. In shared mode the
+   result of checking one value against one descriptor node at one depth is kept for the
+   rest of the check, and every later route to the same key reuses it. Outside shared
+   mode nothing is kept and no value or position is named, so a descriptor without such
+   a node, or whose multi-branch nodes have only leaf alternatives, costs what it did
+   before. Leaves (`any`, `atom`, `exact` and the other constructors that never
+   recurse) are never kept: they do no descent.
 2. **The key is (value, descriptor position, depth), and it is sound.** Under
    lexical scope (ADR 0011) a descriptor node's position in the written descriptor
    fixes its environment: the `rec`s around that position, whose bodies and closures
@@ -49,7 +56,10 @@ because its name-keyed guard pruned the second route, wrongly.
    descriptor position. The diagnostic APIs therefore key on the occurrence (its
    path), never on a value shared between several places.
 4. **How each implementation names a value and a position.** All four bound the same
-   key; they differ only in how they name its parts.
+   key; they differ only in how they name its parts, and they name them only in shared
+   mode. The node where shared mode begins is reached by one route, so it takes a fresh
+   name; a `rec` entered before shared mode names its body when a shared `ref` first
+   needs it. A position is named only for a composite sub-check, never for a leaf.
    - Rust values own their children and cannot share them, so the address of a node
      borrowed from the caller's value or descriptor names both the occurrence and the
      position. Collections and records are walked borrowed, never copied, so no
@@ -62,13 +72,16 @@ because its name-keyed guard pruned the second route, wrongly.
      root. Their diagnoses key on the path, as above. Python keeps the memo in the one
      interpreter frame per level that it used before, so the depth its host can reach
      is unchanged.
-5. **The cost bound.** A check computes at most one result per key, so it does work
-   proportional to (value occurrences) × (descriptor positions) × 513 × (the largest
-   arity), plus the comparison of `exact` literals. That is polynomial in the size of
-   the input; the depth bound is a constant factor. The memo holds at most one entry
-   per key. A decoded value is a tree in every implementation, so for untrusted input
-   every core is bounded by the same measure; TypeScript and Python additionally
-   collapse shared subvalues in memory.
+5. **The cost bound.** Outside shared mode every sub-check is reached along one route,
+   so each key is computed at most once there too; in shared mode the memo ensures it.
+   A check therefore does work proportional to (value occurrences) × (descriptor
+   positions) × 513 × (the largest arity), plus the comparison of `exact` literals.
+   That is polynomial in the size of the input; the depth bound is a constant factor.
+   The memo holds at most one entry per shared key. A decoded value is a tree in every
+   implementation, so for untrusted input every core is bounded by the same measure;
+   TypeScript and Python additionally collapse shared subvalues in memory. A check
+   that never enters shared mode allocates and hashes nothing for the bound, so
+   ordinary descriptors pay nothing for it (see the evidence).
 6. **No work budget.** A default budget on frames or time would turn large valid
    values into `false` or `exhausted`, changing the boolean's documented bounded
    behaviour and the meaning of `exhausted`. Polynomial cost does not need one.
@@ -90,5 +103,6 @@ finished.
 
 ## Consequences
 
-A check allocates memo entries in proportion to the work it does. The fix ships in
+A check allocates memo entries in proportion to its shared work, and nothing outside
+shared mode. The fix ships in
 0.11.1 of every package, whose release notes name it.
