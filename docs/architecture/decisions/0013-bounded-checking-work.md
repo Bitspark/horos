@@ -112,7 +112,14 @@ because its name-keyed guard pruned the second route, wrongly.
   boolean and the same diagnosis, location included, on every pair.
 - **Ordinary input:** `scripts/bench.py --against <main>` alternates the two checkouts run
   by run on a list of 200,000 closed records, with a field typed as an int or as a
-  three-way union of leaves. BENCHSUMMARY
+  three-way union of leaves. On an idle machine Go's, TypeScript's and Python's
+  `conforms` and `diagnose` stayed within +3% of the checker before this change, or
+  got faster. Rust's boolean was at +15% (plain) and +17% (union) while its walk outside
+  shared mode freed ontos/data's copies before walking the originals. Since that walk
+  went back to the copies, and the mode became a compile-time parameter, it has measured
+  between -1% and +4%; its diagnosis was 8% and 14% faster. Allocation is the same for the boolean in Go and Rust; a
+  diagnosis allocates 5% less in Go, 1% more in Rust and up to 8% more heap in
+  TypeScript; Python's peak is unchanged. Pull request #54 has the tables.
 
 ## Consequences
 
