@@ -6,8 +6,14 @@ times conforms and diagnose on it: core/go/internal/bench, core/rs/examples/benc
 core/ts/bench/bench.mjs and core/py/bench.py. No check runs this; it measures the cost
 of checking, which seeded conformance does not. `--against <checkout>` builds a second
 checkout's benches too (copy these bench files into it first if it predates them) and
-alternates the two run by run, so changing load on a shared machine does not favour
-either side; it prints both medians and their ratio.
+runs the two back to back, in alternating order (base then this, then this then base),
+so changing load on a shared machine does not favour either side. It prints both
+medians and the change: the median of the per-run ratios, this over base.
+
+On a machine shared with other work, a memory-bound bench's time also depends on where
+each process lands: which CPU, which L3 cache, how busy its SMT sibling is. One process
+can take twice as long as the next on the same code. `--pin CPU` runs every bench on
+that one CPU, so both checkouts meet the same conditions.
 
 Only the cores named by `--cores` are built and timed. A checkout whose core/ts has no
 node_modules gets them from `npm ci` before its TypeScript bench is built.
@@ -17,7 +23,7 @@ growth V8 reports for TypeScript, and the peak traced memory for Python (a separ
 slower run).
 
 Run:  ONTOS_PY_ROOT=<ontos v0.17.0 checkout> python3 scripts/bench.py [--n 200000] [--runs 3] [--against DIR]
-      [--cores go,rust,typescript,python]
+      [--cores go,rust,typescript,python] [--pin CPU]
 ONTOS_PY_ROOT is needed only when the Python core is timed.
 """
 
@@ -26,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import statistics
 import subprocess
 import tempfile
@@ -58,8 +65,9 @@ def build(root: Path, tmp: Path, cores: list) -> dict:
     return commands
 
 
-def run(command: list, n: int, mode: str, extra: list = ()) -> dict:
-    out = subprocess.run(command + [str(n), mode, *extra], capture_output=True, text=True, check=True)
+def run(command: list, n: int, mode: str, extra: list = (), pin: str | None = None) -> dict:
+    prefix = ["taskset", "-c", pin] if pin is not None else []
+    out = subprocess.run(prefix + command + [str(n), mode, *extra], capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
 
 
@@ -81,6 +89,7 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--against", type=Path, help="a second checkout, run alternately with this one")
     parser.add_argument("--cores", default=",".join(CORES), help="comma-separated cores to time")
+    parser.add_argument("--pin", metavar="CPU", help="run every bench on this CPU (taskset -c), for a shared machine")
     args = parser.parse_args()
     cores = args.cores.split(",")
     unknown = [c for c in cores if c not in CORES]
@@ -88,6 +97,8 @@ def main() -> None:
         raise SystemExit(f"Unknown core {', '.join(unknown)}; the cores are {', '.join(CORES)}")
     if "python" in cores and not os.environ.get("ONTOS_PY_ROOT"):
         raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout")
+    if args.pin is not None and shutil.which("taskset") is None:
+        raise SystemExit("--pin needs taskset (util-linux)")
     trees = {"this": ROOT} if args.against is None else {"base": args.against.resolve(), "this": ROOT}
     with tempfile.TemporaryDirectory() as tmp:
         commands = {name: build(root, Path(tmp) / name, cores) for name, root in trees.items()}
@@ -95,33 +106,42 @@ def main() -> None:
         for mode in ("plain", "union"):
             for core in cores:
                 samples = {name: [] for name in trees}
-                for _ in range(args.runs):
-                    for name in trees:
-                        samples[name].append(run(commands[name][core], args.n, mode))
+                for i in range(args.runs):
+                    for name in (list(trees) if i % 2 == 0 else list(trees)[::-1]):
+                        samples[name].append(run(commands[name][core], args.n, mode, pin=args.pin))
+                change = {}
+                if args.against is not None:
+                    for op in ("conforms", "diagnose"):
+                        ratios = [t[f"{op}_ms"] / b[f"{op}_ms"] for b, t in zip(samples["base"], samples["this"]) if b.get(f"{op}_ms")]
+                        if ratios:
+                            change[op] = statistics.median(ratios) - 1
                 if core == "python":
                     for name in trees:
-                        samples[name][0].update(run(commands[name][core], args.n, mode, ["--memory"]))
+                        samples[name][0].update(run(commands[name][core], args.n, mode, ["--memory"], pin=args.pin))
                 row = {name: medians(samples[name]) for name in trees}
-                rows.append((core, mode, row))
-                print(json.dumps({"core": core, "mode": mode, "n": args.n, "runs": args.runs, **row}), flush=True)
+                rows.append((core, mode, row, change))
+                print(json.dumps({"core": core, "mode": mode, "n": args.n, "runs": args.runs, **row, "change": change}), flush=True)
     print()
-    print(f"n = {args.n}, median of {args.runs} runs" + (f", alternating with {args.against}" if args.against else ""))
+    print(f"n = {args.n}, median of {args.runs} runs" + (f", alternating with {args.against}" if args.against else "")
+          + (f", pinned to CPU {args.pin}" if args.pin is not None else ""))
     print()
     if args.against is None:
         print("| core | mode | conforms ms | conforms memory | diagnose ms | diagnose memory |")
         print("| --- | --- | --- | --- | --- | --- |")
-        for core, mode, row in rows:
+        for core, mode, row, _ in rows:
             m = row["this"]
             print(f"| {core} | {mode} | {m.get('conforms_ms', 0):.0f} | {memory(m, 'conforms')} | {m.get('diagnose_ms', 0):.0f} | {memory(m, 'diagnose')} |")
         return
+    print("The change in brackets is the median of the per-run ratios, this over base.")
+    print()
     print("| core | mode | conforms ms (base → this) | conforms memory | diagnose ms (base → this) | diagnose memory |")
     print("| --- | --- | --- | --- | --- | --- |")
-    for core, mode, row in rows:
+    for core, mode, row, change in rows:
         b, t = row["base"], row["this"]
 
         def ms(op):
             x, y = b.get(f"{op}_ms", 0), t.get(f"{op}_ms", 0)
-            return f"{x:.0f} → {y:.0f} ({(y / x - 1) * 100:+.0f}%)" if x else ""
+            return f"{x:.0f} → {y:.0f} ({change[op] * 100:+.0f}%)" if op in change else ""
 
         def mem(op):
             return f"{memory(b, op)} → {memory(t, op)}"
