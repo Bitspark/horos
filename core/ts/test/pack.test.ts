@@ -33,8 +33,8 @@ test("packed public package works in an isolated consumer and excludes proof API
       stdio: ["ignore", "pipe", "pipe"],
     });
   try {
-    const packs = JSON.parse(
-      run(["pack", "--json", "--pack-destination", temp], root),
+    const packs = Object.values(
+      JSON.parse(run(["pack", "--json", "--pack-destination", temp], root)),
     ) as { filename: string; files: { path: string }[] }[];
     assert.equal(packs.length, 1);
     for (const file of packs[0]!.files)
@@ -63,6 +63,7 @@ import { readFileSync } from "node:fs";
 import * as horos from "@bitspark/horos";
 import { diagnose } from "@bitspark/horos/diagnose";
 import { decode } from "@bitspark/ontos-codec";
+import { encodeList, encodeMap } from "@bitspark/ontos-data";
 const value = h => decode(Uint8Array.from(Buffer.from(h, "hex")));
 const corpus = JSON.parse(readFileSync(process.argv[2], "utf8"));
 for (const c of corpus.cases) {
@@ -72,6 +73,11 @@ for (const c of corpus.cases) {
 }
 const t = value(corpus.cases[0].descriptor);
 assert.equal(typeof diagnose(t, t).verdict, "string");
+const emptyRecord = horos.recordForm("closed", []);
+assert.equal(horos.wf(emptyRecord), true);
+assert.equal(horos.conforms(encodeMap([]), emptyRecord), true);
+assert.equal(horos.conforms(encodeList([]), horos.listForm(emptyRecord)), true);
+assert.equal(horos.conforms(encodeMap([]), horos.mapForm(emptyRecord, emptyRecord)), true);
 for (const name of ["conformsWitness", "conformsViaCheck", "decompose", "FoldMode", "pushBinding", "lookupBinding", "conformsUnderEnv"]) assert.equal(name in horos, false);
 for (const path of ["semantics", "wire"]) await assert.rejects(import("@bitspark/horos/" + path), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });
 console.log("installed public package replays the oracle; private entrypoints absent");
@@ -86,10 +92,16 @@ console.log("installed public package replays the oracle; private entrypoints ab
     writeFileSync(
       join(consumer, "check.ts"),
       `
-import { wf, conforms, type Value } from "@bitspark/horos";
+import { wf, conforms, listForm, mapForm, recordForm, type RecordField, type RecordMode, type Value } from "@bitspark/horos";
 import { diagnose, type Diagnosis } from "@bitspark/horos/diagnose";
 export function check(v: Value, t: Value): Diagnosis | boolean {
   return wf(t) && conforms(v,t) ? diagnose(v,t) : false;
+}
+export function construct(mode: RecordMode, fields: readonly RecordField[]): Value {
+  return recordForm(mode, fields);
+}
+export function constructCollection(itemForm: Value, keyForm: Value): Value {
+  return mapForm(keyForm, listForm(itemForm));
 }
 `,
     );

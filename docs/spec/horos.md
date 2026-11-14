@@ -77,6 +77,48 @@ absent map entry and an entry containing null are different values. Duplicate
 field names are rejected. The record always requires canonical map ordering and
 text keys, including the keys of extra fields in open mode.
 
+### TypeScript construction
+
+The source TypeScript binding exports the following constructors from
+`@bitspark/horos`. They construct the existing syntax; they add no descriptor
+kind or checking rule. It is not part of the published 0.11.0 package.
+
+```ts
+type RecordMode = "open" | "closed";
+interface RecordField {
+  readonly name: string;
+  readonly presence: "required" | "optional";
+  readonly form: Value;
+}
+function recordForm(mode: RecordMode, fields: readonly RecordField[]): Value;
+function listForm(itemForm: Value): Value;
+function mapForm(keyForm: Value, valueForm: Value): Value;
+```
+
+The caller supplies mode, field names, presence and child forms. Horos constructs
+the representation and preserves field order, which is also diagnostic order.
+Names use Ontos's `encodeText`: Unicode scalar strings, without normalization.
+Duplicate names are refused, including a required/optional pair with the same
+name. Invalid native inputs and duplicate names throw `TypeError`; an unpaired
+surrogate is refused by the existing Ontos text encoder with `DataError`.
+There are no native-value conversions, defaults or special object-property names.
+
+Construction checks only its local inputs. It preserves each supplied child
+form as a Value, including an open `ref` that an enclosing `rec` may bind. The
+caller uses `wf` or `diagnoseWf` on the completed descriptor. A constructed
+record is therefore not a well-formedness certificate. Other language bindings
+continue to construct the same descriptor syntax directly; their checker
+semantics and the cross-language descriptor corpus are unchanged.
+
+`listForm` constructs `(horos/list-of itemForm)`, and `mapForm` constructs
+`(horos/map-of keyForm valueForm)`. Both assert native Ontos child Values without
+coercion and preserve those Values, including opaque literal contents and free
+references. Invalid native child values throw `TypeError`. As for `recordForm`,
+whole-descriptor checking remains the caller's responsibility.
+
+The [construction ownership case](../architecture/cases/0001-record-construction.md)
+records why this operation belongs to Horos rather than individual consumers.
+
 ## Integer refinements
 
 `int-min` and `int-max` each first recognize a canonical `int`, exactly as
