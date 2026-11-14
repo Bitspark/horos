@@ -38,10 +38,10 @@ canonical map and text-key requirements, nested records with opaque exact
 payloads, lexical recursion, Unicode names, duplicate and malformed inputs,
 diagnostic field order and input ownership after construction.
 
-Local qualification passed TypeScript typechecking, lint and all 47 tests,
+Local qualification passed TypeScript typechecking, lint and all 48 tests,
 including installation and typechecking of the packed public package in an
-isolated consumer. The required cross-language CI remains pending for the
-landing revision.
+isolated consumer. The existing cross-language CI matrix qualifies the landing
+revision; no native checker meaning is changed by the construction API.
 
 The owner capability is source-only and uses the existing Ontos 0.17.0 family.
 The published Horos 0.11.0 release is unchanged. This change supplies only the
