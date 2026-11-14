@@ -81,7 +81,8 @@ text keys, including the keys of extra fields in open mode.
 
 The source TypeScript binding exports the following constructors from
 `@bitspark/horos`. They construct the existing syntax; they add no descriptor
-kind or checking rule. It is not part of the published 0.11.0 package.
+kind or checking rule. They are not in a published package yet: 0.11.1, the security
+release, was published from a commit before them.
 
 ```ts
 type RecordMode = "open" | "closed";
