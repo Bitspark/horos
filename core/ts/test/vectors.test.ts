@@ -34,9 +34,12 @@ interface VectorDoc {
 // integer-bounds.json is the hand-authored oracle for int-min/int-max (ADR 0010) and
 // recursion-scope.json the one for ref scoping (ADR 0011); the original oracle is pinned
 // byte for byte.
-const VEC_PATHS = ["conformance.json", "integer-bounds.json", "recursion-scope.json"].map(
-  (f) => resolve(process.cwd(), "../../vectors", f),
-);
+const VEC_PATHS = [
+  "conformance.json",
+  "integer-bounds.json",
+  "recursion-scope.json",
+  "checking-work.json",
+].map((f) => resolve(process.cwd(), "../../vectors", f));
 
 function hexToBytes(h: string): Uint8Array {
   const out = new Uint8Array(h.length / 2);

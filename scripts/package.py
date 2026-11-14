@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = "0.11.0"
+VERSION = "0.11.1"
 
 
 def run(args, cwd=ROOT):

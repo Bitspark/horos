@@ -319,7 +319,101 @@ export function diagnoseWf(t: Value): Diagnosis {
 export function diagnose(v: Value, t: Value): Diagnosis {
   const w = diagnoseWfIn(t, [], [], 0, undefined);
   if (w.verdict !== "conforms") return report(w);
-  return report(diagnoseIn(v, t, [], 0, undefined, undefined));
+  return report(diagnoseIn(new DiagChecker(), v, t, [], 0, undefined, undefined, false));
+}
+
+/**
+ * One diagnosis's memo (ADR 0013), kept only in shared mode: below a union or intersection
+ * with two or more alternatives over one value, where a sub-check can be reached along
+ * several routes. There each composite sub-check names its place by canonical path and
+ * position nodes: the first node seen per (parent, step) and per (parent, item index); a
+ * leaf keeps the plain node it was given. The node where shared mode begins is reached by
+ * one route, so its own nodes are unique too. Within a check a path node then names one value
+ * occurrence and a position node one node of the written descriptor, whose environment the
+ * position fixes (ADR 0011). A shared composite sub-check's outcome, location included, is
+ * a function of (path, position, depth), and `get`/`put` keep it. Outside shared mode the
+ * nodes are built and nothing is kept, as before ADR 0013.
+ */
+class DiagChecker {
+  private paths: Map<PathNode | undefined, Map<string, PathNode>> | undefined;
+  private positions: Map<PosNode | undefined, Map<number, PosNode>> | undefined;
+  private canonicalPaths: Set<PathNode> | undefined;
+  private canonicalPositions: Set<PosNode> | undefined;
+  private memo:
+    Map<PathNode | undefined, Map<PosNode | undefined, Map<number, Outcome>>> | undefined;
+
+  /**
+   * The canonical path node for `path`: the first seen for its canonical parent and step,
+   * `path` itself when it is the first. Nodes outside shared mode are reached by one
+   * route, so the first one seen for each step is canonical; the walk up stops at a node
+   * already seen.
+   */
+  canonPath(path: PathNode | undefined): PathNode | undefined {
+    if (path === undefined || this.canonicalPaths?.has(path)) return path;
+    const parent = this.canonPath(path.parent);
+    this.paths ??= new Map();
+    this.canonicalPaths ??= new Set();
+    let children = this.paths.get(parent);
+    if (children === undefined) {
+      children = new Map();
+      this.paths.set(parent, children);
+    }
+    const s = path.step;
+    const key = s.kind === "field" ? `field:${s.name}` : `${s.kind}:${s.index}`;
+    const known = children.get(key);
+    if (known !== undefined) return known;
+    const node = parent === path.parent ? path : stepInto(parent, s);
+    children.set(key, node);
+    this.canonicalPaths.add(node);
+    return node;
+  }
+
+  /** The canonical position node for `pos`, as {@link canonPath} for paths. */
+  canonPos(pos: PosNode | undefined): PosNode | undefined {
+    if (pos === undefined || this.canonicalPositions?.has(pos)) return pos;
+    const parent = this.canonPos(pos.parent);
+    this.positions ??= new Map();
+    this.canonicalPositions ??= new Set();
+    let children = this.positions.get(parent);
+    if (children === undefined) {
+      children = new Map();
+      this.positions.set(parent, children);
+    }
+    const known = children.get(pos.index);
+    if (known !== undefined) return known;
+    const node = parent === pos.parent ? pos : at(parent, pos.index);
+    children.set(pos.index, node);
+    this.canonicalPositions.add(node);
+    return node;
+  }
+
+  get(
+    path: PathNode | undefined,
+    pos: PosNode | undefined,
+    depth: number,
+  ): Outcome | undefined {
+    return this.memo?.get(path)?.get(pos)?.get(depth);
+  }
+
+  put(
+    path: PathNode | undefined,
+    pos: PosNode | undefined,
+    depth: number,
+    o: Outcome,
+  ): void {
+    this.memo ??= new Map();
+    let byPos = this.memo.get(path);
+    if (byPos === undefined) {
+      byPos = new Map();
+      this.memo.set(path, byPos);
+    }
+    let byDepth = byPos.get(pos);
+    if (byDepth === undefined) {
+      byDepth = new Map();
+      byPos.set(pos, byDepth);
+    }
+    byDepth.set(depth, o);
+  }
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -369,12 +463,14 @@ interface Child {
 }
 
 function diagnoseIn(
+  d: DiagChecker,
   v: Value,
   t: Value,
   env: readonly Binding[],
   depth: number,
   path: PathNode | undefined,
   pos: PosNode | undefined,
+  shared: boolean,
 ): Outcome {
   if (depth > MAX_RECURSION_DEPTH) return exhausted(path, pos);
   const refused = (): Outcome => mismatch({ path, at: pos, reason: "refused" });
@@ -385,23 +481,49 @@ function diagnoseIn(
   // Leaves never recurse into a value position, so they are always decisive here.
   if (isLeafCtor(ctor)) return leafClassifies(v, t) ? CONFORMS : refused();
 
+  if (!shared) return composite(d, v, ctor, args, env, depth, path, pos, false);
+  // Only a shared composite sub-check names its place canonically; a leaf never does.
+  const cpath = d.canonPath(path);
+  const cpos = d.canonPos(pos);
+  const hit = d.get(cpath, cpos, depth);
+  if (hit !== undefined) return hit;
+  const o = composite(d, v, ctor, args, env, depth, cpath, cpos, true);
+  d.put(cpath, cpos, depth, o);
+  return o;
+}
+
+/** One composite descriptor node against `v`; `diagnoseIn` memoizes it. */
+function composite(
+  d: DiagChecker,
+  v: Value,
+  ctor: string,
+  args: readonly Value[],
+  env: readonly Binding[],
+  depth: number,
+  path: PathNode | undefined,
+  pos: PosNode | undefined,
+  shared: boolean,
+): Outcome {
+  // Two or more alternatives over one value: below them, shared mode (see DiagChecker).
+  const share = shared || args.length > 1;
+  const refused = (): Outcome => mismatch({ path, at: pos, reason: "refused" });
   switch (ctor) {
     // Composition on the SAME v.
     case "union":
       return kleeneAny(
         args.length,
-        (i) => diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
+        (i) => diagnoseIn(d, v, args[i]!, env, depth + 1, path, at(pos, i + 1), share),
         path,
         pos,
       );
     case "and":
       return kleeneAll(args.length, (i) =>
-        diagnoseIn(v, args[i]!, env, depth + 1, path, at(pos, i + 1)),
+        diagnoseIn(d, v, args[i]!, env, depth + 1, path, at(pos, i + 1), share),
       );
     case "not": {
       if (args.length !== 1) return refused();
       return kleeneNot(
-        diagnoseIn(v, args[0]!, env, depth + 1, path, at(pos, 1)),
+        diagnoseIn(d, v, args[0]!, env, depth + 1, path, at(pos, 1), shared),
         path,
         pos,
       );
@@ -418,12 +540,14 @@ function diagnoseIn(
       const body = args[1]!;
       const bodyAt = at(pos, 2);
       return diagnoseIn(
+        d,
         v,
         body,
         [...env, { name, body, at: bodyAt }],
         depth + 1,
         path,
         bodyAt,
+        shared,
       );
     }
     case "ref": {
@@ -433,7 +557,16 @@ function diagnoseIn(
       for (let i = env.length - 1; i >= 0; i -= 1) {
         const b = env[i]!;
         if (b.name === name) {
-          return diagnoseIn(v, b.body, env.slice(0, i + 1), depth + 1, path, b.at);
+          return diagnoseIn(
+            d,
+            v,
+            b.body,
+            env.slice(0, i + 1),
+            depth + 1,
+            path,
+            b.at,
+            shared,
+          );
         }
       }
       return refused(); // unbound
@@ -446,7 +579,7 @@ function diagnoseIn(
   const children = gate as readonly Child[];
   return kleeneAll(children.length, (i) => {
     const c = children[i]!;
-    return diagnoseIn(c.v, c.t, env, depth + 1, stepInto(path, c.step), c.at);
+    return diagnoseIn(d, c.v, c.t, env, depth + 1, stepInto(path, c.step), c.at, shared);
   });
 }
 

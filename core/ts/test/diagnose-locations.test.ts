@@ -65,6 +65,10 @@ test("every diagnosis in the location corpus is reproduced exactly (ADR 0009)", 
 
 // The ref-scoping oracle (ADR 0011) pins booleans as `wf`/`conforms`, which the vectors
 // replay checks, and diagnoses as `diagnose_wf`/`diagnosis`.
+test("every diagnosis in the checking-work oracle is reproduced exactly (ADR 0013)", () => {
+  replayLocated("checking-work.json", (c) => c.diagnose_wf);
+});
+
 test("every diagnosis in the ref-scoping oracle is reproduced exactly (ADR 0011)", () => {
   replayLocated("recursion-scope.json", (c) => c.diagnose_wf);
 });

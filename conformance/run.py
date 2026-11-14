@@ -80,7 +80,7 @@ def one(checker, *arguments):
 
 def oracle_units():
     """One unit per authored judgment: a thunk returning the number of judgments it checked."""
-    for oracle in ("conformance.json", "integer-bounds.json", "recursion-scope.json"):
+    for oracle in ("conformance.json", "integer-bounds.json", "recursion-scope.json", "checking-work.json"):
         doc = json.loads((ROOT / "vectors" / oracle).read_text())
         for case in doc["cases"]:
             yield lambda c=case: one(check, ["wf", c["descriptor"]], c["wf"])
@@ -88,7 +88,11 @@ def oracle_units():
                 yield lambda c=case, v=value: one(check, ["conforms", c["descriptor"], v["value"]], v["conforms"])
     # The location corpus's wf is a diagnosis; the ref-scoping oracle's wf is the
     # boolean checked above and its wf diagnosis is diagnose_wf (ADR 0011).
-    for corpus, wf_key in (("diagnose.json", "wf"), ("recursion-scope.json", "diagnose_wf")):
+    for corpus, wf_key in (
+        ("diagnose.json", "wf"),
+        ("recursion-scope.json", "diagnose_wf"),
+        ("checking-work.json", "diagnose_wf"),
+    ):
         located = json.loads((ROOT / "vectors" / corpus).read_text())
         for case in located["cases"]:
             yield lambda c=case, k=wf_key: one(check_located, ["diagnose-wf", c["descriptor"]], c[k])

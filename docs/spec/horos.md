@@ -156,8 +156,13 @@ references or arbitrary fixed-point subtyping.
 
 ## Bounded checking and diagnostics
 
-The implementations cap recursive descent at 512. The boolean functions classify
-an over-limit descent as false. With complement, that inner false can produce
+The implementations cap recursive descent at 512, and bound the work of a check by
+the size of its input: within one check, a value is checked against a descriptor node
+at a given depth at most once, however many routes reach that pair. A check therefore
+does work polynomial in the value's and the descriptor's sizes, with no budget that
+could change a verdict. See the
+[checking-work decision](../architecture/decisions/0013-bounded-checking-work.md).
+The boolean functions classify an over-limit descent as false. With complement, that inner false can produce
 true without establishing that the inner check completed. Therefore a boolean
 result alone does not certify completion on arbitrarily deep input.
 

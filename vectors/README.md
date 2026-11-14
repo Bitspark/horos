@@ -49,3 +49,10 @@ values use ontos's value-tree notation with a `{"wire": name}` leaf. Its source 
 `diagnose.py` above. The Go declarations tests check that every descriptor is a
 materialized Descriptor and that the verdicts for descriptors without `wire` are
 the ground judgment.
+
+`checking-work.json` is the hand-authored oracle for checking work
+([ADR 0013](../docs/architecture/decisions/0013-bounded-checking-work.md)):
+descriptors whose alternatives overlap, against values 64 levels deep, which a
+checker bounded by its input finishes at once. It has the format of
+`recursion-scope.json`, and its source is `checking-work.py`. All four lanes and
+the CLI harness replay its booleans and its diagnoses.
