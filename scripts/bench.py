@@ -9,12 +9,16 @@ checkout's benches too (copy these bench files into it first if it predates them
 alternates the two run by run, so changing load on a shared machine does not favour
 either side; it prints both medians and their ratio.
 
+Only the cores named by `--cores` are built and timed. A checkout whose core/ts has no
+node_modules gets them from `npm ci` before its TypeScript bench is built.
+
 Allocation is reported as each runtime allows: Go's and Rust's bytes allocated, the heap
 growth V8 reports for TypeScript, and the peak traced memory for Python (a separate,
 slower run).
 
 Run:  ONTOS_PY_ROOT=<ontos v0.17.0 checkout> python3 scripts/bench.py [--n 200000] [--runs 3] [--against DIR]
       [--cores go,rust,typescript,python]
+ONTOS_PY_ROOT is needed only when the Python core is timed.
 """
 
 from __future__ import annotations
@@ -28,22 +32,30 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+CORES = ("go", "rust", "typescript", "python")
 
 
-def build(root: Path, tmp: Path) -> dict:
-    """Build root's benches into tmp; return each core's command."""
-    target = tmp / "target"
-    go = tmp / "bench-go"
-    subprocess.run(["go", "build", "-o", str(go), "./internal/bench"], cwd=root / "core/go", check=True)
-    env = {**os.environ, "CARGO_TARGET_DIR": str(target)}
-    subprocess.run(["cargo", "build", "--locked", "--release", "--example", "bench", "--quiet"], cwd=root, env=env, check=True)
-    subprocess.run(["npm", "run", "build", "--silent"], cwd=root / "core/ts", check=True)
-    return {
-        "go": [str(go)],
-        "rust": [str(target / "release/examples/bench")],
-        "typescript": ["node", "--expose-gc", str(root / "core/ts/bench/bench.mjs")],
-        "python": ["python3", "-I", str(root / "core/py/bench.py")],
-    }
+def build(root: Path, tmp: Path, cores: list) -> dict:
+    """Build root's benches for the given cores into tmp; return each one's command."""
+    commands = {}
+    if "go" in cores:
+        go = tmp / "bench-go"
+        subprocess.run(["go", "build", "-o", str(go), "./internal/bench"], cwd=root / "core/go", check=True)
+        commands["go"] = [str(go)]
+    if "rust" in cores:
+        target = tmp / "target"
+        env = {**os.environ, "CARGO_TARGET_DIR": str(target)}
+        subprocess.run(["cargo", "build", "--locked", "--release", "--example", "bench", "--quiet"], cwd=root, env=env, check=True)
+        commands["rust"] = [str(target / "release/examples/bench")]
+    if "typescript" in cores:
+        ts = root / "core/ts"
+        if not (ts / "node_modules").is_dir():
+            subprocess.run(["npm", "ci", "--silent"], cwd=ts, check=True)
+        subprocess.run(["npm", "run", "build", "--silent"], cwd=ts, check=True)
+        commands["typescript"] = ["node", "--expose-gc", str(ts / "bench/bench.mjs")]
+    if "python" in cores:
+        commands["python"] = ["python3", "-I", str(root / "core/py/bench.py")]
+    return commands
 
 
 def run(command: list, n: int, mode: str, extra: list = ()) -> dict:
@@ -68,23 +80,27 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=200_000)
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--against", type=Path, help="a second checkout, run alternately with this one")
-    parser.add_argument("--cores", default="go,rust,typescript,python", help="comma-separated cores to time")
+    parser.add_argument("--cores", default=",".join(CORES), help="comma-separated cores to time")
     args = parser.parse_args()
-    if not os.environ.get("ONTOS_PY_ROOT"):
+    cores = args.cores.split(",")
+    unknown = [c for c in cores if c not in CORES]
+    if unknown:
+        raise SystemExit(f"Unknown core {', '.join(unknown)}; the cores are {', '.join(CORES)}")
+    if "python" in cores and not os.environ.get("ONTOS_PY_ROOT"):
         raise SystemExit("Set ONTOS_PY_ROOT to an ontos v0.17.0 checkout")
     trees = {"this": ROOT} if args.against is None else {"base": args.against.resolve(), "this": ROOT}
     with tempfile.TemporaryDirectory() as tmp:
-        cores = {name: build(root, Path(tmp) / name) for name, root in trees.items()}
+        commands = {name: build(root, Path(tmp) / name, cores) for name, root in trees.items()}
         rows = []
         for mode in ("plain", "union"):
-            for core in args.cores.split(","):
+            for core in cores:
                 samples = {name: [] for name in trees}
                 for _ in range(args.runs):
                     for name in trees:
-                        samples[name].append(run(cores[name][core], args.n, mode))
+                        samples[name].append(run(commands[name][core], args.n, mode))
                 if core == "python":
                     for name in trees:
-                        samples[name][0].update(run(cores[name][core], args.n, mode, ["--memory"]))
+                        samples[name][0].update(run(commands[name][core], args.n, mode, ["--memory"]))
                 row = {name: medians(samples[name]) for name in trees}
                 rows.append((core, mode, row))
                 print(json.dumps({"core": core, "mode": mode, "n": args.n, "runs": args.runs, **row}), flush=True)
