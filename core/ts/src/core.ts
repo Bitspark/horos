@@ -124,11 +124,75 @@ function consContainsName(s: Cons<Uint8Array> | undefined, name: Uint8Array): bo
   return false;
 }
 
-/** An in-scope `rec` binding: the name (atom bytes) and its body descriptor. */
+/**
+ * An in-scope `rec` binding: the name (atom bytes), its body descriptor and the body's
+ * position in the written descriptor (see {@link Checker}).
+ */
 interface Binding {
   readonly name: Uint8Array;
   readonly body: Value;
+  /** Numbered lazily: -1 until a shared `ref` needs it (see {@link Checker}). */
+  bodyAt: number;
 }
+
+/**
+ * One check's memo (ADR 0013). A check reaches one sub-check along two routes only below a
+ * union or intersection with two or more alternatives over the same value, so the memo is
+ * kept only there: the check enters shared mode at such a node, and everything below it is
+ * shared. Outside shared mode no position is numbered and nothing is kept, so a check
+ * without such a node costs what it did before ADR 0013.
+ *
+ * In shared mode a value is named by the object itself, so a subvalue shared between
+ * several places is checked once; a descriptor node is named by its position in the
+ * written descriptor, numbered from its parent's position and its item index. The node
+ * where shared mode begins is reached by one route, so it takes a fresh number; a binding
+ * entered before shared mode takes one for its body when a shared `ref` first needs it.
+ * The position fixes the node's environment (ADR 0011), so a shared composite sub-check's
+ * verdict is a function of (value, position, depth) alone. -1 means outside shared mode.
+ */
+class Checker {
+  private values: Map<Value, number> | undefined;
+  private positions: Map<number, Map<number, number>> | undefined;
+  private next = 0;
+  readonly memo = new Map<string, boolean>();
+
+  /** A new position number, distinct from every other of this check. */
+  fresh(): number {
+    this.next += 1;
+    return this.next;
+  }
+
+  /** The position of item `index` below position `parent` (`parent` itself for -1). */
+  position(parent: number, index: number): number {
+    if (parent < 0) return -1;
+    if (index < 0) return parent;
+    this.positions ??= new Map();
+    let children = this.positions.get(parent);
+    if (children === undefined) {
+      children = new Map();
+      this.positions.set(parent, children);
+    }
+    let id = children.get(index);
+    if (id === undefined) {
+      id = this.fresh();
+      children.set(index, id);
+    }
+    return id;
+  }
+
+  key(v: Value, at: number, depth: number): string {
+    this.values ??= new Map();
+    let id = this.values.get(v);
+    if (id === undefined) {
+      id = this.values.size;
+      this.values.set(v, id);
+    }
+    return `${id},${at},${depth}`;
+  }
+}
+
+/** Leaf arms never use their checker; leaf-only callers share this one, which stays empty. */
+const LEAF_CHECKER = new Checker();
 
 /**
  * If `t` is `Tuple(Atom("horos/<ctor>"), args...)` with a valid-UTF-8 label under the
@@ -274,7 +338,7 @@ export function conforms(v: Value, t: Value): boolean {
   // Soundness gate (spec §3 MUST): `v : T` presupposes `wf(T)`. A descriptor that is
   // not well-formed admits no values, even where an individual arm would otherwise
   // match — so check `wf` once at the entry and never arm-by-arm below.
-  return wf(t) && conformsIn(v, t, undefined, 0);
+  return wf(t) && conformsIn(new Checker(), v, t, -1, -1, undefined, 0, false);
 }
 
 /**
@@ -284,10 +348,14 @@ export function conforms(v: Value, t: Value): boolean {
  * first; `conformsIn` relies on its guardedness (see the module comment).
  */
 function conformsIn(
+  c: Checker,
   v: Value,
   t: Value,
+  parent: number,
+  index: number,
   env: Cons<Binding> | undefined,
   depth: number,
+  shared: boolean,
 ): boolean {
   // Recursion-depth guard (horos-internal#37): past MAX_RECURSION_DEPTH frames, return a deterministic
   // `false` rather than risk a native-stack overflow (RangeError). Counted at the same
@@ -295,6 +363,27 @@ function conformsIn(
   if (depth > MAX_RECURSION_DEPTH) return false;
   const h = head(t);
   if (h === undefined) return false; // not a horos descriptor
+  if (!shared || isLeafCtor(h.ctor)) return node(c, v, h, -1, env, depth, shared);
+  // `t` is item `index` below position `parent`; numbered only here (see Checker).
+  const at = c.position(parent, index);
+  const key = c.key(v, at, depth);
+  const hit = c.memo.get(key);
+  if (hit !== undefined) return hit;
+  const r = node(c, v, h, at, env, depth, true);
+  c.memo.set(key, r);
+  return r;
+}
+
+/** One descriptor node against `v`; `conformsIn` memoizes the composite ones in shared mode. */
+function node(
+  c: Checker,
+  v: Value,
+  h: Head,
+  at: number,
+  env: Cons<Binding> | undefined,
+  depth: number,
+  shared: boolean,
+): boolean {
   const { ctor, args } = h;
   switch (ctor) {
     // Top.
@@ -446,15 +535,16 @@ function conformsIn(
       const items = v.items();
       if (items.length !== args.length) return false;
       for (let i = 0; i < items.length; i += 1) {
-        if (!conformsIn(items[i]!, args[i]!, env, depth + 1)) return false;
+        if (!conformsIn(c, items[i]!, args[i]!, at, i + 1, env, depth + 1, shared))
+          return false;
       }
       return true;
     }
     case "seq": {
       if (args.length !== 1) return false;
       if (!(v instanceof Tuple)) return false;
-      for (const c of v.items()) {
-        if (!conformsIn(c, args[0]!, env, depth + 1)) return false;
+      for (const item of v.items()) {
+        if (!conformsIn(c, item, args[0]!, at, 1, env, depth + 1, shared)) return false;
       }
       return true;
     }
@@ -470,7 +560,8 @@ function conformsIn(
       const head0 = atomBytes(items[0]!);
       if (head0 === undefined || !bytesEqual(head0, lb)) return false;
       for (let i = 0; i < ts.length; i += 1) {
-        if (!conformsIn(items[i + 1]!, ts[i]!, env, depth + 1)) return false;
+        if (!conformsIn(c, items[i + 1]!, ts[i]!, at, i + 2, env, depth + 1, shared))
+          return false;
       }
       return true;
     }
@@ -486,7 +577,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
+        if (!conformsIn(c, e, args[0]!, at, 1, env, depth + 1, shared)) return false;
       }
       return true;
     }
@@ -499,7 +590,7 @@ function conformsIn(
         return false;
       }
       for (const e of elems) {
-        if (!conformsIn(e, args[0]!, env, depth + 1)) return false;
+        if (!conformsIn(c, e, args[0]!, at, 1, env, depth + 1, shared)) return false;
       }
       return true;
     }
@@ -513,8 +604,8 @@ function conformsIn(
       }
       for (const [k, val] of entries) {
         if (
-          !conformsIn(k, args[0]!, env, depth + 1) ||
-          !conformsIn(val, args[1]!, env, depth + 1)
+          !conformsIn(c, k, args[0]!, at, 1, env, depth + 1, shared) ||
+          !conformsIn(c, val, args[1]!, at, 2, env, depth + 1, shared)
         ) {
           return false;
         }
@@ -526,25 +617,31 @@ function conformsIn(
     // and a mandatory open/closed flag.
     case "record": {
       if (args.length < 1) return false;
-      return conformsRecord(v, args[0]!, args.slice(1), env, depth);
+      return conformsRecord(c, v, args[0]!, args.slice(1), at, env, depth, shared);
     }
 
     // Composition — recurse on the SAME v.
+    // Two or more alternatives over one value: below them a sub-check can be reached along
+    // several routes, so they are checked in shared mode (see Checker).
     case "union": {
-      for (const ct of args) {
-        if (conformsIn(v, ct, env, depth + 1)) return true;
+      const share = shared || args.length > 1;
+      const uat = shared || !share ? at : c.fresh();
+      for (let i = 0; i < args.length; i += 1) {
+        if (conformsIn(c, v, args[i]!, uat, i + 1, env, depth + 1, share)) return true;
       }
       return false;
     }
     case "and": {
-      for (const ct of args) {
-        if (!conformsIn(v, ct, env, depth + 1)) return false;
+      const share = shared || args.length > 1;
+      const uat = shared || !share ? at : c.fresh();
+      for (let i = 0; i < args.length; i += 1) {
+        if (!conformsIn(c, v, args[i]!, uat, i + 1, env, depth + 1, share)) return false;
       }
       return true;
     }
     case "not": {
       if (args.length !== 1) return false;
-      return !conformsIn(v, args[0]!, env, depth + 1);
+      return !conformsIn(c, v, args[0]!, at, 1, env, depth + 1, shared);
     }
 
     // Singleton — membership by ontos structural identity (defines no new equality).
@@ -563,7 +660,17 @@ function conformsIn(
       const body = args[1]!;
       // Push one shared node (no per-frame spread copy); the child frame sees this
       // binding innermost-first. The node closes over `env`.
-      return conformsIn(v, body, cons<Binding>({ name: nb, body }, env), depth + 1);
+      const bodyAt = c.position(at, 2);
+      return conformsIn(
+        c,
+        v,
+        body,
+        bodyAt,
+        -1,
+        cons<Binding>({ name: nb, body, bodyAt }, env),
+        depth + 1,
+        shared,
+      );
     }
     case "ref": {
       if (args.length !== 1) return false;
@@ -571,11 +678,13 @@ function conformsIn(
       if (!(nm instanceof Atom)) return false;
       // The nearest enclosing binding in the written descriptor: `env` holds exactly
       // the bindings that lexically enclose this `ref` (ADR 0011).
-      const node = lookupBinding(env, nm.bytes());
-      if (node === undefined) return false; // unbound reference
+      const found = lookupBinding(env, nm.bytes());
+      if (found === undefined) return false; // unbound reference
       // Unfold in the binding's own environment, so the body's free refs keep the
-      // bindings they were written under.
-      return conformsIn(v, node.head.body, node, depth + 1);
+      // bindings they were written under. The body is checked at its own position.
+      if (shared && found.head.bodyAt < 0) found.head.bodyAt = c.fresh();
+      const bodyAt = shared ? found.head.bodyAt : -1;
+      return conformsIn(c, v, found.head.body, bodyAt, -1, found, depth + 1, shared);
     }
 
     // Unknown ctor or wrong arity → not a recognized descriptor.
@@ -617,11 +726,14 @@ function readField(f: Value): Field | undefined {
 }
 
 function conformsRecord(
+  c: Checker,
   v: Value,
   mode: Value,
   fields: readonly Value[],
+  at: number,
   env: Cons<Binding> | undefined,
   depth: number,
+  shared: boolean,
 ): boolean {
   // mode is a bare atom flag (open | closed).
   const mb = atomBytes(mode);
@@ -660,13 +772,15 @@ function conformsRecord(
   // covers. Field names are pairwise-distinct (`wf(record)`, checked at entry), so a
   // present declared key is counted at most once.
   let covered = 0;
-  for (const f of fields) {
-    const fld = readField(f);
+  for (let k = 0; k < fields.length; k += 1) {
+    const fld = readField(fields[k]!);
     if (fld === undefined) return false; // malformed field descriptor
     const val = present.get(fld.name);
     if (val !== undefined) {
       covered += 1;
-      if (!conformsIn(val, fld.ty, env, depth + 1)) return false;
+      // Field k is the record's item k + 2; its type is the field form's item 3.
+      if (!conformsIn(c, val, fld.ty, c.position(at, k + 2), 3, env, depth + 1, shared))
+        return false;
     } else if (fld.required) {
       return false;
     }
@@ -714,7 +828,7 @@ export function isLeafCtor(ctor: string): boolean {
 export function leafClassifies(v: Value, t: Value): boolean {
   const h = head(t);
   if (h === undefined || !isLeafCtor(h.ctor)) return false;
-  return conformsIn(v, t, undefined, 0);
+  return node(LEAF_CHECKER, v, h, -1, undefined, 0, false);
 }
 
 /** Decide whether a LEAF descriptor `t` is well-formed (the `horos/wf-leaf(T)` builtin). */

@@ -308,6 +308,41 @@ fn union_and_not_exact() {
     assert!(!conforms(&encode_int(8), &exact7));
 }
 
+/// ADR 0013: a union reached outside shared mode begins a region with a memo of its own.
+/// Outside shared mode the check walks the copies ontos/data returns, and each record's
+/// copies are freed before the next record's reuse their memory. A memo kept across
+/// regions would take a failing record's element for the conforming one checked at the
+/// same address before it.
+#[test]
+fn shared_regions_do_not_outlive_their_values() {
+    let alternative = |kind: &[u8]| d("tuple", vec![scalar(kind)]);
+    let element = d(
+        "union",
+        vec![alternative(b"int"), alternative(b"utf8-text")],
+    );
+    let desc = d(
+        "list-of",
+        vec![d(
+            "record",
+            vec![a(b"closed"), field("x", true, d("list-of", vec![element]))],
+        )],
+    );
+    let good = map_of(&[("x", encode_list(&[tup(vec![encode_int(1)])]))]);
+    let bad = map_of(&[("x", encode_list(&[tup(vec![a(b"y")])]))]);
+    let alternating: Vec<Value> = (0..64)
+        .map(|i| {
+            if i % 2 == 0 {
+                good.clone()
+            } else {
+                bad.clone()
+            }
+        })
+        .collect();
+    assert!(!conforms(&encode_list(&alternating), &desc));
+    assert!(!conforms(&encode_list(&[good.clone(), bad]), &desc));
+    assert!(conforms(&encode_list(&vec![good; 64]), &desc));
+}
+
 // ----- a non-descriptor is never a conformance target -----
 
 #[test]

@@ -36,6 +36,7 @@
 
 use ontos_core::Value;
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
@@ -218,6 +219,7 @@ impl Located {
 
 /// The recursion's outcome. The boxed location keeps every recursive frame small, so the
 /// bounded descent fits the same stacks as the boolean recognizer.
+#[derive(Clone)]
 struct Out {
     diagnosis: Diagnosis,
     location: Option<Box<Location>>,
@@ -413,11 +415,14 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
     let w = diagnose_wf_located(t);
     match w.diagnosis {
         Diagnosis::Conforms => {
+            let memo = RefCell::new(DiagMemo::new());
             let cx = Cx {
                 env: None,
                 pos: None,
                 path: None,
                 depth: 0,
+                memo: &memo,
+                shared: false,
             };
             Located::from_out(diagnose_in(v, t, cx))
         }
@@ -433,14 +438,27 @@ pub fn diagnose_located(v: &Value, t: &Value) -> Located {
 // the value recursion — an arm-for-arm mirror of `conforms_in`
 // ---------------------------------------------------------------------------
 
+/// One diagnosis's memo (ADR 0013): a composite sub-check's outcome, location included,
+/// keyed by the addresses of its value and descriptor nodes and its depth, kept only in
+/// shared mode (`Cx::shared`). Every `&Value`
+/// that reaches `diagnose_in` is borrowed from the caller's value or descriptor, never a
+/// temporary copy, so within a check an address names one value occurrence, whose path is
+/// fixed, or one node of the written descriptor, whose position and environment are fixed.
+type DiagMemo = HashMap<(usize, usize, usize), Out>;
+
 /// The checking context of one frame: the `rec` bindings that lexically enclose the
-/// descriptor, the descriptor position, the value path and the counted depth.
+/// descriptor, the descriptor position, the value path, the counted depth and the check's
+/// memo.
 #[derive(Clone, Copy)]
 struct Cx<'a> {
     env: Env<'a>,
     pos: Pos<'a>,
     path: Path<'a>,
     depth: usize,
+    memo: &'a RefCell<DiagMemo>,
+    /// Below a union or intersection with two or more alternatives over one value, where a
+    /// sub-check can be reached along several routes: only there is the memo kept.
+    shared: bool,
 }
 
 impl Cx<'_> {
@@ -476,6 +494,8 @@ fn descend<'a>(cv: &Value, ct: &'a Value, cx: Cx<'a>, items: &[usize], step: Ste
         pos,
         path: Some(&s),
         depth: cx.depth + 1,
+        memo: cx.memo,
+        shared: cx.shared,
     };
     match items.get(1) {
         Some(&second) => {
@@ -501,6 +521,20 @@ fn diagnose_in<'a>(v: &Value, t: &'a Value, cx: Cx<'a>) -> Out {
             cx.refused()
         };
     }
+    if !cx.shared {
+        return composite_in(v, ctor, args, cx);
+    }
+    let key = (crate::addr(v), crate::addr(t), cx.depth);
+    if let Some(o) = cx.memo.borrow().get(&key).cloned() {
+        return o;
+    }
+    let o = composite_in(v, ctor, args, cx);
+    cx.memo.borrow_mut().insert(key, o.clone());
+    o
+}
+
+/// One composite descriptor node against `v`; `diagnose_in` memoizes it.
+fn composite_in<'a>(v: &Value, ctor: &str, args: &'a [Value], cx: Cx<'a>) -> Out {
     match ctor {
         "union" => union_in(v, args, cx),
         "and" => and_in(v, args, cx),
@@ -520,6 +554,10 @@ fn diagnose_in<'a>(v: &Value, t: &'a Value, cx: Cx<'a>) -> Out {
 /// went deeper than the union's own value, else the union itself (ADR 0009).
 #[inline(never)]
 fn union_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
+    let cx = Cx {
+        shared: cx.shared || ts.len() > 1,
+        ..cx
+    };
     let mut exhausted: Option<Out> = None;
     let mut not_wf: Option<Out> = None;
     let mut deepest: Option<Out> = None;
@@ -553,6 +591,10 @@ fn union_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
 
 #[inline(never)]
 fn and_in<'a>(v: &Value, ts: &'a [Value], cx: Cx<'a>) -> Out {
+    let cx = Cx {
+        shared: cx.shared || ts.len() > 1,
+        ..cx
+    };
     let mut fold = AllFold::new();
     for (i, ct) in ts.iter().enumerate() {
         if let Some(o) = fold.add(same(v, ct, cx, i + 1)) {
@@ -602,6 +644,8 @@ fn rec_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         pos: Some(&bp),
         path: cx.path,
         depth: cx.depth + 1,
+        memo: cx.memo,
+        shared: cx.shared,
     };
     diagnose_in(v, body, inner)
 }
@@ -624,6 +668,8 @@ fn ref_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         pos: b.head.pos,
         path: cx.path,
         depth: cx.depth + 1,
+        memo: cx.memo,
+        shared: cx.shared,
     };
     diagnose_in(v, b.head.body, inner)
 }
@@ -673,20 +719,32 @@ fn tuple_in<'a>(v: &Value, ctor: &str, args: &'a [Value], cx: Cx<'a>) -> Out {
     fold.finish()
 }
 
+/// The `(key, value)` entries of a map `v` that ontos/data has recognized, borrowed.
+fn map_entries(v: &Value) -> impl Iterator<Item = (&Value, &Value)> {
+    crate::labelled_items(v)
+        .iter()
+        .filter_map(|e| match e.as_tuple().map(|t| t.items()) {
+            Some([k, val]) => Some((k, val)),
+            _ => None,
+        })
+}
+
 /// `list-of` and `set-of`: the canonical collection, then its elements in order.
 #[inline(never)]
 fn collection_in<'a>(v: &Value, ctor: &str, args: &'a [Value], cx: Cx<'a>) -> Out {
     let [te] = args else {
         return cx.refused();
     };
-    let elems = if ctor == "list-of" {
-        read_list(v)
+    let recognized = if ctor == "list-of" {
+        read_list(v).is_ok()
     } else {
-        read_set(v)
+        read_set(v).is_ok()
     };
-    let Ok(elems) = elems else {
+    if !recognized {
         return cx.refused();
-    };
+    }
+    // The elements are walked borrowed from `v`, as the memo requires.
+    let elems = crate::labelled_items(v);
     let mut fold = AllFold::new();
     for (i, e) in elems.iter().enumerate() {
         if let Some(o) = fold.add(descend(e, te, cx, &[1], StepRef::Elem(i))) {
@@ -702,11 +760,12 @@ fn map_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
     let [tk, tv] = args else {
         return cx.refused();
     };
-    let Ok(entries) = read_map(v) else {
+    if read_map(v).is_err() {
         return cx.refused();
-    };
+    }
     let mut fold = AllFold::new();
-    for (i, (k, val)) in entries.iter().enumerate() {
+    // The entries are walked borrowed from `v`, as the memo requires.
+    for (i, (k, val)) in map_entries(v).enumerate() {
         if let Some(o) = fold.add(descend(k, tk, cx, &[1], StepRef::Key(i))) {
             return o;
         }
@@ -730,9 +789,11 @@ fn record_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         Some(b"open") => false,
         _ => return cx.refused(),
     };
-    let Ok(entries) = read_map(v) else {
+    if read_map(v).is_err() {
         return cx.refused();
-    };
+    }
+    // The entries are walked borrowed from `v`, as the memo requires.
+    let entries: Vec<(&Value, &Value)> = map_entries(v).collect();
     let mut keys: Vec<String> = Vec::with_capacity(entries.len());
     for (i, (k, _)) in entries.iter().enumerate() {
         match read_text(k) {
@@ -776,7 +837,7 @@ fn record_in<'a>(v: &Value, args: &'a [Value], cx: Cx<'a>) -> Out {
         let Some(&i) = index.get(name.as_str()) else {
             continue;
         };
-        let o = descend(&entries[i].1, ty, cx, &[k + 2, 3], StepRef::Field(name));
+        let o = descend(entries[i].1, ty, cx, &[k + 2, 3], StepRef::Field(name));
         if let Some(o) = fold.add(o) {
             return o;
         }

@@ -1731,6 +1731,7 @@ fn vectors_replay() {
         "conformance.json",
         "integer-bounds.json",
         "recursion-scope.json",
+        "checking-work.json",
     ] {
         let path = format!("{}/testdata/{file}", env!("CARGO_MANIFEST_DIR"));
         let txt = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));

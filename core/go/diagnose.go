@@ -181,7 +181,101 @@ func Diagnose(v, t Value) Diagnosis {
 	if w := diagnoseWFIn(t, nil, nil, 0, nil); w.verdict != VerdictConforms {
 		return w.diagnosis()
 	}
-	return diagnoseIn(v, t, nil, 0, nil, nil).diagnosis()
+	return newDiagChecker().diagnoseIn(v, t, nil, 0, nil, nil, false).diagnosis()
+}
+
+// diagChecker holds one diagnosis's memo (ADR 0013). As in the recognizer (checker), it is
+// used only in shared mode: below a union or intersection with two or more alternatives
+// over the same value, where one sub-check can be reached along several routes. There its
+// path and position nodes are canonical: one node per (parent, step) and per (parent, item
+// index). The node where shared mode begins is reached by one route, so its own path and
+// position nodes are unique too. Within one check a path node then names one value
+// occurrence and a position node one node of the written descriptor, whose environment
+// the position fixes (ADR 0011). A shared composite sub-check's outcome, location
+// included, is a function of (path, position, depth), and memo keeps it. Outside shared
+// mode the nodes are built and nothing is kept, as before ADR 0013.
+type diagChecker struct {
+	paths      map[pathKey]*pathNode
+	positions  map[posKey]*posNode
+	canonPaths map[*pathNode]bool
+	canonPoss  map[*posNode]bool
+	memo       map[diagKey]outcome
+}
+
+type pathKey struct {
+	parent *pathNode
+	step   Step
+}
+
+type posKey struct {
+	parent *posNode
+	index  int
+}
+
+type diagKey struct {
+	path  *pathNode
+	at    *posNode
+	depth int
+}
+
+func newDiagChecker() *diagChecker { return &diagChecker{} }
+
+func (d *diagChecker) init() {
+	if d.memo == nil {
+		d.paths = map[pathKey]*pathNode{}
+		d.positions = map[posKey]*posNode{}
+		d.canonPaths = map[*pathNode]bool{}
+		d.canonPoss = map[*posNode]bool{}
+		d.memo = map[diagKey]outcome{}
+	}
+}
+
+// share reports whether the alternatives of a union or intersection are checked in shared
+// mode: below two or more alternatives over one value.
+func (d *diagChecker) share(shared bool, alternatives int) bool {
+	return shared || alternatives > 1
+}
+
+// canonPath is the canonical path node for p: the first seen for its canonical parent and
+// step, p itself when it is the first. Nodes outside shared mode are reached by one route,
+// so the first one seen for each step is canonical; the walk up stops at one already seen.
+func (d *diagChecker) canonPath(p *pathNode) *pathNode {
+	d.init()
+	if p == nil || d.canonPaths[p] {
+		return p
+	}
+	parent := d.canonPath(p.parent)
+	k := pathKey{parent: parent, step: p.step}
+	if n, ok := d.paths[k]; ok {
+		return n
+	}
+	n := p
+	if parent != p.parent {
+		n = parent.push(p.step)
+	}
+	d.paths[k] = n
+	d.canonPaths[n] = true
+	return n
+}
+
+// canonPos is the canonical position node for p, as canonPath for paths.
+func (d *diagChecker) canonPos(p *posNode) *posNode {
+	d.init()
+	if p == nil || d.canonPoss[p] {
+		return p
+	}
+	parent := d.canonPos(p.parent)
+	k := posKey{parent: parent, index: p.index}
+	if n, ok := d.positions[k]; ok {
+		return n
+	}
+	n := p
+	if parent != p.parent {
+		n = parent.push(p.index)
+	}
+	d.positions[k] = n
+	d.canonPoss[n] = true
+	return n
 }
 
 // ----- the recursions: arm-for-arm mirrors of conformsIn / wfIn -----
@@ -228,7 +322,7 @@ func lookupEnv(env []*diagEnv, name []byte) int {
 	return -1
 }
 
-func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNode) outcome {
+func (d *diagChecker) diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNode, shared bool) outcome {
 	if depth > MaxRecursionDepth {
 		return exhaustedAt(path, at)
 	}
@@ -245,7 +339,23 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		}
 		return refused()
 	}
+	if !shared {
+		return d.composite(v, ctor, args, env, depth, path, at, false)
+	}
+	// Only a shared composite sub-check names its place canonically; a leaf never does.
+	path, at = d.canonPath(path), d.canonPos(at)
+	key := diagKey{path: path, at: at, depth: depth}
+	if o, hit := d.memo[key]; hit {
+		return o
+	}
+	o := d.composite(v, ctor, args, env, depth, path, at, true)
+	d.memo[key] = o
+	return o
+}
 
+// composite diagnoses one composite descriptor node against v.
+func (d *diagChecker) composite(v Value, ctor string, args []Value, env []*diagEnv, depth int, path *pathNode, at *posNode, shared bool) outcome {
+	refused := func() outcome { return failAt(VerdictMismatch, path, at, ReasonRefused) }
 	switch ctor {
 	// Composition on the SAME v.
 	case "union":
@@ -253,8 +363,9 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		// reports the first alternative that descended furthest, else the union itself.
 		var exhausted *outcome
 		var deepest *fault
+		alt := d.share(shared, len(args))
 		for i, ct := range args {
-			o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1))
+			o := d.diagnoseIn(v, ct, env, depth+1, path, at.push(i+1), alt)
 			switch o.verdict {
 			case VerdictConforms:
 				return conformsO
@@ -277,8 +388,9 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		return outcome{verdict: VerdictMismatch, f: deepest}
 	case "and":
 		var all allOf
+		alt := d.share(shared, len(args))
 		for i, ct := range args {
-			if o := diagnoseIn(v, ct, env, depth+1, path, at.push(i+1)); all.add(o) {
+			if o := d.diagnoseIn(v, ct, env, depth+1, path, at.push(i+1), alt); all.add(o) {
 				return o
 			}
 		}
@@ -287,7 +399,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		if len(args) != 1 {
 			return refused()
 		}
-		switch o := diagnoseIn(v, args[0], env, depth+1, path, at.push(1)); o.verdict {
+		switch o := d.diagnoseIn(v, args[0], env, depth+1, path, at.push(1), shared); o.verdict {
 		case VerdictConforms:
 			return failAt(VerdictMismatch, path, at, ReasonComplement)
 		case VerdictMismatch:
@@ -311,7 +423,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 		}
 		bodyAt := at.push(2)
 		b := &diagEnv{name: nb, body: args[1], at: bodyAt}
-		return diagnoseIn(v, args[1], diagPushEnv(env, b), depth+1, path, bodyAt)
+		return d.diagnoseIn(v, args[1], diagPushEnv(env, b), depth+1, path, bodyAt, shared)
 	case "ref":
 		if len(args) != 1 {
 			return refused()
@@ -325,7 +437,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 			return refused() // unbound
 		}
 		b := env[i]
-		return diagnoseIn(v, b.body, env[:i+1], depth+1, path, b.at)
+		return d.diagnoseIn(v, b.body, env[:i+1], depth+1, path, b.at, shared)
 	}
 
 	// Structural arms: the gate is decisive, then each child value against its descriptor.
@@ -339,7 +451,7 @@ func diagnoseIn(v, t Value, env []*diagEnv, depth int, path *pathNode, at *posNo
 	}
 	var all allOf
 	for _, c := range children {
-		if o := diagnoseIn(c.v, c.t, env, depth+1, path.push(c.step), at.push(c.at...)); all.add(o) {
+		if o := d.diagnoseIn(c.v, c.t, env, depth+1, path.push(c.step), at.push(c.at...), shared); all.add(o) {
 			return o
 		}
 	}

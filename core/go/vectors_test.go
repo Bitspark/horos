@@ -56,7 +56,7 @@ func TestVectorsReplay(t *testing.T) {
 	// testdata holds checked copies of vectors/conformance.json, of
 	// vectors/integer-bounds.json, the oracle for int-min/int-max (ADR 0010), and of
 	// vectors/recursion-scope.json, the oracle for ref scoping (ADR 0011).
-	for _, file := range []string{"conformance.json", "integer-bounds.json", "recursion-scope.json"} {
+	for _, file := range []string{"conformance.json", "integer-bounds.json", "recursion-scope.json", "checking-work.json"} {
 		path := filepath.Join("testdata", file)
 		txt, err := os.ReadFile(path)
 		if err != nil {

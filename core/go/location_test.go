@@ -17,6 +17,13 @@ func TestDiagnosticLocationsReplay(t *testing.T) {
 	}
 }
 
+// Replays the diagnoses of the checking-work oracle (vectors/checking-work.json, ADR 0013).
+func TestCheckingWorkLocationsReplay(t *testing.T) {
+	if checked := replayLocated(t, "checking-work.json", "diagnose_wf"); checked == 0 {
+		t.Error("no located judgments")
+	}
+}
+
 // Replays the diagnoses of the ref-scoping oracle (vectors/recursion-scope.json,
 // ADR 0011), whose booleans TestVectorsReplay checks. Its wf diagnosis is diagnose_wf,
 // since its wf is the boolean.

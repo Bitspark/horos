@@ -135,6 +135,13 @@ mod tests {
         replay_located("recursion-scope.json", "diagnose_wf");
     }
 
+    /// Replays the diagnoses of the checking-work oracle (vectors/checking-work.json,
+    /// ADR 0013).
+    #[test]
+    fn the_checking_work_diagnoses_replay() {
+        replay_located("checking-work.json", "diagnose_wf");
+    }
+
     /// Checks every diagnosis of a located corpus in testdata; `wf_key` names the case
     /// member that holds the expected `diagnose-wf` result.
     fn replay_located(file: &'static str, wf_key: &'static str) {
