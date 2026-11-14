@@ -1,16 +1,21 @@
 # Distribution
 
-## Current release: 0.11.0
+## Current release: 0.11.1
 
-Version 0.11.0 publishes npm, crates.io and the Go module at one version again.
-Root `v0.11.0` and `core/go/v0.11.0` identify the same accepted source commit.
-npm and crates.io go from 0.9.0 to 0.11.0. They skip 0.10.0 because the Go module
-already used v0.10.0 (retracted), v0.10.1 and v0.10.2 for the Go-only declaration
-deliveries ([0.10.1](releases/v0.10.1.md), [0.10.2](releases/v0.10.2.md)).
-Existing tags and registry versions are never replaced. See the
-[release notes](releases/v0.11.0.md).
+Version 0.11.1 publishes npm, crates.io and the Go module at one version, as 0.11.0
+did. Root `v0.11.1` and `core/go/v0.11.1` identify the same accepted source commit.
+It fixes a denial-of-service exposure in every package: checking work was not
+bounded by the size of the input
+([ADR 0013](architecture/decisions/0013-bounded-checking-work.md), advisory
+GHSA-8vh5-2mqc-56h3). See the [release notes](releases/v0.11.1.md).
 
-Publication uses the hosted release workflow described below, as 0.9.0 did:
+[0.11.0](releases/v0.11.0.md) took npm and crates.io from 0.9.0 to 0.11.0. They
+skip 0.10.0 because the Go module already used v0.10.0 (retracted), v0.10.1 and
+v0.10.2 for the Go-only declaration deliveries ([0.10.1](releases/v0.10.1.md),
+[0.10.2](releases/v0.10.2.md)). Existing tags and registry versions are never
+replaced.
+
+Publication uses the hosted release workflow described below, as 0.11.0 did:
 `rehearse` on the accepted main revision, the two tags on that revision, then
 `publish`, which runs `verify` and finalizes the GitHub release. The npm package
 already exists, so the first-publication bootstrap is unnecessary.
@@ -20,9 +25,9 @@ private history and are not tags in this repository.
 
 | Surface | Distribution | Dependency |
 | --- | --- | --- |
-| TypeScript | npmjs `@bitspark/horos@0.11.0` | ontos core, codec and data 0.17.0 |
-| Rust | crates.io `bitspark-horos@0.11.0`, library `horos` | bitspark-ontos-core/codec/data 0.17.0 |
-| Go | `github.com/Bitspark/horos/core/go@v0.11.0` | github.com/bitspark/ontos v0.17.0 |
+| TypeScript | npmjs `@bitspark/horos@0.11.1` | ontos core, codec and data 0.17.0 |
+| Rust | crates.io `bitspark-horos@0.11.1`, library `horos` | bitspark-ontos-core/codec/data 0.17.0 |
+| Go | `github.com/Bitspark/horos/core/go@v0.11.1` | github.com/bitspark/ontos v0.17.0 |
 | Python | Source-only validation lane | ontos v0.17.0 Python source |
 
 Earlier releases (npm and Cargo 0.9.0, Go v0.10.2 and before) use Ontos 0.16.0.
