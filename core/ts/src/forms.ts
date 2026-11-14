@@ -13,6 +13,19 @@ export interface RecordField {
 const bytes = new TextEncoder();
 const word = (name: string): Value => atom(bytes.encode(name));
 
+/** Constructs horos/list-of without closing or checking the supplied child form. */
+export function listForm(itemForm: Value): Value {
+  assertValue(itemForm);
+  return tuple([word("horos/list-of"), itemForm]);
+}
+
+/** Constructs horos/map-of, preserving the supplied key and value forms. */
+export function mapForm(keyForm: Value, valueForm: Value): Value {
+  assertValue(keyForm);
+  assertValue(valueForm);
+  return tuple([word("horos/map-of"), keyForm, valueForm]);
+}
+
 /**
  * Constructs the existing horos/record descriptor, preserving field order and
  * child forms. Names are Unicode scalar strings, without normalization, and must

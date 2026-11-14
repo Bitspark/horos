@@ -5,11 +5,19 @@ import {
   DataError,
   encodeBool,
   encodeInt,
+  encodeList,
   encodeMap,
   encodeNull,
   encodeText,
 } from "@bitspark/ontos-data";
-import { conforms, recordForm, wf, type RecordField } from "../src/index.js";
+import {
+  conforms,
+  listForm,
+  mapForm,
+  recordForm,
+  wf,
+  type RecordField,
+} from "../src/index.js";
 import { diagnose } from "../src/diagnose.js";
 
 const word = (s: string): Value => atom(new TextEncoder().encode(s));
@@ -19,6 +27,52 @@ const text = form("scalar", word("utf8-text"));
 const int = form("scalar", word("int"));
 const map = (...entries: [string, Value][]): Value =>
   encodeMap(entries.map(([key, value]) => [encodeText(key), value]));
+
+test("list and map construction preserve syntax, child identity and checker judgments", () => {
+  const opaque = tuple([atom([0xff]), tuple([])]);
+  const exact = form("exact", opaque);
+  const list = listForm(exact);
+  const mapping = mapForm(text, exact);
+  assert.ok(list.equals(tuple([word("horos/list-of"), exact])));
+  assert.ok(mapping.equals(tuple([word("horos/map-of"), text, exact])));
+  assert.equal(list.kind, "tuple");
+  assert.equal(mapping.kind, "tuple");
+  if (list.kind !== "tuple" || mapping.kind !== "tuple") assert.fail("compound forms");
+  assert.equal(list.at(1), exact);
+  assert.equal(mapping.at(1), text);
+  assert.equal(mapping.at(2), exact);
+  assert.equal(wf(list), true);
+  assert.equal(wf(mapping), true);
+  assert.equal(conforms(encodeList([opaque]), list), true);
+  assert.equal(conforms(encodeList([encodeText("opaque")]), list), false);
+  assert.equal(conforms(map(["payload", opaque]), mapping), true);
+  assert.equal(conforms(map(["payload", encodeNull()]), mapping), false);
+  assert.equal(conforms(encodeMap([[encodeInt(1n), opaque]]), mapping), false);
+});
+
+test("list and map constructors preserve lexical refs without certifying well-formedness", () => {
+  const ref = form("ref", word("Node"));
+  const list = listForm(ref);
+  const mapping = mapForm(text, ref);
+  assert.equal(wf(list), false);
+  assert.equal(wf(mapping), false);
+  const recursiveList = form("rec", word("Node"), list);
+  const recursiveMap = form("rec", word("Node"), mapping);
+  assert.equal(wf(recursiveList), true);
+  assert.equal(wf(recursiveMap), true);
+  assert.equal(conforms(encodeList([encodeList([])]), recursiveList), true);
+  assert.equal(conforms(map(["next", map()]), recursiveMap), true);
+  assert.equal(wf(listForm(atom([]))), false);
+  assert.equal(wf(mapForm(atom([]), text)), false);
+});
+
+test("list and map constructors reject foreign native shapes without coercion", () => {
+  for (const invalid of [null, undefined, "text", { kind: "atom" }, []]) {
+    assert.throws(() => listForm(invalid as Value), TypeError);
+    assert.throws(() => mapForm(invalid as Value, text), TypeError);
+    assert.throws(() => mapForm(text, invalid as Value), TypeError);
+  }
+});
 
 test("recordForm constructs the specified descriptor bytes without reordering fields", () => {
   const got = recordForm("closed", [

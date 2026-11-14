@@ -8,4 +8,10 @@ export {
   ATOM_LEN_BOUND_MAX,
   type Value,
 } from "./core.js";
-export { recordForm, type RecordField, type RecordMode } from "./forms.js";
+export {
+  listForm,
+  mapForm,
+  recordForm,
+  type RecordField,
+  type RecordMode,
+} from "./forms.js";
