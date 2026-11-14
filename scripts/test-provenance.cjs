@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { context, subject, statement } = require('./provenance.cjs');
 
 function fixture() {
-  const receipt = { source: 'a'.repeat(40), mode: 'rehearse', version: '0.11.0' };
+  const receipt = { source: 'a'.repeat(40), mode: 'rehearse', version: '0.11.1' };
   const env = { GITHUB_REPOSITORY: 'Bitspark/horos', GITHUB_REPOSITORY_ID: '1441363998',
     GITHUB_REF: 'refs/heads/main', GITHUB_EVENT_NAME: 'workflow_dispatch',
     GITHUB_SHA: receipt.source, RUNNER_ENVIRONMENT: 'github-hosted',
@@ -43,7 +43,7 @@ test('changed archive, extra subjects and changed provenance claims are refused'
   const mutations = [
     f => { f.archiveSubject = subject(Buffer.from('different bytes')); },
     f => f.value.subject.push(f.archiveSubject),
-    f => { f.value.subject[0].name = 'pkg:npm/different@0.11.0'; f.archiveSubject = subject(Buffer.from('candidate bytes')); },
+    f => { f.value.subject[0].name = 'pkg:npm/different@0.11.1'; f.archiveSubject = subject(Buffer.from('candidate bytes')); },
     f => { f.value.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = 'b'.repeat(40); },
     f => { f.value.predicate.buildDefinition.externalParameters.workflow.repository = 'https://github.com/other/repo'; },
     f => { f.value.predicate.runDetails.metadata.invocationId += '0'; },
