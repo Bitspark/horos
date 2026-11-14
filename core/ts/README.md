@@ -11,7 +11,7 @@ The package exports declarations for both entrypoints. There are no private
 proof/witness entrypoints or compatibility aliases.
 
 The source binding additionally exports `listForm`, `mapForm`, `recordForm`,
-`RecordField` and `RecordMode` from the root entrypoint. These additions are not in published
-0.11.0. They construct named required/optional fields with an explicit open or
+`RecordField` and `RecordMode` from the root entrypoint. These additions are not in a
+published package yet; 0.11.1 predates them. They construct named required/optional fields with an explicit open or
 closed mode, plus homogeneous lists and maps; child descriptors and native domain values remain the caller's
 responsibility. See the [exact construction contract](../../docs/spec/horos.md#typescript-construction).
