@@ -1,13 +1,13 @@
-# HOROS-ACX-001: record construction in consumers
+# HOROS-ACX-001: descriptor construction in consumers
 
 ## Responsibility and defect
 
 Resource contributions and deployment bindings were constructing generic
-`horos/record` and `horos/field` compounds themselves. Their helpers selected
+`horos/record`, `horos/field`, `horos/list-of` and `horos/map-of` compounds themselves. Their helpers selected
 required/optional markers and encoded names, while each contribution correctly
 owned its own field meanings. The generic construction responsibility was
 repeated outside Horos because the public TypeScript binding exposed checking
-but no record constructor.
+but no owner constructors for those compound forms.
 
 This is the ownership failure described by
 [AC-02](https://github.com/Bitspark/platform/blob/main/docs/concepts/architectural-correctness.md#ac-02)
@@ -24,6 +24,12 @@ validity to `wf`/`diagnoseWf`. It preserves child Values and descriptor order.
 The [form contract](../../spec/horos.md#typescript-construction) defines the
 exact API and failure behavior.
 
+The same owner API supplies `listForm(itemForm)` and
+`mapForm(keyForm, valueForm)`. They construct the existing homogeneous collection
+syntax, assert native Ontos child Values and preserve their identities. Consumers
+choose the child forms; the helper neither encodes domain data nor checks an
+unfinished descriptor.
+
 The interface follows the required record meanings independently of the former
 helpers, as [AC-09](https://github.com/Bitspark/platform/blob/main/docs/concepts/architectural-correctness.md#ac-09)
 requires. It does not select domain names, encode native field values, infer
@@ -38,10 +44,10 @@ canonical map and text-key requirements, nested records with opaque exact
 payloads, lexical recursion, Unicode names, duplicate and malformed inputs,
 diagnostic field order and input ownership after construction.
 
-Local qualification passed TypeScript typechecking, lint and all 47 tests,
+Local qualification includes TypeScript typechecking, lint and the constructor tests,
 including installation and typechecking of the packed public package in an
-isolated consumer. The required cross-language CI remains pending for the
-landing revision.
+isolated consumer. The existing cross-language CI matrix qualifies the landing
+revision; no native checker meaning is changed by the construction API.
 
 The owner capability is source-only and uses the existing Ontos 0.17.0 family.
 The published Horos 0.11.0 release is unchanged. This change supplies only the

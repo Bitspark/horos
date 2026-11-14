@@ -79,8 +79,8 @@ text keys, including the keys of extra fields in open mode.
 
 ### TypeScript construction
 
-The source TypeScript binding exports the following constructor from
-`@bitspark/horos`. It constructs the record syntax above; it adds no descriptor
+The source TypeScript binding exports the following constructors from
+`@bitspark/horos`. They construct the existing syntax; they add no descriptor
 kind or checking rule. It is not part of the published 0.11.0 package.
 
 ```ts
@@ -91,6 +91,8 @@ interface RecordField {
   readonly form: Value;
 }
 function recordForm(mode: RecordMode, fields: readonly RecordField[]): Value;
+function listForm(itemForm: Value): Value;
+function mapForm(keyForm: Value, valueForm: Value): Value;
 ```
 
 The caller supplies mode, field names, presence and child forms. Horos constructs
@@ -107,6 +109,12 @@ caller uses `wf` or `diagnoseWf` on the completed descriptor. A constructed
 record is therefore not a well-formedness certificate. Other language bindings
 continue to construct the same descriptor syntax directly; their checker
 semantics and the cross-language descriptor corpus are unchanged.
+
+`listForm` constructs `(horos/list-of itemForm)`, and `mapForm` constructs
+`(horos/map-of keyForm valueForm)`. Both assert native Ontos child Values without
+coercion and preserve those Values, including opaque literal contents and free
+references. Invalid native child values throw `TypeError`. As for `recordForm`,
+whole-descriptor checking remains the caller's responsibility.
 
 The [construction ownership case](../architecture/cases/0001-record-construction.md)
 records why this operation belongs to Horos rather than individual consumers.
